@@ -101,6 +101,7 @@ run_weatherstar.bat
 
 **Linux/Mac:**
 ```bash
+chmod +x run_weatherstar.sh
 ./run_weatherstar.sh
 ```
 
