@@ -7,8 +7,8 @@ A pixel-perfect recreation of the iconic WeatherStar 4000 for Raspberry Pi and C
 [![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-A22846?style=flat-square&logo=raspberry-pi&logoColor=white)](#)
 [![NOAA](https://img.shields.io/badge/NOAA_API-003087?style=flat-square)](#)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/wesellis/FUN-WeatherStar-4000-Raspberry-Pi-Python-Pygame-CRT-NOAA?style=flat-square)](https://github.com/wesellis/FUN-WeatherStar-4000-Raspberry-Pi-Python-Pygame-CRT-NOAA/stargazers)
-[![Last Commit](https://img.shields.io/github/last-commit/wesellis/FUN-WeatherStar-4000-Raspberry-Pi-Python-Pygame-CRT-NOAA?style=flat-square)](https://github.com/wesellis/FUN-WeatherStar-4000-Raspberry-Pi-Python-Pygame-CRT-NOAA/commits)
+[![Stars](https://img.shields.io/github/stars/wesellis/weatherstar-4000?style=flat-square)](https://github.com/wesellis/weatherstar-4000/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/wesellis/weatherstar-4000?style=flat-square)](https://github.com/wesellis/weatherstar-4000/commits)
 
 ---
 
@@ -83,8 +83,8 @@ The WeatherStar 4000 was the iconic weather information system used by The Weath
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/WeatherStar-4000-Python.git
-cd WeatherStar-4000-Python
+git clone https://github.com/wesellis/weatherstar-4000.git
+cd weatherstar-4000
 ```
 
 2. **Install dependencies:**
@@ -134,7 +134,7 @@ R. **Refresh Weather Data** - Force update
 ## 🗂️ Project Structure
 
 ```
-WeatherStar-4000-Python/
+weatherstar-4000/
 ├── weatherstar4000.py          # Main application
 ├── weatherstar_logger.py       # Logging utilities
 ├── run_weatherstar.py          # Python launcher
@@ -267,8 +267,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 ## Project Status & Roadmap
-
-**Completion: 100%** - Production Ready
 
 ### What Works
 - ✅ 24 Python files with modular architecture
