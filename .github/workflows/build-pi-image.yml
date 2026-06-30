@@ -11,6 +11,9 @@ on:
         required: true
         default: 'weatherstar4000_v1.0'
 
+permissions:
+  contents: write
+
 jobs:
   build-image:
     runs-on: ubuntu-latest
