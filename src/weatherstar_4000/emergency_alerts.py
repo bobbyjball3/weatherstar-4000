@@ -45,7 +45,7 @@ class EmergencyAlertSystem:
         try:
             pygame.mixer.init()
             # You can add a custom alert sound file here
-            # self.alert_sound = pygame.mixer.Sound("weatherstar_assets/sounds/alert.wav")
+            # self.alert_sound = pygame.mixer.Sound("static_assets/sounds/alert.wav")
         except:
             logger.warning("Could not initialize alert sound")
 

@@ -433,7 +433,7 @@ class WeatherStar4000Complete:
         self.clock = pygame.time.Clock()
 
         # Load assets
-        self.assets_path = Path("weatherstar_assets")
+        self.assets_path = Path("static_assets")
         logger.main_logger.info(f"Loading assets from {self.assets_path}")
 
         self.backgrounds = self._load_backgrounds()
@@ -603,7 +603,7 @@ class WeatherStar4000Complete:
         logger.main_logger.info("Initializing fonts")
 
         # Check for converted Star4000 TTF fonts first
-        font_dir = Path("weatherstar_assets/fonts_ttf")
+        font_dir = Path("static_assets/fonts_ttf")
         star4000_path = font_dir / "star4000.ttf"
         star4000_large_path = font_dir / "star4000_large.ttf"
         star4000_extended_path = font_dir / "star4000_extended.ttf"
@@ -706,7 +706,7 @@ class WeatherStar4000Complete:
 
             # Try multiple paths for music files
             music_dirs = [
-                Path("weatherstar_assets/music"),
+                Path("static_assets/music"),
                 Path("ws4kp/server/music/default"),  # Fallback to ws4kp music if needed
             ]
 

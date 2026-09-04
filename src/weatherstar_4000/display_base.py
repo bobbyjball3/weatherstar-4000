@@ -23,7 +23,7 @@ class DisplayBase:
     _font_cache = {}
     _icon_cache = {}
 
-    def __init__(self, screen: pygame.Surface, assets_path: str = "weatherstar_assets"):
+    def __init__(self, screen: pygame.Surface, assets_path: str = "static_assets"):
         self.screen = screen
         self.assets_path = Path(assets_path)
 
@@ -86,7 +86,7 @@ class DisplayBase:
     @classmethod
     def _get_font_paths_static(cls) -> dict:
         """Static method to get font paths"""
-        font_dir = Path("weatherstar_assets/fonts")
+        font_dir = Path("static_assets/fonts")
         return {
             "small": str(font_dir / "Star4000 Small.ttf"),
             "normal": str(font_dir / "Star4000.ttf"),
