@@ -3,8 +3,8 @@
 Unit tests for WeatherStar 4000 configuration module
 """
 
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 # Add parent directory to path
@@ -35,18 +35,18 @@ class TestConfig(unittest.TestCase):
 
     def test_colors_palette(self):
         """Test that color palette is defined"""
-        self.assertIn('blue', COLORS)
-        self.assertIn('white', COLORS)
-        self.assertIn('yellow', COLORS)
-        self.assertIsInstance(COLORS['blue'], tuple)
-        self.assertEqual(len(COLORS['blue']), 3)
+        self.assertIn("blue", COLORS)
+        self.assertIn("white", COLORS)
+        self.assertIn("yellow", COLORS)
+        self.assertIsInstance(COLORS["blue"], tuple)
+        self.assertEqual(len(COLORS["blue"]), 3)
 
     def test_display_modes_enum(self):
         """Test DisplayMode enum"""
-        self.assertTrue(hasattr(DisplayMode, 'CURRENT_CONDITIONS'))
-        self.assertTrue(hasattr(DisplayMode, 'LOCAL_FORECAST'))
-        self.assertTrue(hasattr(DisplayMode, 'RADAR'))
-        self.assertTrue(hasattr(DisplayMode, 'HAZARDS'))
+        self.assertTrue(hasattr(DisplayMode, "CURRENT_CONDITIONS"))
+        self.assertTrue(hasattr(DisplayMode, "LOCAL_FORECAST"))
+        self.assertTrue(hasattr(DisplayMode, "RADAR"))
+        self.assertTrue(hasattr(DisplayMode, "HAZARDS"))
 
     def test_display_mode_values(self):
         """Test DisplayMode enum values are strings"""
@@ -54,5 +54,5 @@ class TestConfig(unittest.TestCase):
             self.assertIsInstance(mode.value, str)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

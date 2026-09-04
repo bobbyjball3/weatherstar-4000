@@ -3,10 +3,10 @@
 This app seems heavily vibe-coded and in a state of partial implementation. I want to add some rigor to the application and structure to this. 
 
 ## Toolchain
-- build/run/package management: uv
-- linting/flakes/etc: ruff
+- build/run/package management: [uv](https://github.com/astral-sh/uv)
+- linting/flakes/etc: [ruff](https://astral.sh/ruff)
 - testing: pytest
-- project tasks: Task
+- project tasks: [Task](https://taskfile.dev)
 - pre-commit validation: pre-commit
 
 ## Improvements

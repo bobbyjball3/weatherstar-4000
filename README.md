@@ -1,376 +1,168 @@
-# WeatherStar 4000 Python Recreation
+# WeatherStar 4000
 
-A pixel-perfect recreation of the iconic WeatherStar 4000 for Raspberry Pi and CRT TVs.
+A recreation of The Weather Channel's iconic 1990s WeatherStar 4000 local
+forecast presentation.
 
-[![Python](https://img.shields.io/badge/Python-3.7+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![Pygame](https://img.shields.io/badge/Pygame-00AA00?style=flat-square&logo=python&logoColor=white)](#)
-[![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-A22846?style=flat-square&logo=raspberry-pi&logoColor=white)](#)
-[![NOAA](https://img.shields.io/badge/NOAA_API-003087?style=flat-square)](#)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/wesellis/weatherstar-4000?style=flat-square)](https://github.com/wesellis/weatherstar-4000/stargazers)
-[![Last Commit](https://img.shields.io/github/last-commit/wesellis/weatherstar-4000?style=flat-square)](https://github.com/wesellis/weatherstar-4000/commits)
+> **Note:** the original README (features, controls, packaging, Raspberry Pi
+> setup, etc.) has been preserved as [`README.old.md`](./README.old.md). This
+> README focuses on the development toolchain, local checks, and CI.
 
----
+## Overview
 
-## 🎯 **Project Overview**
+This project is managed end-to-end with modern Python tooling:
 
-The WeatherStar 4000 was the iconic weather information system used by The Weather Channel throughout the 1990s. This Python recreation brings that nostalgic experience to modern hardware, **optimized for Raspberry Pi and authentic display on 4:3 CRT televisions**.
+| Tool | Purpose | Invoked via |
+| --- | --- | --- |
+| [uv](https://docs.astral.sh/uv/) | Build / run / package / dependency management | `uv …` |
+| [ruff](https://docs.astral.sh/ruff/) | Linting and formatting | `uv run ruff …` |
+| [pytest](https://docs.pytest.org/) | Testing (with coverage via pytest-cov) | `uv run pytest …` |
+| [Task](https://taskfile.dev) | Project task runner (checks, tests, CI) | `task …` |
+| [pre-commit](https://pre-commit.com) | Git hook framework for commit-time checks | `uv run pre-commit …` |
 
-<div align="center">
-  <img src="docs/images/current_conditions.png" width="45%" alt="Current Conditions">
-  <img src="docs/images/weather_forecast.png" width="45%" alt="Weather Forecast">
-</div>
+Everything that runs in CI also runs locally through the same `task` commands,
+so results are reproducible between your machine and GitHub Actions.
 
-### **Perfect for:**
-- 📺 **CRT TV collectors** - Native 640x480 resolution perfect for 4:3 displays
-- 🖥️ **Retro computing enthusiasts** - Authentic 90s experience
-- 🌡️ **Weather monitoring stations** - Professional weather display
-- 🏫 **Educational displays** - Museums, schools, maker spaces
-- 🎮 **Nostalgia projects** - Relive the 90s Weather Channel
+## Quick start
 
-## ✨ Features
+Prerequisites: Python 3.10 and [uv](https://docs.astral.sh/uv/) installed.
 
-### 🎨 Authentic Display Modes
-- **Current Conditions** - Temperature, humidity, wind, pressure with trends
-- **Local Forecast** - 3-column scrolling text forecast
-- **Extended Forecast** - 7-day outlook with conditions
-- **Hourly Forecast** - Next 24 hours with scrolling display
-- **Regional Observations** - Nearby city conditions
-- **Travel Cities** - Major US city weather
-- **Weather Almanac** - Records, sunrise/sunset, precipitation totals
-- **Local Radar** - Animated radar imagery
-- **Hazards & Warnings** - Active weather alerts
-- **30-Day Temperature History** - Historical temperature trends
-- **30-Day Precipitation History** - Rainfall accumulation tracking
-- **UV Index Forecast** - 7-day UV protection guidance
-- **Recent Earthquakes** - USGS seismic activity (magnitude 3.0+)
-- **Stock Market** - Live DOW, S&P 500, NASDAQ indices
+```sh
+# Install task (taskfile.dev runner)
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b "$HOME/bin"
+export PATH="$HOME/bin:$PATH"
 
-### 🆕 Enhanced Features (New in v1.0!)
-- **Air Quality & Health** - Real-time AQI, pollen counts, health recommendations
-- **7-Day Temperature Graph** - Color-coded temperature trends (blue=cold to red=hot)
-- **Weather Records** - Historical comparisons
-- **Sun & Moon Data** - Detailed astronomy information
-- **Wind & Pressure Analysis** - Barometric trends
-- **Weekend Forecast** - 2-column Saturday/Sunday display
-- **Animated Weather Icons** - GIF animations for rain, snow, storms
-- **News Integration** - MSN, Reddit, and REAL local news headlines
-- **Clickable Headlines** - Open news articles in browser
+# Create the environment (project + dev dependencies), pinned by uv.lock
+uv sync
 
-### 🎵 Authentic Experience
-- **75+ Smooth Jazz Tracks** - Hours of period-correct background music
-- **Original Star4000 Fonts** - Pixel-perfect bitmap fonts
-- **Classic Backgrounds** - Blue gradients and authentic layouts
-- **Smooth Transitions** - Auto-cycling through all displays
-- **Scrolling Ticker** - Classic bottom banner with conditions
-
-### 📊 Smart Features
-- **Weather Trend Arrows** - Rising/falling indicators for temperature and pressure
-- **Historical Comparisons** - Current vs. 30-year averages
-- **Precipitation Tracking** - 24hr, 7-day, monthly accumulation
-- **Right-Click Settings Menu** - Customize display options
-- **Auto Location Detection** - Uses IP geolocation or manual entry
-
-## 🚀 Quick Start
-
-### System Requirements
-- Python 3.7 or higher
-- 1GB RAM minimum (2GB recommended)
-- Internet connection for weather data
-- **Perfect for Raspberry Pi 3B+, 4, or Zero 2W**
-
-### Installation
-
-1. **Clone the repository:**
-```bash
-git clone https://github.com/wesellis/weatherstar-4000.git
-cd weatherstar-4000
+# Install the git pre-commit hooks
+task install-hooks
 ```
 
-2. **Install dependencies:**
-```bash
-pip install pygame requests
+The Python version is pinned in `.python-version` (`3.10`). `uv sync` reads it
+so your local environment matches CI.
+
+## Everyday workflow
+
+```sh
+task check        # ruff lint + ruff format --check
+task fix          # auto-fix what ruff can (mirrors the pre-commit hooks)
+task coverage     # full pytest suite with branch coverage + reports
 ```
 
-3. **Run WeatherStar 4000:**
+### Available tasks
 
-**Windows:**
-```bash
-run_weatherstar.bat
+Run `task --list` or see [`Taskfile.yml`](./Taskfile.yml). All tasks execute
+their tools through `uv run`, so they work on any machine with uv installed.
+
+| Task | Command | Description |
+| --- | --- | --- |
+| `install` | `uv sync` | Sync project and dev dependencies |
+| `lint` | `uv run ruff check src tests` | Lint the package and tests |
+| `lint-fix` | `uv run ruff check --fix src tests` | Auto-fix lint issues |
+| `format` | `uv run ruff format src tests` | Format code |
+| `format-check` | `uv run ruff format --check src tests` | Verify formatting |
+| `check` | `lint` + `format-check` | All quality gates |
+| `fix` | `lint-fix` + `format` | Auto-fix everything possible |
+| `test` | `uv run pytest` | Run the test suite |
+| `coverage` | `uv run pytest --cov …` | Run tests with coverage + XML report |
+| `install-hooks` | `uv run pre-commit install` | Install pre-commit hooks |
+
+## Configuration
+
+All tool configuration lives in [`pyproject.toml`](./pyproject.toml):
+
+- **ruff** — `[tool.ruff]`, targets Python 3.10, 100-column lines, `src`
+  layout. Lint rules enabled (`[tool.ruff.lint]`): `E4`, `E7`, `E9`, `F`,
+  `I`, `UP`, `W`; everything fixable is auto-fixed.
+- **pytest** — `[tool.pytest.ini_options]`; discovers tests in `tests/`, always
+  writes a JUnit report to `reports/junit.xml`, and runs with
+  `--continue-on-collection-errors` so one broken test module does not abort
+  the whole suite.
+- **coverage** — `[tool.coverage.run]` measures only code owned by this package
+  (`source = ["src/weatherstar_4000"]`) with branch coverage enabled.
+
+### pre-commit
+
+[`.pre-commit-config.yaml`](./.pre-commit-config.yaml) runs ruff in **fix mode**
+on every commit: safe lint fixes and formatting are applied automatically, and
+the commit is blocked if anything could not be fixed. The hook ruff version is
+pinned to match the version uv locked in the dev group.
+
+## CI
+
+GitHub Actions is defined in
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml). It runs on push to
+`main`/`master` and on pull requests, and is split into two stages:
+
+### Quality stage
+
+Each ruff check runs in its **own job** so failures are easy to isolate:
+
+| Job | Runs | Tool |
+| --- | --- | --- |
+| `ruff-check` | `task lint` | ruff lint |
+| `ruff-format` | `task format-check` | ruff format |
+
+Both run on a single Python version (3.10).
+
+### Testing stage
+
+| Job | Runs | Notes |
+| --- | --- | --- |
+| `test` | `task coverage` | Python 3.10 by default; see matrix below |
+
+The test job then:
+
+1. **Publishes a test report** to the PR/commit checks
+   (`EnricoMi/publish-unit-test-result-action`), generated from
+   `reports/junit.xml`.
+2. **Posts a coverage comment** on the PR
+   (`MishaKav/pytest-coverage-comment`), generated from `coverage.xml`. The
+   report is limited to package-owned code in `src/weatherstar_4000` and
+   includes branch coverage.
+3. Uploads `reports/junit.xml` and `coverage.xml` as a downloadable artifact.
+
+Reports are only published when the token has write access (same-repo branches
+and pushes). On pull requests from external forks the token is read-only, so the
+publishing steps are skipped — the artifact is still uploaded.
+
+### Running tests on more Python versions
+
+The `test` job uses a strategy matrix that defaults to a single version:
+
+```yaml
+matrix:
+  python-version: ['3.10']
 ```
 
-**Linux/Mac:**
-```bash
-chmod +x run_weatherstar.sh
-./run_weatherstar.sh
-```
+Add versions to that list (e.g. `['3.10', '3.11']`) to run the suite across
+them. Each matrix cell is pinned by overwriting `.python-version`, so CI never
+drifts from the committed lockfile.
 
-**Or directly with Python:**
-```bash
-python run_weatherstar.py
-```
-
-## 🎮 Controls
-
-| Key | Action |
-|-----|--------|
-| **Space** | Pause/Resume auto-play |
-| **←/→** | Navigate displays manually |
-| **Right-Click** or **M** | Open settings menu |
-| **Escape** | Exit |
-
-### Settings Menu Options
-1. **Toggle Marine Forecast** - Show/hide coastal conditions
-2. **Toggle Weather Trends** - Show/hide trend arrows
-3. **Toggle Historical Data** - Show/hide comparisons
-4. **Music Volume** - Adjust background music (0-100%)
-0. **Voice Narration** - Professional weather announcer (OFF by default, ducks music to 20%)
-5. **MSN Top Stories** - Toggle MSN news headlines
-6. **Reddit Headlines** - Toggle Reddit news
-7. **Local News** - Toggle local news display
-8. **International Weather** - Switch between NOAA (US) and Open Meteo (worldwide)
-9. **Color Theme** - Cycle through 5 themes (Classic, Dark, High Contrast, Retro Green, Amber)
-R. **Refresh Weather Data** - Force update
-
-## 🗂️ Project Structure
+## Repository layout
 
 ```
-weatherstar-4000/
-├── weatherstar4000.py          # Main application
-├── weatherstar_logger.py       # Logging utilities
-├── run_weatherstar.py          # Python launcher
-├── run_weatherstar.bat         # Windows launcher
-├── run_weatherstar.sh          # Linux/Mac launcher
-├── convert_fonts.py            # Font conversion utility
-├── requirements.txt            # Python dependencies
-├── LICENSE                     # MIT License
-├── README.md                   # Documentation
-├── .gitignore                  # Git ignore rules
-├── weatherstar_assets/         # All assets
-│   ├── fonts/                  # Original WOFF fonts
-│   ├── fonts_ttf/              # Converted TTF fonts
-│   ├── music/                  # 75+ background tracks
-│   ├── icons/                  # Weather condition icons
-│   ├── logos/                  # WeatherStar logos
-│   └── backgrounds/            # Display backgrounds
-└── logs/                       # Runtime logs (auto-created)
+pyproject.toml            uv / ruff / pytest / coverage configuration
+Taskfile.yml              task runner commands
+.pre-commit-config.yaml   commit-time ruff (fix mode) hooks
+.github/workflows/ci.yml  Quality + Testing CI pipeline
+.github/actions/setup     reusable CI step: uv + task + dependency sync
+src/weatherstar_4000/     the package (src layout)
+tests/                    pytest suite
+reports/                  JUnit output (gitignored, generated)
+coverage.xml              coverage output (gitignored, generated)
+README.old.md             original project README (features, packaging)
 ```
 
-## 🛠️ Configuration
+## Current status
 
-### Manual Location
-When prompted, enter your latitude and longitude:
-```
-Latitude: 40.7128
-Longitude: -74.0060
-```
-
-Find your coordinates at [LatLong.net](https://www.latlong.net/)
-
-### Auto-Detection
-Press Enter when prompted to use IP-based location detection.
-
-## 📝 Logging
-
-Comprehensive logging is saved to the `logs/` directory:
-- `weatherstar_main.log` - General application logs
-- `weatherstar_display.log` - Display mode changes
-- `weatherstar_weather.log` - Weather API interactions
-- `weatherstar_error.log` - Error tracking
-
-## 🌐 Data Sources
-
-- **Weather Data**: [NOAA/NWS API](https://api.weather.gov) (US only)
-- **International Weather**: [Open-Meteo API](https://open-meteo.com) (worldwide)
-- **UV Index & History**: [Open-Meteo API](https://open-meteo.com)
-- **Earthquakes**: [USGS Earthquake API](https://earthquake.usgs.gov)
-- **Stock Market**: [Alpha Vantage API](https://www.alphavantage.co)
-- **Radar Images**: [Iowa State Mesonet](https://mesonet.agron.iastate.edu)
-- **Location Detection**: [ipapi.co](https://ipapi.co)
-
-## 🏗️ Building from Source
-
-### Converting Fonts
-If you need to convert WOFF fonts to TTF:
-```bash
-python convert_fonts.py
-```
-
-### Installing Optional Dependencies
-For enhanced astronomy calculations:
-```bash
-pip install ephem
-```
-
-## 🐛 Troubleshooting
-
-### No Sound/Music
-- Check music files exist in `weatherstar_assets/music/`
-- Verify pygame mixer initialized (check logs)
-- Adjust volume in settings menu (Right-click → 4)
-
-### Display Issues
-- Ensure 640x480 resolution is supported
-- Check all assets are in `weatherstar_assets/`
-- Review error logs in `logs/weatherstar_error.log`
-
-### Weather Data Not Loading
-- Verify internet connection
-- Check location is within the US (NOAA API limitation)
-- Review API logs in `logs/weatherstar_weather.log`
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues for:
-- Bug fixes
-- New display modes
-- International weather API support
-- Performance improvements
-- Additional nostalgic music tracks
-
-## 📜 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Original WeatherStar 4000 by The Weather Channel
-- [ws4kp](https://github.com/netbymatt/ws4kp) JavaScript implementation for reference
-- NOAA/NWS for weather data API
-- The Weather Channel music composers of the 1990s
-
-## 🎯 Roadmap
-
-- [x] International weather support (non-US locations) - ✅ **DONE**
-- [x] Custom color themes - ✅ **DONE** (5 themes available)
-- [x] Automated test suite - ✅ **DONE** (37 tests, 100% passing)
-- [x] Weather history graphs - ✅ **DONE** (30-day temperature & precipitation)
-- [x] Severe weather animations - ✅ **DONE** (flashing, scrolling, pulsating)
-- [x] Performance optimization for Pi - ✅ **DONE** (adaptive frame skipping, caching, memory mgmt)
-- [x] Voice narration - ✅ **DONE** (professional announcer, audio ducking, OFF by default)
-
-## 📺 Screenshots
-
-### Terminal View - Running WeatherStar 4000+
-![Terminal View](docs/images/terminal_view.png)
-
-### Current Conditions Display
-![Current Conditions](docs/images/current_conditions.png)
-
-### Weather Forecast Display
-![Weather Forecast](docs/images/weather_forecast.png)
-
----
-
-**Made with ❤️ for weather enthusiasts and 90s nostalgia lovers**
-
-*Not affiliated with The Weather Channel or IBM*
----
-
-## Project Status & Roadmap
-
-### What Works
-- ✅ 24 Python files with modular architecture
-- ✅ 26+ weather display modes (current conditions, forecasts, radar, almanac, **history, UV index, earthquakes, stocks**)
-- ✅ NOAA/NWS API for US weather data
-- ✅ Open Meteo API for international weather & UV index
-- ✅ USGS Earthquake API for seismic data
-- ✅ Alpha Vantage API for live stock market data
-- ✅ International weather toggle in settings menu
-- ✅ **30-day weather history** (temperature & precipitation trends)
-- ✅ **UV Index Forecast** (7-day protection guidance)
-- ✅ **Recent Earthquakes** (magnitude 3.0+ from USGS)
-- ✅ **Stock Market Indices** (live DOW, S&P 500, NASDAQ)
-- ✅ **Animated severe weather alerts** (flashing borders, scrolling warnings, pulsating effects)
-- ✅ **Performance optimizer** (frame skipping, caching, memory management for Pi)
-- ✅ **NEW: Voice narration** (professional weather announcer, OFF by default, audio ducking)
-- ✅ News integration (MSN headlines, Reddit, local news)
-- ✅ Emergency alerts with NOAA integration
-- ✅ 75 smooth jazz background music tracks (ducks to 20% during narration)
-- ✅ 41 weather condition icons with GIF animations
-- ✅ Authentic Star4000 fonts (4 TTF fonts)
-- ✅ 5 color themes (Classic, Dark, High Contrast, Retro Green, Amber)
-- ✅ Raspberry Pi optimizations (adaptive frame skipping, surface caching)
-- ✅ CRT TV support (640x480, 4:3 aspect ratio, composite output)
-- ✅ Settings menu with volume, narration, toggles, themes, API selection
-- ✅ **Comprehensive test suite** (37 unit + integration tests, 100% passing)
-- ✅ Automated CI/CD testing via GitHub Actions
-- ✅ GitHub Actions workflows (Pi image builder, Windows EXE, releases)
-- ✅ Comprehensive documentation and setup scripts
-- ✅ Air quality and health displays
-- ✅ Sun/moon astronomy data
-- ✅ Temperature graphs with color gradients
-- ✅ Clickable news headlines
-- ✅ Auto-boot configuration for Raspberry Pi
-
-### Optional Enhancements
-
-All core features are complete. The following are optional polish items:
-
-**Testing:**
-- ✅ **Unit Tests** - 37 tests covering config, settings, API, performance, integration
-- ✅ **Automated Testing** - GitHub Actions CI running tests on push/PR
-- 🔄 **Hardware Testing** - Ongoing validation on actual Raspberry Pi hardware (metrics documented, working well)
-
-**Features:**
-- 🔄 **Local News API Key** - Works with simulated news by default, add API key for real headlines (optional)
-- ✅ **International Toggle** - Easy UI switch between NOAA and Open Meteo
-- ✅ **Custom Color Themes** - 5 themes available (classic, dark, high contrast, retro green, amber)
-- ✅ **Weather History Graphs** - 30-day temperature & precipitation trend visualization
-- ✅ **Severe Weather Animations** - Flashing alerts, scrolling warnings, pulsating backgrounds
-- ✅ **Voice Narration** - Professional weather announcer with audio ducking (OFF by default)
-
-**Performance:**
-- ✅ **Optimized for Pi** - Adaptive frame skipping, surface/font/image caching, memory management
-- ✅ **Pi Zero 2W Target** - Optimizations implemented, runs smoothly
-- ✅ **Memory Management** - Reduced via caching and periodic GC (target <150MB achieved)
-
-### Current Status
-
-This is a **production-ready, fully functional WeatherStar 4000 recreation** marked as "READY FOR RELEASE v1.0" in project documentation. The project successfully recreates the authentic 1990s Weather Channel experience with:
-- Complete weather display system with 26+ modes
-- Live data integration (weather, UV index, earthquakes, stock market)
-- Professional Raspberry Pi and CRT TV integration
-- Authentic assets (music, fonts, graphics)
-- Clean, modular codebase
-- Comprehensive documentation
-
-**Reality Check**: This is one of the most complete personal projects - it actually works as advertised. All core features implemented plus extended data displays for modern information needs.
-
-### Performance Metrics
-
-| Platform | FPS | RAM Usage | CPU Usage |
-|----------|-----|-----------|-----------|
-| Desktop | 60 | 150MB | 5-10% |
-| Pi 4 | 45-60 | 200MB | 15-25% |
-| Pi 3B+ | 30-45 | 200MB | 30-40% |
-| Pi Zero 2 | 20-30 | 180MB | 50-60% |
-
-### 100% Complete - All Features Implemented
-
-1. ✅ **Testing Infrastructure** - 37 unit + integration tests, 100% passing
-2. ✅ **CI/CD Enhancement** - GitHub Actions automated testing on push/PR
-3. ✅ **International Toggle + Themes** - International API switch + 5 color themes
-4. ✅ **Weather History Graphs** - 30-day temperature & precipitation trends
-5. ✅ **Severe Weather Animations** - Flashing, scrolling, pulsating effects
-6. ✅ **Performance Optimization** - Frame skipping, caching, memory management
-7. ✅ **Voice Narration** - Professional announcer, audio ducking, 90s authentic
-
-### Achievements
-
-**This project stands out for:**
-- Pixel-perfect recreation of nostalgic 90s Weather Channel aesthetic
-- Real hardware integration (Raspberry Pi, CRT TVs)
-- Production-ready code with no known bugs (per PROJECT_COMPLETE.md)
-- Extensive asset library (75 music tracks, 41 icons)
-- Active development with release automation
-
-### Contributing
-
-This is a personal hobby project for weather enthusiasts and 90s nostalgia lovers. Key documentation:
-- `docs/PROJECT_STATUS.md` - Technical status and optimization details
-- `docs/PROJECT_COMPLETE.md` - Feature completion checklist
-- `docs/README_RASPBERRY_PI.md` - Pi-specific setup guide
-- `docs/MODULARIZATION_PLAN.md` - Code architecture
-
-**Note**: Production-ready WeatherStar 4000 recreation. Works on desktop and Raspberry Pi. Optimized for CRT TV display. Not affiliated with The Weather Channel or IBM.
+- The project recently moved to a **src layout** (`src/weatherstar_4000/`).
+  The test suite and several modules still import the legacy
+  `weatherstar_modules` package, so most tests currently error on import. This
+  is a known, tracked issue — pytest tolerates it and still produces reports.
+- The lint/format backlog in existing code is also not yet cleared, so the CI
+  Quality stage is expected to be red until a cleanup pass lands. Run
+  `task fix` to auto-apply the safe fixes, then address the rest manually.
+- The legacy top-level `run_weatherstar.py` (and its copy under
+  `docs/alternative_launchers/`) predates the src layout and is excluded from
+  lint/format scope.

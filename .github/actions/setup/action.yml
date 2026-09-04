@@ -1,0 +1,30 @@
+name: Python project setup
+description: Install uv and task, pin the Python version, and sync dependencies
+
+inputs:
+  python-version:
+    description: Python version to target (overrides .python-version)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      shell: bash
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+    - name: Install task
+      shell: bash
+      run: |
+        curl -fsSL https://taskfile.dev/install.sh | sh -s -- -d -b "$RUNNER_TOOL_CACHE/task"
+        echo "$RUNNER_TOOL_CACHE/task" >> "$GITHUB_PATH"
+
+    - name: Pin Python version
+      shell: bash
+      run: echo "${{ inputs.python-version }}" > .python-version
+
+    - name: Sync dependencies
+      shell: bash
+      run: uv sync --frozen

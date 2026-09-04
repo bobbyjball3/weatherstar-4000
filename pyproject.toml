@@ -18,6 +18,39 @@ dependencies = [
 [project.scripts]
 weatherstar-4000 = "weatherstar_4000:main"
 
+[dependency-groups]
+dev = [
+    "pre-commit>=3.5",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.8",
+]
+
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "W"]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["weatherstar_4000"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--continue-on-collection-errors --junitxml=reports/junit.xml"
+
+[tool.coverage.run]
+source = ["src/weatherstar_4000"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
