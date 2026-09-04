@@ -41,20 +41,6 @@ logger = init_logger()
 # Log imports
 logger.main_logger.info("Importing modules...")
 
-try:
-    import pygame
-    logger.main_logger.debug("pygame imported successfully")
-except ImportError as e:
-    logger.log_error("Failed to import pygame", e)
-    sys.exit(1)
-
-try:
-    import requests
-    logger.main_logger.debug("requests imported successfully")
-except ImportError as e:
-    logger.log_error("Failed to import requests", e)
-    sys.exit(1)
-
 # Screen dimensions (authentic WeatherStar 4000)
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
