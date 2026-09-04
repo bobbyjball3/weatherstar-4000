@@ -1,0 +1,23 @@
+[project]
+name = "weatherstar-4000"
+version = "0.1.0"
+description = "Weatherstar 4000 Simulator"
+readme = "README.md"
+authors = [
+    { name = "Bobby Ball", email = "bobbyjball3@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "ephem>=4.1.0",
+    "pillow==12.2.0",
+    "pygame==2.6.1",
+    "pyttsx3>=2.90",
+    "requests==2.33.0",
+]
+
+[project.scripts]
+weatherstar-4000 = "weatherstar_4000:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
