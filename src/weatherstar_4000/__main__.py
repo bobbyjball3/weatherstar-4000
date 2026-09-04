@@ -14,19 +14,20 @@ from pathlib import Path
 
 import pygame
 import requests
-from weatherstar_modules import display_history
-from weatherstar_modules.animated_icons import AnimatedIconManager
-from weatherstar_modules.data_fetchers import WeatherStarDataFetchers
-from weatherstar_modules.displays import WeatherStarDisplays
-from weatherstar_modules.emergency_animations import SevereWeatherDisplay
-from weatherstar_modules.history_graphs import get_weather_history
-from weatherstar_modules.news_displays import WeatherStarNewsDisplays
-from weatherstar_modules.performance import get_performance_optimizer
-from weatherstar_modules.themes import get_theme, list_themes
-from weatherstar_modules.voice_narration import get_narrator
+
+from weatherstar_4000 import display_history
+from weatherstar_4000.animated_icons import AnimatedIconManager
+from weatherstar_4000.data_fetchers import WeatherStarDataFetchers
+from weatherstar_4000.displays import WeatherStarDisplays
+from weatherstar_4000.emergency_animations import SevereWeatherDisplay
+from weatherstar_4000.history_graphs import get_weather_history
+from weatherstar_4000.news_displays import WeatherStarNewsDisplays
+from weatherstar_4000.performance import get_performance_optimizer
+from weatherstar_4000.themes import get_theme, list_themes
+from weatherstar_4000.voice_narration import get_narrator
 
 # Import our custom modules
-from weatherstar_modules.weatherstar_logger import init_logger
+from weatherstar_4000.weatherstar_logger import init_logger
 
 # Initialize logging
 logger = init_logger()

@@ -168,16 +168,13 @@ Run `weatherstar4000 --help` for available options.
 
 ## Current status
 
-- The project recently moved to a **src layout** (`src/weatherstar_4000/`).
-  The test suite and several modules still import the legacy
-  `weatherstar_modules` package, so most tests currently error on import, and
-  the `weatherstar4000` entrypoint cannot start yet. This is a known, tracked
-  issue — pytest tolerates it and still produces reports.
+- The project recently moved to a **src layout** (`src/weatherstar_4000/`), and
+  the legacy `weatherstar_modules` imports have been migrated to
+  `weatherstar_4000`. The full pytest suite passes.
 - The lint/format backlog in existing code is also not yet cleared, so the CI
   Quality stage is expected to be red until a cleanup pass lands. Run
   `task fix` to auto-apply the safe fixes, then address the rest manually.
 - The former standalone launcher `run_weatherstar.py` has been moved into the
   package as `src/weatherstar_4000/__main__.py` and exposed as the
-  `weatherstar4000` entrypoint. A stale copy still exists under
-  `docs/alternative_launchers/` for reference.
+  `weatherstar4000` entrypoint.
 

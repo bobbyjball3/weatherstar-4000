@@ -9,7 +9,8 @@ to meet the line limit requirements.
 from datetime import datetime
 
 import pygame
-from weatherstar_modules.weatherstar_logger import get_logger
+
+from weatherstar_4000.weatherstar_logger import get_logger
 
 # Screen dimensions
 SCREEN_WIDTH = 640

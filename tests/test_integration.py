@@ -26,7 +26,7 @@ class TestWeatherStarIntegration(unittest.TestCase):
         """Clean up pygame"""
         pygame.quit()
 
-    @patch("weatherstar_modules.data_fetchers.requests.get")
+    @patch("weatherstar_4000.data_fetchers.requests.get")
     def test_weather_data_workflow(self, mock_get):
         """Test complete weather data fetch and display workflow"""
         # Mock API response
@@ -46,7 +46,7 @@ class TestWeatherStarIntegration(unittest.TestCase):
         import os
         import tempfile
 
-        from weatherstar_modules import weatherstar_settings
+        from weatherstar_4000 import weatherstar_settings
 
         # Create temp file
         temp_file = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")

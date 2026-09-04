@@ -43,7 +43,7 @@ class WeatherStarDisplays:
         """Initialize with reference to main WeatherStar instance"""
         self.ws = weatherstar_instance
         # Import logger from main module
-        from weatherstar_modules.weatherstar_logger import get_logger
+        from weatherstar_4000.weatherstar_logger import get_logger
 
         self.logger = get_logger()
 
@@ -169,13 +169,13 @@ class WeatherStarDisplays:
 
         # Get local news headlines - try real news first, fallback to simulated
         try:
-            from weatherstar_modules import get_local_news_real
+            from weatherstar_4000 import get_local_news_real
 
             headlines = get_local_news_real.get_local_news_by_location(self.ws.lat, self.ws.lon)
         except Exception as e:
             # Fallback to simulated news if real news fails
             self.logger.main_logger.debug(f"Using simulated news: {e}")
-            from weatherstar_modules import get_local_news
+            from weatherstar_4000 import get_local_news
 
             headlines = get_local_news.get_local_news_by_location(self.ws.lat, self.ws.lon)
 
@@ -2211,7 +2211,7 @@ class WeatherStarDisplays:
         self.ws.draw_header("30-Day", "Temperature")
 
         # Get history data
-        from weatherstar_modules.history_graphs import get_weather_history
+        from weatherstar_4000.history_graphs import get_weather_history
 
         history = get_weather_history()
 
@@ -2285,7 +2285,7 @@ class WeatherStarDisplays:
         self.ws.draw_header("30-Day", "Precipitation")
 
         # Get history data
-        from weatherstar_modules.history_graphs import get_weather_history
+        from weatherstar_4000.history_graphs import get_weather_history
 
         history = get_weather_history()
 

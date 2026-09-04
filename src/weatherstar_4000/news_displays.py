@@ -9,8 +9,9 @@ to reduce the main file size and improve organization.
 import time
 
 import pygame
-from weatherstar_modules import get_local_news
-from weatherstar_modules.weatherstar_logger import get_logger
+
+from weatherstar_4000 import get_local_news
+from weatherstar_4000.weatherstar_logger import get_logger
 
 # Colors from ws4kp SCSS
 COLORS = {
@@ -154,7 +155,7 @@ class WeatherStarNewsDisplays:
 
         # Get local news headlines - try real news first, fallback to simulated
         try:
-            from weatherstar_modules import get_local_news_real
+            from weatherstar_4000 import get_local_news_real
 
             headlines = get_local_news_real.get_local_news_by_location(self.ws.lat, self.ws.lon)
         except Exception as e:

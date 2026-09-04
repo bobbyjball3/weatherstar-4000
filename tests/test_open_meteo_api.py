@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from weatherstar_modules.open_meteo_api import OpenMeteoAPI
+from weatherstar_4000.open_meteo_api import OpenMeteoAPI
 
 
 class TestOpenMeteoAPI(unittest.TestCase):

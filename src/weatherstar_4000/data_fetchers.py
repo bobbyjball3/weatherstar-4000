@@ -19,7 +19,7 @@ class WeatherStarDataFetchers:
         """Initialize with reference to main WeatherStar instance"""
         self.ws = weatherstar_instance
         # Import logger from main module
-        from weatherstar_modules.weatherstar_logger import get_logger
+        from weatherstar_4000.weatherstar_logger import get_logger
 
         self.logger = get_logger()
 
@@ -30,7 +30,7 @@ class WeatherStarDataFetchers:
             return self.ws.cached_city_name
 
         # Get fresh city name
-        from weatherstar_modules import get_local_news
+        from weatherstar_4000 import get_local_news
 
         self.ws.cached_city_name = get_local_news.get_city_name_from_coords(
             self.ws.lat, self.ws.lon

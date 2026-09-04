@@ -12,7 +12,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from weatherstar_modules import weatherstar_settings
+from weatherstar_4000 import weatherstar_settings
 
 
 class TestWeatherStarSettings(unittest.TestCase):
