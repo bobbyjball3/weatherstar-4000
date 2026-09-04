@@ -3,37 +3,30 @@
 WeatherStar 4000+ Python Implementation with Comprehensive Logging
 """
 
+import logging
+import sys
+import threading
+import time
+import webbrowser
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+
 import pygame
 import requests
-import json
-import time
-import os
-import sys
-import io
-from datetime import datetime, timedelta
-from pathlib import Path
-from enum import Enum
-from typing import Dict, List, Optional, Tuple
-import math
-import random
-import logging
-import webbrowser
-import threading
+from weatherstar_modules import display_history
+from weatherstar_modules.animated_icons import AnimatedIconManager
+from weatherstar_modules.data_fetchers import WeatherStarDataFetchers
+from weatherstar_modules.displays import WeatherStarDisplays
+from weatherstar_modules.emergency_animations import SevereWeatherDisplay
+from weatherstar_modules.history_graphs import get_weather_history
+from weatherstar_modules.news_displays import WeatherStarNewsDisplays
+from weatherstar_modules.performance import get_performance_optimizer
+from weatherstar_modules.themes import get_theme, list_themes
+from weatherstar_modules.voice_narration import get_narrator
 
 # Import our custom modules
-from weatherstar_modules.weatherstar_logger import init_logger, get_logger
-from weatherstar_modules import weatherstar_settings
-from weatherstar_modules import get_local_news
-from weatherstar_modules.animated_icons import AnimatedIconManager
-from weatherstar_modules.displays import WeatherStarDisplays
-from weatherstar_modules.news_displays import WeatherStarNewsDisplays
-from weatherstar_modules.data_fetchers import WeatherStarDataFetchers
-from weatherstar_modules.themes import get_theme, list_themes, CLASSIC_THEME
-from weatherstar_modules.history_graphs import get_weather_history
-from weatherstar_modules.emergency_animations import SevereWeatherDisplay
-from weatherstar_modules.performance import get_performance_optimizer
-from weatherstar_modules.voice_narration import get_narrator
-from weatherstar_modules import display_history
+from weatherstar_modules.weatherstar_logger import init_logger
 
 # Initialize logging
 logger = init_logger()
@@ -48,6 +41,7 @@ SCREEN_HEIGHT = 480
 # Display timing (from ws4kp navigation.mjs)
 DISPLAY_DURATION_MS = 15000  # 15 seconds per screen (slowed down for better viewing)
 SCROLL_SPEED = 100  # pixels/second for bottom scroll
+
 
 # Authentic ws4kp display modes
 class DisplayMode(Enum):
@@ -79,19 +73,21 @@ class DisplayMode(Enum):
     STOCK_MARKET = "stock-market"
     SEVERE_WEATHER_ALERT = "severe-weather-alert"
 
+
 # Colors from ws4kp SCSS
 COLORS = {
-    'yellow': (255, 255, 0),           # Title color
-    'white': (255, 255, 255),          # Main text
-    'black': (0, 0, 0),                # Text shadows
-    'purple_header': (32, 0, 87),      # Column headers
-    'blue_gradient_1': (16, 32, 128),  # Gradient start
-    'blue_gradient_2': (0, 16, 64),    # Gradient end
-    'light_blue': (128, 128, 255),     # Low temperatures
-    'blue': (128, 128, 255),           # Alias for light_blue
-    'cyan': (0, 255, 255),             # Reddit subreddits
-    'red': (255, 0, 0),                # Breaking news
+    "yellow": (255, 255, 0),  # Title color
+    "white": (255, 255, 255),  # Main text
+    "black": (0, 0, 0),  # Text shadows
+    "purple_header": (32, 0, 87),  # Column headers
+    "blue_gradient_1": (16, 32, 128),  # Gradient start
+    "blue_gradient_2": (0, 16, 64),  # Gradient end
+    "light_blue": (128, 128, 255),  # Low temperatures
+    "blue": (128, 128, 255),  # Alias for light_blue
+    "cyan": (0, 255, 255),  # Reddit subreddits
+    "red": (255, 0, 0),  # Breaking news
 }
+
 
 class WeatherIcon:
     """Maps weather conditions to icon files"""
@@ -100,25 +96,28 @@ class WeatherIcon:
     def get_icon(condition_code, is_night=False):
         """Get icon filename for weather condition"""
         icon_map = {
-            'skc': 'Clear.gif' if is_night else 'Sunny.gif',
-            'few': 'Mostly-Clear.gif' if is_night else 'Partly-Cloudy.gif',
-            'sct': 'Partly-Cloudy.gif',
-            'bkn': 'Cloudy.gif',
-            'ovc': 'Cloudy.gif',
-            'fog': 'Fog.gif',
-            'smoke': 'Smoke.gif',
-            'rain': 'Rain.gif',
-            'rain_showers': 'Shower.gif',
-            'tsra': 'Scattered-Thunderstorms-Day.gif' if not is_night else 'Scattered-Thunderstorms-Night.gif',
-            'snow': 'Snow.gif',
-            'sleet': 'Sleet.gif',
-            'frzra': 'Freezing-Rain.gif',
-            'wind': 'Windy.gif',
+            "skc": "Clear.gif" if is_night else "Sunny.gif",
+            "few": "Mostly-Clear.gif" if is_night else "Partly-Cloudy.gif",
+            "sct": "Partly-Cloudy.gif",
+            "bkn": "Cloudy.gif",
+            "ovc": "Cloudy.gif",
+            "fog": "Fog.gif",
+            "smoke": "Smoke.gif",
+            "rain": "Rain.gif",
+            "rain_showers": "Shower.gif",
+            "tsra": "Scattered-Thunderstorms-Day.gif"
+            if not is_night
+            else "Scattered-Thunderstorms-Night.gif",
+            "snow": "Snow.gif",
+            "sleet": "Sleet.gif",
+            "frzra": "Freezing-Rain.gif",
+            "wind": "Windy.gif",
         }
 
-        result = icon_map.get(condition_code, 'No-Data.gif')
+        result = icon_map.get(condition_code, "No-Data.gif")
         logger.main_logger.debug(f"Icon mapping: {condition_code} -> {result}")
         return result
+
 
 class ScrollingText:
     """Bottom scrolling text"""
@@ -158,7 +157,7 @@ class ScrollingText:
     def draw(self, screen, y_pos):
         """Draw scrolling text"""
         if self.current_text:
-            text_surface = self.font.render(self.current_text, True, COLORS['white'])
+            text_surface = self.font.render(self.current_text, True, COLORS["white"])
             screen.blit(text_surface, (self.scroll_x, y_pos))
 
 
@@ -169,17 +168,18 @@ def get_automatic_location():
     # Method 1: Try IP geolocation using ipapi.co (free, no key required)
     try:
         import requests
-        response = requests.get('https://ipapi.co/json/', timeout=5)
+
+        response = requests.get("https://ipapi.co/json/", timeout=5)
         if response.status_code == 200:
             data = response.json()
-            lat = data.get('latitude')
-            lon = data.get('longitude')
-            city = data.get('city', 'Unknown')
-            region = data.get('region', '')
-            country = data.get('country_code', '')
+            lat = data.get("latitude")
+            lon = data.get("longitude")
+            city = data.get("city", "Unknown")
+            region = data.get("region", "")
+            country = data.get("country_code", "")
 
             # Only use if it's in the US (NOAA only covers US)
-            if country == 'US' and lat and lon:
+            if country == "US" and lat and lon:
                 logger.main_logger.info(f"Location detected: {city}, {region} ({lat}, {lon})")
                 return lat, lon, f"{city}, {region}"
     except Exception as e:
@@ -187,17 +187,17 @@ def get_automatic_location():
 
     # Method 2: Try alternative IP geolocation service
     try:
-        response = requests.get('http://ip-api.com/json/', timeout=5)
+        response = requests.get("http://ip-api.com/json/", timeout=5)
         if response.status_code == 200:
             data = response.json()
-            if data.get('status') == 'success':
-                lat = data.get('lat')
-                lon = data.get('lon')
-                city = data.get('city', 'Unknown')
-                region = data.get('regionName', '')
-                country = data.get('countryCode', '')
+            if data.get("status") == "success":
+                lat = data.get("lat")
+                lon = data.get("lon")
+                city = data.get("city", "Unknown")
+                region = data.get("regionName", "")
+                country = data.get("countryCode", "")
 
-                if country == 'US' and lat and lon:
+                if country == "US" and lat and lon:
                     logger.main_logger.info(f"Location detected: {city}, {region} ({lat}, {lon})")
                     return lat, lon, f"{city}, {region}"
     except Exception as e:
@@ -213,7 +213,7 @@ class NOAAWeatherAPI:
 
     def __init__(self):
         self.base_url = "https://api.weather.gov"
-        self.headers = {'User-Agent': 'WeatherStar4000Python/1.0'}
+        self.headers = {"User-Agent": "WeatherStar4000Python/1.0"}
         self.cache = {}
         self.cache_time = {}
         logger.api_logger.info("NOAA Weather API initialized")
@@ -274,12 +274,12 @@ class NOAAWeatherAPI:
             if resp.status_code == 200:
                 data = resp.json()
                 self._cache_data(cache_key, data)
-                station_count = len(data.get('features', []))
+                station_count = len(data.get("features", []))
                 logger.api_logger.info(f"Got {station_count} stations")
                 return data
         except Exception as e:
             logger.log_api_call(stations_url, error=str(e))
-            logger.log_error(f"Error getting stations", e)
+            logger.log_error("Error getting stations", e)
         return None
 
     def get_current_observations(self, station_id):
@@ -298,14 +298,14 @@ class NOAAWeatherAPI:
             if resp.status_code == 200:
                 data = resp.json()
                 self._cache_data(cache_key, data)
-                logger.log_weather_data("current", data.get('properties'))
+                logger.log_weather_data("current", data.get("properties"))
                 return data
         except Exception as e:
             logger.log_api_call(url, error=str(e))
             logger.log_error(f"Error getting observations for {station_id}", e)
         return None
 
-    def get_forecast(self, office, gridX, gridY, units='us'):
+    def get_forecast(self, office, gridX, gridY, units="us"):
         """Get weather forecast"""
         cache_key = f"forecast_{office}_{gridX}_{gridY}"
 
@@ -315,22 +315,22 @@ class NOAAWeatherAPI:
         try:
             url = f"{self.base_url}/gridpoints/{office}/{gridX},{gridY}/forecast"
             logger.log_api_call(url)
-            params = {'units': units}
+            params = {"units": units}
             resp = requests.get(url, headers=self.headers, params=params, timeout=10)
             logger.log_api_call(url, resp.status_code)
 
             if resp.status_code == 200:
                 data = resp.json()
                 self._cache_data(cache_key, data)
-                periods = len(data.get('properties', {}).get('periods', []))
+                periods = len(data.get("properties", {}).get("periods", []))
                 logger.api_logger.info(f"Got forecast with {periods} periods")
                 return data
         except Exception as e:
             logger.log_api_call(url, error=str(e))
-            logger.log_error(f"Error getting forecast", e)
+            logger.log_error("Error getting forecast", e)
         return None
 
-    def get_hourly_forecast(self, office, gridX, gridY, units='us'):
+    def get_hourly_forecast(self, office, gridX, gridY, units="us"):
         """Get hourly weather forecast"""
         cache_key = f"hourly_{office}_{gridX}_{gridY}"
         if self._is_cache_valid(cache_key, 1800):
@@ -339,20 +339,21 @@ class NOAAWeatherAPI:
         try:
             url = f"{self.base_url}/gridpoints/{office}/{gridX},{gridY}/forecast/hourly"
             logger.log_api_call(url)
-            params = {'units': units}
+            params = {"units": units}
             resp = requests.get(url, headers=self.headers, params=params, timeout=10)
             logger.log_api_call(url, resp.status_code)
 
             if resp.status_code == 200:
                 data = resp.json()
                 self._cache_data(cache_key, data)
-                periods = len(data.get('properties', {}).get('periods', []))
+                periods = len(data.get("properties", {}).get("periods", []))
                 logger.api_logger.info(f"Got hourly forecast with {periods} periods")
                 return data
         except Exception as e:
             logger.log_api_call(url, error=str(e))
-            logger.log_error(f"Error getting hourly forecast", e)
+            logger.log_error("Error getting hourly forecast", e)
         return None
+
 
 class WeatherStar4000Complete:
     """Complete WeatherStar 4000 implementation with logging"""
@@ -374,20 +375,20 @@ class WeatherStar4000Complete:
 
         # Initialize settings
         self.settings = {
-            'show_marine': False,  # Only show marine forecast if enabled
-            'units': 'F',  # F or C
-            'music_volume': 0.3,
-            'show_trends': True,
-            'show_historical': True,
-            'show_msn': True,  # Auto-enabled by default
-            'show_reddit': True,  # Auto-enabled by default
-            'use_international': False,  # Use Open Meteo API for international weather
-            'theme': 'classic',  # Color theme
-            'voice_narration': False  # Voice announcements (OFF by default for authenticity)
+            "show_marine": False,  # Only show marine forecast if enabled
+            "units": "F",  # F or C
+            "music_volume": 0.3,
+            "show_trends": True,
+            "show_historical": True,
+            "show_msn": True,  # Auto-enabled by default
+            "show_reddit": True,  # Auto-enabled by default
+            "use_international": False,  # Use Open Meteo API for international weather
+            "theme": "classic",  # Color theme
+            "voice_narration": False,  # Voice announcements (OFF by default for authenticity)
         }
 
         # Load current theme
-        self.current_theme = get_theme(self.settings['theme'])
+        self.current_theme = get_theme(self.settings["theme"])
 
         # Initialize performance optimizer
         self.perf_optimizer = get_performance_optimizer()
@@ -402,14 +403,13 @@ class WeatherStar4000Complete:
         self.narrator = get_narrator()
         self.original_music_volume = 0.3  # Store original volume for ducking
         self.narrator.set_audio_callbacks(
-            duck_callback=self._duck_music_volume,
-            restore_callback=self._restore_music_volume
+            duck_callback=self._duck_music_volume, restore_callback=self._restore_music_volume
         )
 
         # Weather trends storage for arrow indicators
         self.weather_trends = {
-            'temp': [],  # Store last 5 temperature readings
-            'pressure': []  # Store last 5 pressure readings
+            "temp": [],  # Store last 5 temperature readings
+            "pressure": [],  # Store last 5 pressure readings
         }
 
         try:
@@ -473,7 +473,9 @@ class WeatherStar4000Complete:
         # This will be called again after settings are fully set up
 
         # Scrolling text
-        self.scroller = ScrollingText(self.font_scroller if hasattr(self, 'font_scroller') else self.font_small)
+        self.scroller = ScrollingText(
+            self.font_scroller if hasattr(self, "font_scroller") else self.font_small
+        )
 
         # Initialize weather data
         self.point_data = None
@@ -507,7 +509,7 @@ class WeatherStar4000Complete:
         # Create default if none loaded
         if not backgrounds:
             logger.main_logger.warning("No backgrounds loaded, creating default")
-            backgrounds['default'] = self._create_default_background()
+            backgrounds["default"] = self._create_default_background()
 
         logger.main_logger.info(f"Loaded {len(backgrounds)} backgrounds")
         return backgrounds
@@ -607,18 +609,34 @@ class WeatherStar4000Complete:
         star4000_small_path = font_dir / "star4000_small.ttf"
 
         # Try to use actual Star4000 fonts
-        if all(f.exists() for f in [star4000_path, star4000_large_path, star4000_extended_path, star4000_small_path]):
+        if all(
+            f.exists()
+            for f in [
+                star4000_path,
+                star4000_large_path,
+                star4000_extended_path,
+                star4000_small_path,
+            ]
+        ):
             logger.main_logger.info("Using authentic Star4000 fonts!")
             try:
                 # Use actual Star4000 fonts with proper sizes (24pt ≈ 32px)
                 self.font_title = pygame.font.Font(str(star4000_path), 32)
                 self.font_large = pygame.font.Font(str(star4000_large_path), 32)
                 self.font_extended = pygame.font.Font(str(star4000_extended_path), 32)
-                self.font_small = pygame.font.Font(str(star4000_small_path), 28)  # Reduced from 32 for Local Forecast
+                self.font_small = pygame.font.Font(
+                    str(star4000_small_path), 28
+                )  # Reduced from 32 for Local Forecast
                 self.font_normal = pygame.font.Font(str(star4000_path), 20)
-                self.font_scroller = pygame.font.Font(str(star4000_extended_path), 24)  # Sized to fit in banner
-                self.font_forecast = pygame.font.Font(str(star4000_small_path), 24)  # Smaller for Local Forecast text
-                self.font_tiny = pygame.font.Font(str(star4000_path), 16)  # Tiny font for compact displays
+                self.font_scroller = pygame.font.Font(
+                    str(star4000_extended_path), 24
+                )  # Sized to fit in banner
+                self.font_forecast = pygame.font.Font(
+                    str(star4000_small_path), 24
+                )  # Smaller for Local Forecast text
+                self.font_tiny = pygame.font.Font(
+                    str(star4000_path), 16
+                )  # Tiny font for compact displays
                 logger.main_logger.info("Star4000 fonts loaded successfully")
                 return
             except Exception as e:
@@ -626,7 +644,7 @@ class WeatherStar4000Complete:
 
         # Fallback to system fonts
         logger.main_logger.info("Star4000 fonts not found, using fallback fonts")
-        font_candidates = ['consolas', 'courier new', 'courier', 'monospace', 'dejavu sans mono']
+        font_candidates = ["consolas", "courier new", "courier", "monospace", "dejavu sans mono"]
         selected_font = None
         for font_name in font_candidates:
             font_path = pygame.font.match_font(font_name, bold=True)
@@ -637,14 +655,30 @@ class WeatherStar4000Complete:
 
         if selected_font:
             # Match ws4kp font sizes (24pt = 32px)
-            self.font_title = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 32)  # Star4000
-            self.font_large = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 32)  # Star4000 Large
-            self.font_extended = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 32)  # Star4000 Extended
-            self.font_normal = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 20)  # For data
-            self.font_small = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 28)  # Star4000 Small - reduced
-            self.font_forecast = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 24)  # For Local Forecast
-            self.font_tiny = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 16)  # Tiny font
-            self.font_scroller = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 24)  # Sized to fit in banner
+            self.font_title = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=True), 32
+            )  # Star4000
+            self.font_large = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=True), 32
+            )  # Star4000 Large
+            self.font_extended = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=True), 32
+            )  # Star4000 Extended
+            self.font_normal = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=False), 20
+            )  # For data
+            self.font_small = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=False), 28
+            )  # Star4000 Small - reduced
+            self.font_forecast = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=False), 24
+            )  # For Local Forecast
+            self.font_tiny = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=False), 16
+            )  # Tiny font
+            self.font_scroller = pygame.font.Font(
+                pygame.font.match_font(selected_font, bold=True), 24
+            )  # Sized to fit in banner
             logger.main_logger.debug(f"Fonts initialized with {selected_font}")
         else:
             logger.main_logger.warning("No suitable font found, using defaults")
@@ -672,7 +706,7 @@ class WeatherStar4000Complete:
             # Try multiple paths for music files
             music_dirs = [
                 Path("weatherstar_assets/music"),
-                Path("ws4kp/server/music/default")  # Fallback to ws4kp music if needed
+                Path("ws4kp/server/music/default"),  # Fallback to ws4kp music if needed
             ]
 
             music_files = []
@@ -682,12 +716,15 @@ class WeatherStar4000Complete:
                     music_files = list(dir_path.glob("*.mp3"))
                     if music_files:
                         music_dir = dir_path
-                        logger.main_logger.info(f"Found {len(music_files)} music files in {dir_path}")
+                        logger.main_logger.info(
+                            f"Found {len(music_files)} music files in {dir_path}"
+                        )
                         break
 
             if music_files:
                 # Pick a random song to start
                 import random
+
                 self.music_playlist = music_files
                 random.shuffle(self.music_playlist)
                 self.current_song_index = 0
@@ -750,13 +787,13 @@ class WeatherStar4000Complete:
             logger.main_logger.error("Failed to get point data")
             return False
 
-        props = self.point_data['properties']
+        props = self.point_data["properties"]
 
         # Extract grid info
-        self.office = props.get('gridId')
-        self.gridX = props.get('gridX')
-        self.gridY = props.get('gridY')
-        self.radarStation = props.get('radarStation')  # Get radar station from point data
+        self.office = props.get("gridId")
+        self.gridX = props.get("gridX")
+        self.gridY = props.get("gridY")
+        self.radarStation = props.get("radarStation")  # Get radar station from point data
 
         logger.main_logger.info(f"Grid info: Office={self.office}, X={self.gridX}, Y={self.gridY}")
         if self.radarStation:
@@ -765,29 +802,29 @@ class WeatherStar4000Complete:
             logger.main_logger.warning("No radar station found in point data")
 
         # Get location info
-        rel_location = props.get('relativeLocation', {}).get('properties', {})
+        rel_location = props.get("relativeLocation", {}).get("properties", {})
         self.location = {
-            'city': rel_location.get('city', ''),
-            'state': rel_location.get('state', ''),
+            "city": rel_location.get("city", ""),
+            "state": rel_location.get("state", ""),
         }
 
         logger.main_logger.info(f"Location: {self.location['city']}, {self.location['state']}")
 
         # Get observation stations
-        stations_url = props.get('observationStations')
+        stations_url = props.get("observationStations")
         if stations_url:
             stations = self.api.get_stations(stations_url)
-            if stations and stations.get('features'):
+            if stations and stations.get("features"):
                 # Filter for 4-letter stations
-                for feature in stations['features']:
-                    station_id = feature['properties']['stationIdentifier']
-                    if len(station_id) == 4 and not station_id[0] in 'UC':
+                for feature in stations["features"]:
+                    station_id = feature["properties"]["stationIdentifier"]
+                    if len(station_id) == 4 and station_id[0] not in "UC":
                         self.station = station_id
                         logger.main_logger.info(f"Selected 4-letter station: {station_id}")
                         break
 
-                if not self.station and stations['features']:
-                    self.station = stations['features'][0]['properties']['stationIdentifier']
+                if not self.station and stations["features"]:
+                    self.station = stations["features"][0]["properties"]["stationIdentifier"]
                     logger.main_logger.info(f"Using first available station: {self.station}")
         else:
             logger.main_logger.warning("No observation stations URL")
@@ -806,23 +843,23 @@ class WeatherStar4000Complete:
         # Get current observations
         obs = self.api.get_current_observations(self.station)
         if obs:
-            self.weather_data['current'] = obs.get('properties', {})
+            self.weather_data["current"] = obs.get("properties", {})
             logger.main_logger.info("Current observations updated")
 
         # Get forecast
         forecast = self.api.get_forecast(self.office, self.gridX, self.gridY)
         if forecast:
-            self.weather_data['forecast'] = forecast.get('properties', {})
+            self.weather_data["forecast"] = forecast.get("properties", {})
             logger.main_logger.info("Forecast updated")
 
             # Update scrolling text with new weather data
-            if hasattr(self, 'scroller'):
+            if hasattr(self, "scroller"):
                 self._update_scroll_text()
 
         # Get hourly forecast
         hourly_forecast = self.api.get_hourly_forecast(self.office, self.gridX, self.gridY)
         if hourly_forecast:
-            self.weather_data['hourly'] = hourly_forecast.get('properties', {})
+            self.weather_data["hourly"] = hourly_forecast.get("properties", {})
             logger.main_logger.info("Hourly forecast updated")
 
         # Preload radar image to prevent stuttering
@@ -835,7 +872,7 @@ class WeatherStar4000Complete:
     def _update_scroll_text(self):
         """Update scrolling text with current weather information"""
         try:
-            if not hasattr(self, 'scroller') or not self.scroller:
+            if not hasattr(self, "scroller") or not self.scroller:
                 logger.main_logger.warning("No scroller available")
                 return
 
@@ -843,25 +880,25 @@ class WeatherStar4000Complete:
             self.scroller.text_items = []
 
             # Add location information
-            if hasattr(self, 'location') and self.location:
-                city = self.location.get('city', '')
-                state = self.location.get('state', '')
+            if hasattr(self, "location") and self.location:
+                city = self.location.get("city", "")
+                state = self.location.get("state", "")
                 if city and state:
                     self.scroller.add_item(f" +++ {city.upper()}, {state} +++ ")
 
             # Add current conditions if available
-            current = self.weather_data.get('current', {})
+            current = self.weather_data.get("current", {})
             if current:
-                temp = current.get('temperature', {}).get('value')
-                conditions = current.get('textDescription', 'Unknown')
-                humidity = current.get('relativeHumidity', {}).get('value')
-                wind_speed = current.get('windSpeed', {}).get('value')
-                wind_dir = current.get('windDirection', {}).get('value')
+                temp = current.get("temperature", {}).get("value")
+                conditions = current.get("textDescription", "Unknown")
+                humidity = current.get("relativeHumidity", {}).get("value")
+                wind_speed = current.get("windSpeed", {}).get("value")
+                wind_dir = current.get("windDirection", {}).get("value")
 
                 # Build current conditions text
                 current_text = ""
                 if temp is not None:
-                    temp_f = round(temp * 9/5 + 32)
+                    temp_f = round(temp * 9 / 5 + 32)
                     current_text = f"CURRENTLY: {temp_f}°F, {conditions}"
 
                     # Add humidity if available
@@ -871,7 +908,7 @@ class WeatherStar4000Complete:
                     # Add wind information if available
                     if wind_speed is not None:
                         wind_mph = round(wind_speed * 2.237)  # Convert m/s to mph
-                        wind_text = f" ... WIND: "
+                        wind_text = " ... WIND: "
                         if wind_dir is not None:
                             direction = self._get_wind_direction(wind_dir)
                             wind_text += f"{direction} "
@@ -881,13 +918,13 @@ class WeatherStar4000Complete:
                     self.scroller.add_item(current_text)
 
             # Add today's high/low and forecast
-            forecast = self.weather_data.get('forecast', {})
-            periods = forecast.get('periods', [])
+            forecast = self.weather_data.get("forecast", {})
+            periods = forecast.get("periods", [])
             if periods:
                 today = periods[0]
-                today_name = today.get('name', 'Today')
-                today_forecast = today.get('shortForecast', '')
-                today_temp = today.get('temperature', '')
+                today_name = today.get("name", "Today")
+                today_forecast = today.get("shortForecast", "")
+                today_temp = today.get("temperature", "")
 
                 if today_temp and today_forecast:
                     # Try to get both high and low for today
@@ -895,13 +932,13 @@ class WeatherStar4000Complete:
                     low_temp = None
 
                     # Check if this is a daytime or nighttime period
-                    if today.get('isDaytime', True):
+                    if today.get("isDaytime", True):
                         high_temp = today_temp
                         # Look for tonight's low
                         if len(periods) > 1:
                             tonight = periods[1]
-                            if not tonight.get('isDaytime', True):
-                                low_temp = tonight.get('temperature', '')
+                            if not tonight.get("isDaytime", True):
+                                low_temp = tonight.get("temperature", "")
                     else:
                         low_temp = today_temp
                         # This shouldn't happen often, but handle it
@@ -920,12 +957,14 @@ class WeatherStar4000Complete:
                 # Add tonight's forecast if available
                 if len(periods) > 1:
                     tonight = periods[1]
-                    tonight_name = tonight.get('name', 'Tonight')
-                    if 'tonight' in tonight_name.lower() or not tonight.get('isDaytime', True):
-                        tonight_forecast = tonight.get('shortForecast', '')
-                        tonight_temp = tonight.get('temperature', '')
+                    tonight_name = tonight.get("name", "Tonight")
+                    if "tonight" in tonight_name.lower() or not tonight.get("isDaytime", True):
+                        tonight_forecast = tonight.get("shortForecast", "")
+                        tonight_temp = tonight.get("temperature", "")
                         if tonight_forecast:
-                            tonight_text = f" +++ {tonight_name.upper()}: {tonight_forecast.upper()}"
+                            tonight_text = (
+                                f" +++ {tonight_name.upper()}: {tonight_forecast.upper()}"
+                            )
                             if tonight_temp:
                                 tonight_text += f", LOW {tonight_temp}°F"
                             self.scroller.add_item(tonight_text + " +++ ")
@@ -933,12 +972,14 @@ class WeatherStar4000Complete:
                 # Add tomorrow's forecast if available
                 if len(periods) > 2:
                     tomorrow = periods[2]
-                    tomorrow_name = tomorrow.get('name', 'Tomorrow')
-                    if 'tomorrow' in tomorrow_name.lower() or tomorrow.get('isDaytime', True):
-                        tomorrow_forecast = tomorrow.get('shortForecast', '')
-                        tomorrow_temp = tomorrow.get('temperature', '')
+                    tomorrow_name = tomorrow.get("name", "Tomorrow")
+                    if "tomorrow" in tomorrow_name.lower() or tomorrow.get("isDaytime", True):
+                        tomorrow_forecast = tomorrow.get("shortForecast", "")
+                        tomorrow_temp = tomorrow.get("temperature", "")
                         if tomorrow_forecast:
-                            tomorrow_text = f" +++ {tomorrow_name.upper()}: {tomorrow_forecast.upper()}"
+                            tomorrow_text = (
+                                f" +++ {tomorrow_name.upper()}: {tomorrow_forecast.upper()}"
+                            )
                             if tomorrow_temp:
                                 tomorrow_text += f", HIGH {tomorrow_temp}°F"
                             self.scroller.add_item(tomorrow_text + " +++ ")
@@ -953,7 +994,9 @@ class WeatherStar4000Complete:
             if not self.scroller.current_text and self.scroller.text_items:
                 self.scroller.current_text = self.scroller.text_items[0]
 
-            logger.main_logger.info(f"Updated scroll text with {len(self.scroller.text_items)} items")
+            logger.main_logger.info(
+                f"Updated scroll text with {len(self.scroller.text_items)} items"
+            )
 
         except Exception as e:
             logger.main_logger.error(f"Error updating scroll text: {e}")
@@ -961,13 +1004,29 @@ class WeatherStar4000Complete:
     def _get_wind_direction(self, degrees):
         """Convert wind degrees to compass direction"""
         if degrees is None:
-            return ''
-        directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-                     'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+            return ""
+        directions = [
+            "N",
+            "NNE",
+            "NE",
+            "ENE",
+            "E",
+            "ESE",
+            "SE",
+            "SSE",
+            "S",
+            "SSW",
+            "SW",
+            "WSW",
+            "W",
+            "WNW",
+            "NW",
+            "NNW",
+        ]
         idx = int((degrees + 11.25) / 22.5) % 16
         return directions[idx]
 
-    def draw_background(self, bg_name='1'):
+    def draw_background(self, bg_name="1"):
         """Draw background image"""
         if bg_name in self.backgrounds:
             self.screen.blit(self.backgrounds[bg_name], (0, 0))
@@ -979,35 +1038,35 @@ class WeatherStar4000Complete:
     def draw_header(self, title_top, title_bottom=None, has_noaa=False):
         """Draw standard header matching ws4kp exact layout"""
         # Logo at exact position: top: 25px (moved up 5 pixels), left: 50px
-        if 'logo-corner' in self.logos:
-            self.screen.blit(self.logos['logo-corner'], (50, 25))
+        if "logo-corner" in self.logos:
+            self.screen.blit(self.logos["logo-corner"], (50, 25))
 
         # Title at exact position: left: 170px
         if title_bottom:
             # Dual line title - top: -3px (relative), bottom: 26px (relative)
-            text1 = self.font_title.render(title_top.upper(), True, COLORS['yellow'])
-            text2 = self.font_title.render(title_bottom.upper(), True, COLORS['yellow'])
+            text1 = self.font_title.render(title_top.upper(), True, COLORS["yellow"])
+            text2 = self.font_title.render(title_bottom.upper(), True, COLORS["yellow"])
             self.screen.blit(text1, (170, 27))  # Adjusted for absolute positioning
             self.screen.blit(text2, (170, 53))  # 26px below the first line
         else:
             # Single line title - top: 40px
-            text = self.font_title.render(title_top.upper(), True, COLORS['yellow'])
+            text = self.font_title.render(title_top.upper(), True, COLORS["yellow"])
             self.screen.blit(text, (170, 40))
 
         # NOAA logo at exact position: top: 39px, left: 356px
-        if has_noaa and 'noaa' in self.logos:
-            self.screen.blit(self.logos['noaa'], (356, 39))
+        if has_noaa and "noaa" in self.logos:
+            self.screen.blit(self.logos["noaa"], (356, 39))
 
         # Time at exact position: right-aligned, moved up 10px and right 5px
-        time_str = datetime.now().strftime("%I:%M %p").lstrip('0')
-        time_text = self.font_small.render(time_str, True, COLORS['white'])
+        time_str = datetime.now().strftime("%I:%M %p").lstrip("0")
+        time_text = self.font_small.render(time_str, True, COLORS["white"])
         # Right-align at 590 (was 585+5), y=34 (was 44-10)
         time_rect = time_text.get_rect(right=590, y=34)
         self.screen.blit(time_text, time_rect)
 
         # Date below the time (authentic WeatherStar 4000 style)
         date_str = datetime.now().strftime("%a %b %d").upper()  # "WED OCT 02"
-        date_text = self.font_small.render(date_str, True, COLORS['white'])
+        date_text = self.font_small.render(date_str, True, COLORS["white"])
         # Right-align below the time at 590, y=54 (was 64-10)
         date_rect = date_text.get_rect(right=590, y=54)
         self.screen.blit(date_text, date_rect)
@@ -1023,17 +1082,17 @@ class WeatherStar4000Complete:
         WIN95_SELECTED = (10, 36, 106)  # Navy blue for selected items
 
         # Check for settings attribute
-        if not hasattr(self, 'settings'):
+        if not hasattr(self, "settings"):
             self.settings = {
-                'show_marine': False,
-                'units': 'F',
-                'music_volume': 0.3,
-                'show_trends': True,
-                'show_historical': True,
-                'show_msn': False,
-                'show_reddit': False,
-                'show_local_news': True,
-                'use_international': False
+                "show_marine": False,
+                "units": "F",
+                "music_volume": 0.3,
+                "show_trends": True,
+                "show_historical": True,
+                "show_msn": False,
+                "show_reddit": False,
+                "show_local_news": True,
+                "use_international": False,
             }
 
         # Create smaller, compact menu
@@ -1044,15 +1103,19 @@ class WeatherStar4000Complete:
 
         # Draw 3D raised border (Windows 95 style)
         # Top and left edges (light)
-        pygame.draw.line(menu_surface, WIN95_LIGHT, (0, 0), (menu_width-1, 0), 2)
-        pygame.draw.line(menu_surface, WIN95_LIGHT, (0, 0), (0, menu_height-1), 2)
+        pygame.draw.line(menu_surface, WIN95_LIGHT, (0, 0), (menu_width - 1, 0), 2)
+        pygame.draw.line(menu_surface, WIN95_LIGHT, (0, 0), (0, menu_height - 1), 2)
         # Bottom and right edges (dark)
-        pygame.draw.line(menu_surface, WIN95_DARK, (0, menu_height-1), (menu_width-1, menu_height-1), 2)
-        pygame.draw.line(menu_surface, WIN95_DARK, (menu_width-1, 0), (menu_width-1, menu_height-1), 2)
+        pygame.draw.line(
+            menu_surface, WIN95_DARK, (0, menu_height - 1), (menu_width - 1, menu_height - 1), 2
+        )
+        pygame.draw.line(
+            menu_surface, WIN95_DARK, (menu_width - 1, 0), (menu_width - 1, menu_height - 1), 2
+        )
 
         # Title bar with gradient effect
         title_height = 18
-        title_rect = pygame.Rect(2, 2, menu_width-4, title_height)
+        title_rect = pygame.Rect(2, 2, menu_width - 4, title_height)
         pygame.draw.rect(menu_surface, WIN95_SELECTED, title_rect)
         title_font = pygame.font.Font(None, 14)  # Smaller font
         title = title_font.render("WeatherStar Settings", True, WIN95_LIGHT)
@@ -1066,64 +1129,102 @@ class WeatherStar4000Complete:
         category = item_font.render("Display Options", True, WIN95_BLACK)
         menu_surface.blit(category, (8, y_pos))
         y_pos += 16
-        pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos), (menu_width-8, y_pos), 1)
+        pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos), (menu_width - 8, y_pos), 1)
         y_pos += 4
 
         menu_items = [
-            ("[1] Marine Forecast", "show_marine", self.settings.get('show_marine', False)),
-            ("[2] Weather Trends", "show_trends", self.settings.get('show_trends', True)),
-            ("[3] Historical Data", "show_historical", self.settings.get('show_historical', True)),
+            ("[1] Marine Forecast", "show_marine", self.settings.get("show_marine", False)),
+            ("[2] Weather Trends", "show_trends", self.settings.get("show_trends", True)),
+            ("[3] Historical Data", "show_historical", self.settings.get("show_historical", True)),
             ("---", None, None),  # Separator
             ("Audio Settings", "category", None),
-            ("[4] Music Volume", "volume", self.settings.get('music_volume', 0.3)),
-            ("[0] Voice Narration", "voice_narration", self.settings.get('voice_narration', False)),
+            ("[4] Music Volume", "volume", self.settings.get("music_volume", 0.3)),
+            ("[0] Voice Narration", "voice_narration", self.settings.get("voice_narration", False)),
             ("---", None, None),  # Separator
             ("Weather Source", "category", None),
-            ("[8] International Weather", "use_international", self.settings.get('use_international', False)),
+            (
+                "[8] International Weather",
+                "use_international",
+                self.settings.get("use_international", False),
+            ),
             ("---", None, None),  # Separator
             ("Appearance", "category", None),
-            ("[9] Color Theme", "theme", self.settings.get('theme', 'classic')),
+            ("[9] Color Theme", "theme", self.settings.get("theme", "classic")),
             ("---", None, None),  # Separator
             ("News & Information", "category", None),
-            ("[5] MSN Top Stories", "show_msn", self.settings.get('show_msn', False)),
-            ("[6] Reddit Headlines", "show_reddit", self.settings.get('show_reddit', False)),
-            ("[7] Local News", "show_local_news", self.settings.get('show_local_news', True)),
+            ("[5] MSN Top Stories", "show_msn", self.settings.get("show_msn", False)),
+            ("[6] Reddit Headlines", "show_reddit", self.settings.get("show_reddit", False)),
+            ("[7] Local News", "show_local_news", self.settings.get("show_local_news", True)),
             ("---", None, None),  # Separator
             ("System", "category", None),
             ("[R] Refresh Weather", "refresh", None),
-            ("[ESC] Close Menu", None, None)
+            ("[ESC] Close Menu", None, None),
         ]
 
         for text, setting, value in menu_items:
             if text == "---":
                 # Draw separator line
-                pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos+2), (menu_width-8, y_pos+2), 1)
-                pygame.draw.line(menu_surface, WIN95_LIGHT, (8, y_pos+3), (menu_width-8, y_pos+3), 1)
+                pygame.draw.line(
+                    menu_surface, WIN95_DARK, (8, y_pos + 2), (menu_width - 8, y_pos + 2), 1
+                )
+                pygame.draw.line(
+                    menu_surface, WIN95_LIGHT, (8, y_pos + 3), (menu_width - 8, y_pos + 3), 1
+                )
                 y_pos += 8
             elif setting == "category":
                 # Category header
                 cat_text = item_font.render(text, True, WIN95_BLACK)
                 menu_surface.blit(cat_text, (8, y_pos))
                 y_pos += 16
-                pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos), (menu_width-8, y_pos), 1)
+                pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos), (menu_width - 8, y_pos), 1)
                 y_pos += 4
             else:
                 # Regular menu item with checkbox style
                 item_x = 20
                 # Draw checkbox for toggleable items
-                if setting in ["show_marine", "show_trends", "show_historical", "show_msn", "show_reddit", "show_local_news", "use_international", "voice_narration"]:
+                if setting in [
+                    "show_marine",
+                    "show_trends",
+                    "show_historical",
+                    "show_msn",
+                    "show_reddit",
+                    "show_local_news",
+                    "use_international",
+                    "voice_narration",
+                ]:
                     # Draw checkbox
                     checkbox = pygame.Rect(item_x, y_pos, 11, 11)
                     pygame.draw.rect(menu_surface, WIN95_LIGHT, checkbox)
                     pygame.draw.rect(menu_surface, WIN95_BLACK, checkbox, 1)
                     # Draw inner shadow
-                    pygame.draw.line(menu_surface, WIN95_DARK, (item_x+1, y_pos+1), (item_x+9, y_pos+1), 1)
-                    pygame.draw.line(menu_surface, WIN95_DARK, (item_x+1, y_pos+1), (item_x+1, y_pos+9), 1)
+                    pygame.draw.line(
+                        menu_surface,
+                        WIN95_DARK,
+                        (item_x + 1, y_pos + 1),
+                        (item_x + 9, y_pos + 1),
+                        1,
+                    )
+                    pygame.draw.line(
+                        menu_surface,
+                        WIN95_DARK,
+                        (item_x + 1, y_pos + 1),
+                        (item_x + 1, y_pos + 9),
+                        1,
+                    )
                     # Draw checkmark if enabled
                     if value:
                         # Draw a checkmark
-                        pygame.draw.lines(menu_surface, WIN95_BLACK, False,
-                                        [(item_x+2, y_pos+5), (item_x+4, y_pos+7), (item_x+8, y_pos+3)], 2)
+                        pygame.draw.lines(
+                            menu_surface,
+                            WIN95_BLACK,
+                            False,
+                            [
+                                (item_x + 2, y_pos + 5),
+                                (item_x + 4, y_pos + 7),
+                                (item_x + 8, y_pos + 3),
+                            ],
+                            2,
+                        )
                     item_x += 15
 
                 # Draw text
@@ -1152,27 +1253,31 @@ class WeatherStar4000Complete:
                     if event.key == pygame.K_ESCAPE:
                         waiting = False
                     elif event.key == pygame.K_1:
-                        self.settings['show_marine'] = not self.settings.get('show_marine', False)
+                        self.settings["show_marine"] = not self.settings.get("show_marine", False)
                         self.update_display_list()
                         logger.main_logger.info(f"Marine forecast: {self.settings['show_marine']}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_2:
-                        self.settings['show_trends'] = not self.settings.get('show_trends', True)
+                        self.settings["show_trends"] = not self.settings.get("show_trends", True)
                         logger.main_logger.info(f"Weather trends: {self.settings['show_trends']}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_3:
-                        self.settings['show_historical'] = not self.settings.get('show_historical', True)
-                        logger.main_logger.info(f"Historical data: {self.settings['show_historical']}")
+                        self.settings["show_historical"] = not self.settings.get(
+                            "show_historical", True
+                        )
+                        logger.main_logger.info(
+                            f"Historical data: {self.settings['show_historical']}"
+                        )
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_4:
-                        current_vol = self.settings.get('music_volume', 0.3)
+                        current_vol = self.settings.get("music_volume", 0.3)
                         new_vol = (current_vol + 0.1) % 1.1
                         if new_vol > 1.0:
                             new_vol = 0.0
-                        self.settings['music_volume'] = new_vol
+                        self.settings["music_volume"] = new_vol
                         if self.music:
                             self.music.set_volume(new_vol)
                         logger.main_logger.info(f"Music volume: {int(new_vol * 100)}%")
@@ -1180,51 +1285,63 @@ class WeatherStar4000Complete:
                         return
                     elif event.key == pygame.K_5:
                         # Toggle MSN news
-                        self.settings['show_msn'] = not self.settings.get('show_msn', False)
+                        self.settings["show_msn"] = not self.settings.get("show_msn", False)
                         self.update_display_list()
                         logger.main_logger.info(f"MSN news: {self.settings['show_msn']}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_6:
                         # Toggle Reddit news
-                        self.settings['show_reddit'] = not self.settings.get('show_reddit', False)
+                        self.settings["show_reddit"] = not self.settings.get("show_reddit", False)
                         self.update_display_list()
                         logger.main_logger.info(f"Reddit news: {self.settings['show_reddit']}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_7:
                         # Toggle Local news
-                        self.settings['show_local_news'] = not self.settings.get('show_local_news', True)
+                        self.settings["show_local_news"] = not self.settings.get(
+                            "show_local_news", True
+                        )
                         self.update_display_list()
                         logger.main_logger.info(f"Local news: {self.settings['show_local_news']}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_8:
                         # Toggle International Weather (Open Meteo API)
-                        self.settings['use_international'] = not self.settings.get('use_international', False)
+                        self.settings["use_international"] = not self.settings.get(
+                            "use_international", False
+                        )
                         self.get_weather_data()  # Refresh with new API
-                        api_name = "Open Meteo (International)" if self.settings['use_international'] else "NOAA (US Only)"
+                        api_name = (
+                            "Open Meteo (International)"
+                            if self.settings["use_international"]
+                            else "NOAA (US Only)"
+                        )
                         logger.main_logger.info(f"Weather API: {api_name}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_9:
                         # Cycle through color themes
                         themes = list_themes()
-                        current_theme = self.settings.get('theme', 'classic')
-                        current_index = themes.index(current_theme) if current_theme in themes else 0
+                        current_theme = self.settings.get("theme", "classic")
+                        current_index = (
+                            themes.index(current_theme) if current_theme in themes else 0
+                        )
                         next_index = (current_index + 1) % len(themes)
-                        self.settings['theme'] = themes[next_index]
+                        self.settings["theme"] = themes[next_index]
                         self.current_theme = get_theme(themes[next_index])
                         logger.main_logger.info(f"Color theme: {self.current_theme.name}")
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_0:
                         # Toggle voice narration
-                        self.settings['voice_narration'] = not self.settings.get('voice_narration', False)
-                        self.narrator.set_enabled(self.settings['voice_narration'])
-                        status = "enabled" if self.settings['voice_narration'] else "disabled"
+                        self.settings["voice_narration"] = not self.settings.get(
+                            "voice_narration", False
+                        )
+                        self.narrator.set_enabled(self.settings["voice_narration"])
+                        status = "enabled" if self.settings["voice_narration"] else "disabled"
                         logger.main_logger.info(f"Voice narration: {status}")
-                        if self.settings['voice_narration'] and self.narrator.is_available():
+                        if self.settings["voice_narration"] and self.narrator.is_available():
                             # Test announcement
                             self.narrator._speak_async("Voice narration enabled.")
                         self.show_context_menu()  # Redraw menu
@@ -1236,7 +1353,10 @@ class WeatherStar4000Complete:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     # Click to close menu
                     mouse_x, mouse_y = event.pos
-                    if not (menu_x <= mouse_x <= menu_x + menu_width and menu_y <= mouse_y <= menu_y + menu_height):
+                    if not (
+                        menu_x <= mouse_x <= menu_x + menu_width
+                        and menu_y <= mouse_y <= menu_y + menu_height
+                    ):
                         waiting = False
 
     def draw_severe_weather_alert(self, dt):
@@ -1267,41 +1387,34 @@ class WeatherStar4000Complete:
         """Update display list based on settings"""
         # Authentic WeatherStar 4000 display sequence (90s style)
         base_displays = [
-            DisplayMode.CURRENT_CONDITIONS,     # 1. Current Conditions
+            DisplayMode.CURRENT_CONDITIONS,  # 1. Current Conditions
             DisplayMode.REGIONAL_OBSERVATIONS,  # 2. Latest Observations
-            DisplayMode.HOURLY_FORECAST,       # 3. 12/24 Hour Forecast
-            DisplayMode.EXTENDED_FORECAST,     # 4. Extended Forecast
-            DisplayMode.RADAR,                 # 5. Local Radar
-            DisplayMode.TRAVEL_CITIES,         # 6. Travel Cities Weather
-            DisplayMode.ALMANAC,               # 7. Almanac
-            DisplayMode.TEMPERATURE_HISTORY,   # 8. 30-Day Temperature History
-            DisplayMode.PRECIPITATION_HISTORY, # 9. 30-Day Precipitation History
-            DisplayMode.UV_INDEX,              # 10. UV Index Forecast
-            DisplayMode.EARTHQUAKES,           # 11. Recent Earthquakes
-            DisplayMode.STOCK_MARKET,          # 12. Stock Market Indices
+            DisplayMode.HOURLY_FORECAST,  # 3. 12/24 Hour Forecast
+            DisplayMode.EXTENDED_FORECAST,  # 4. Extended Forecast
+            DisplayMode.RADAR,  # 5. Local Radar
+            DisplayMode.TRAVEL_CITIES,  # 6. Travel Cities Weather
+            DisplayMode.ALMANAC,  # 7. Almanac
+            DisplayMode.TEMPERATURE_HISTORY,  # 8. 30-Day Temperature History
+            DisplayMode.PRECIPITATION_HISTORY,  # 9. 30-Day Precipitation History
+            DisplayMode.UV_INDEX,  # 10. UV Index Forecast
+            DisplayMode.EARTHQUAKES,  # 11. Recent Earthquakes
+            DisplayMode.STOCK_MARKET,  # 12. Stock Market Indices
         ]
 
         # Add optional displays only if enabled (keep it simple by default)
-        if self.settings.get('show_marine', False):
+        if self.settings.get("show_marine", False):
             base_displays.append(DisplayMode.MARINE_FORECAST)
 
         # News displays (optional for authenticity)
-        if self.settings.get('show_msn', False):
+        if self.settings.get("show_msn", False):
             base_displays.append(DisplayMode.MSN_NEWS)
-        if self.settings.get('show_reddit', False):
+        if self.settings.get("show_reddit", False):
             base_displays.append(DisplayMode.REDDIT_NEWS)
-        if self.settings.get('show_local_news', False):
+        if self.settings.get("show_local_news", False):
             base_displays.append(DisplayMode.LOCAL_NEWS)
 
         self.display_list = base_displays
         self.displays = [mode for mode in self.display_list if mode != DisplayMode.PROGRESS]
-
-
-
-
-
-
-
 
     def cycle_display(self):
         """Cycle to next display - simple 90s style"""
@@ -1312,7 +1425,7 @@ class WeatherStar4000Complete:
         logger.log_display_change(old_mode.value, new_mode.value)
 
         # Voice narration for new display (if enabled)
-        if self.settings.get('voice_narration', False):
+        if self.settings.get("voice_narration", False):
             self.narrator.set_enabled(True)
             self.narrator.announce_display(new_mode.value, self.weather_data)
 
@@ -1326,7 +1439,7 @@ class WeatherStar4000Complete:
             return
 
         # Start with minimal data - just get current conditions quickly
-        self.weather_data = {'properties': {}}  # Initialize empty
+        self.weather_data = {"properties": {}}  # Initialize empty
 
         # Start background thread to load weather data
         def load_data_background():
@@ -1368,13 +1481,13 @@ class WeatherStar4000Complete:
                             self.show_context_menu()
                         elif event.button == 1:  # Left click
                             # Check if clicking on a news headline
-                            if hasattr(self, 'clickable_headlines'):
+                            if hasattr(self, "clickable_headlines"):
                                 mouse_pos = event.pos
                                 for headline_info in self.clickable_headlines:
                                     # Handle dict format from news_displays.py
                                     if isinstance(headline_info, dict):
-                                        rect = headline_info.get('rect')
-                                        url = headline_info.get('url')
+                                        rect = headline_info.get("rect")
+                                        url = headline_info.get("url")
                                         if rect and rect.collidepoint(mouse_pos):
                                             logger.main_logger.info(f"Opening URL: {url}")
                                             try:
@@ -1398,12 +1511,16 @@ class WeatherStar4000Complete:
                             running = False
                         elif event.key == pygame.K_SPACE:
                             self.is_playing = not self.is_playing
-                            logger.main_logger.info(f"Play/pause toggled: playing={self.is_playing}")
+                            logger.main_logger.info(
+                                f"Play/pause toggled: playing={self.is_playing}"
+                            )
                         elif event.key == pygame.K_RIGHT:
                             self.cycle_display()
                         elif event.key == pygame.K_LEFT:
                             old_mode = self.displays[self.current_display_index]
-                            self.current_display_index = (self.current_display_index - 1) % len(self.displays)
+                            self.current_display_index = (self.current_display_index - 1) % len(
+                                self.displays
+                            )
                             new_mode = self.displays[self.current_display_index]
                             logger.log_display_change(old_mode.value, new_mode.value)
                             self.display_timer = 0
@@ -1511,8 +1628,8 @@ class WeatherStar4000Complete:
                         self.draw_severe_weather_alert(dt / 1000.0)
                     else:
                         # Fallback
-                        self.draw_background('1')
-                        self.draw_header(current_mode.value.replace('-', ' ').title())
+                        self.draw_background("1")
+                        self.draw_header(current_mode.value.replace("-", " ").title())
                 except Exception as e:
                     logger.log_error(f"Error drawing {current_mode.value}", e)
 
@@ -1527,7 +1644,9 @@ class WeatherStar4000Complete:
 
                 # Log performance every 1000 frames
                 if frame_count % 1000 == 0:
-                    logger.main_logger.debug(f"Frame {frame_count}, FPS: {self.clock.get_fps():.1f}")
+                    logger.main_logger.debug(
+                        f"Frame {frame_count}, FPS: {self.clock.get_fps():.1f}"
+                    )
 
         except Exception as e:
             logger.log_error("Fatal error in main loop", e)
@@ -1547,21 +1666,28 @@ def main():
     """Main entry point"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='WeatherStar 4000+ with Logging')
-    parser.add_argument('--lat', type=float, default=None, help='Latitude (auto-detect if not specified)')
-    parser.add_argument('--lon', type=float, default=None, help='Longitude (auto-detect if not specified)')
-    parser.add_argument('--log-level', default='DEBUG',
-                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
-                       help='Logging level')
+    parser = argparse.ArgumentParser(description="WeatherStar 4000+ with Logging")
+    parser.add_argument(
+        "--lat", type=float, default=None, help="Latitude (auto-detect if not specified)"
+    )
+    parser.add_argument(
+        "--lon", type=float, default=None, help="Longitude (auto-detect if not specified)"
+    )
+    parser.add_argument(
+        "--log-level",
+        default="DEBUG",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Logging level",
+    )
 
     args = parser.parse_args()
 
     # Set logging level
     log_levels = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
     }
 
     # Re-initialize logger with specified level

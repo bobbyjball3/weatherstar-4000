@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-weatherstar-4000 = "weatherstar_4000:main"
+weatherstar4000 = "weatherstar_4000.__main__:main"
 
 [dependency-groups]
 dev = [

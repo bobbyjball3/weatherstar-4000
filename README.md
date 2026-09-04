@@ -148,21 +148,36 @@ Taskfile.yml              task runner commands
 .github/workflows/ci.yml  Quality + Testing CI pipeline
 .github/actions/setup     reusable CI step: uv + task + dependency sync
 src/weatherstar_4000/     the package (src layout)
+  __main__.py             application entrypoint (`python -m weatherstar_4000`)
 tests/                    pytest suite
 reports/                  JUnit output (gitignored, generated)
 coverage.xml              coverage output (gitignored, generated)
 README.old.md             original project README (features, packaging)
 ```
 
+## Running the app
+
+The installed command is `weatherstar4000` (equivalent to
+`python -m weatherstar_4000`):
+
+```sh
+uv run weatherstar4000 --lat 40.7128 --lon -74.0060 --log-level INFO
+```
+
+Run `weatherstar4000 --help` for available options.
+
 ## Current status
 
 - The project recently moved to a **src layout** (`src/weatherstar_4000/`).
   The test suite and several modules still import the legacy
-  `weatherstar_modules` package, so most tests currently error on import. This
-  is a known, tracked issue — pytest tolerates it and still produces reports.
+  `weatherstar_modules` package, so most tests currently error on import, and
+  the `weatherstar4000` entrypoint cannot start yet. This is a known, tracked
+  issue — pytest tolerates it and still produces reports.
 - The lint/format backlog in existing code is also not yet cleared, so the CI
   Quality stage is expected to be red until a cleanup pass lands. Run
   `task fix` to auto-apply the safe fixes, then address the rest manually.
-- The legacy top-level `run_weatherstar.py` (and its copy under
-  `docs/alternative_launchers/`) predates the src layout and is excluded from
-  lint/format scope.
+- The former standalone launcher `run_weatherstar.py` has been moved into the
+  package as `src/weatherstar_4000/__main__.py` and exposed as the
+  `weatherstar4000` entrypoint. A stale copy still exists under
+  `docs/alternative_launchers/` for reference.
+
