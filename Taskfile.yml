@@ -1,0 +1,63 @@
+version: '3'
+
+vars:
+  RUFF_PATHS: src tests
+
+tasks:
+  default:
+    desc: Run code-quality checks and the test suite with coverage
+    cmds:
+      - task: check
+      - task: coverage
+
+  install:
+    desc: Sync the project and dev dependencies (uv)
+    cmds:
+      - uv sync
+
+  lint:
+    desc: Run ruff lint checks
+    cmds:
+      - uv run ruff check {{.RUFF_PATHS}}
+
+  lint-fix:
+    desc: Auto-fix ruff lint issues
+    cmds:
+      - uv run ruff check --fix {{.RUFF_PATHS}}
+
+  format:
+    desc: Format code with ruff
+    cmds:
+      - uv run ruff format {{.RUFF_PATHS}}
+
+  format-check:
+    desc: Check code formatting with ruff
+    cmds:
+      - uv run ruff format --check {{.RUFF_PATHS}}
+
+  check:
+    desc: Run all code-quality checks (lint + format)
+    cmds:
+      - task: lint
+      - task: format-check
+
+  fix:
+    desc: Auto-fix lint and format issues (mirrors pre-commit fix mode)
+    cmds:
+      - task: lint-fix
+      - task: format
+
+  test:
+    desc: Run the pytest suite
+    cmds:
+      - uv run pytest
+
+  coverage:
+    desc: Run pytest with coverage (package-owned code, branch) and Cobertura XML
+    cmds:
+      - uv run pytest --cov=src/weatherstar_4000 --cov-report=term-missing --cov-report=xml:coverage.xml
+
+  install-hooks:
+    desc: Install pre-commit hooks
+    cmds:
+      - uv run pre-commit install

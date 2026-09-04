@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  # ---- Quality stage ------------------------------------------------------
+  # Each ruff check runs in its own job so it is clear what is failing.
+  ruff-check:
+    name: Ruff lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          python-version: '3.10'
+      - name: Run ruff lint
+        run: task lint
+
+  ruff-format:
+    name: Ruff format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          python-version: '3.10'
+      - name: Run ruff format check
+        run: task format-check
+
+  # ---- Testing stage ------------------------------------------------------
+  test:
+    name: pytest (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # Add Python versions to this list to test against them in CI.
+        # Defaults to 3.10 for day-to-day runs.
+        python-version: ['3.10']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run tests with coverage
+        run: task coverage
+
+      - name: Publish test report
+        # Posting results needs a write-scoped token: available for same-repo
+        # branches and pushes, but not for external fork PRs (read-only).
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: EnricoMi/publish-unit-test-result-action@v2.9.0
+        with:
+          files: reports/junit.xml
+
+      - name: Publish coverage comment
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: MishaKav/pytest-coverage-comment@v1.9.0
+        with:
+          pytest-xml-coverage-path: ./coverage.xml
+          junitxml-path: ./reports/junit.xml
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.python-version }}
+          if-no-files-found: ignore
+          path: |
+            reports/junit.xml
+            coverage.xml

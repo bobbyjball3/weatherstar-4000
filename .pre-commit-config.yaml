@@ -1,0 +1,9 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
+    hooks:
+      # Lint with auto-fix: applies safe fixes; exits non-zero (blocking the
+      # commit) if any issues remain that could not be fixed.
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

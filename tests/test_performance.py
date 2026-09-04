@@ -3,22 +3,21 @@
 Unit tests for Performance Optimization Module
 """
 
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from weatherstar_modules.performance import (
-    PerformanceMonitor,
-    SurfaceCache,
     FontCache,
-    ImageCache,
-    RenderOptimizer,
     MemoryManager,
+    PerformanceMonitor,
     PerformanceOptimizer,
-    get_performance_optimizer
+    RenderOptimizer,
+    SurfaceCache,
+    get_performance_optimizer,
 )
 
 
@@ -60,6 +59,7 @@ class TestSurfaceCache(unittest.TestCase):
     def test_cache_put_get(self):
         """Test caching and retrieval"""
         import pygame
+
         pygame.init()
         surface = pygame.Surface((100, 100))
 
@@ -70,6 +70,7 @@ class TestSurfaceCache(unittest.TestCase):
     def test_cache_max_size(self):
         """Test cache size limit"""
         import pygame
+
         pygame.init()
 
         for i in range(5):
@@ -82,6 +83,7 @@ class TestSurfaceCache(unittest.TestCase):
     def test_cache_clear(self):
         """Test cache clearing"""
         import pygame
+
         pygame.init()
         surface = pygame.Surface((10, 10))
 
@@ -96,6 +98,7 @@ class TestFontCache(unittest.TestCase):
     def test_get_font(self):
         """Test font retrieval"""
         import pygame
+
         pygame.init()
 
         font = FontCache.get_font(None, 24)
@@ -104,6 +107,7 @@ class TestFontCache(unittest.TestCase):
     def test_font_cached(self):
         """Test fonts are cached"""
         import pygame
+
         pygame.init()
 
         font1 = FontCache.get_font(None, 24)
@@ -120,6 +124,7 @@ class TestRenderOptimizer(unittest.TestCase):
     def test_dirty_rects(self):
         """Test dirty rectangle tracking"""
         import pygame
+
         rect = pygame.Rect(0, 0, 100, 100)
 
         self.optimizer.add_dirty_rect(rect)
@@ -164,9 +169,9 @@ class TestPerformanceOptimizer(unittest.TestCase):
         optimizer.update()
         stats = optimizer.get_stats()
 
-        self.assertIn('fps', stats)
-        self.assertIn('frame_count', stats)
-        self.assertIn('memory_estimate', stats)
+        self.assertIn("fps", stats)
+        self.assertIn("frame_count", stats)
+        self.assertIn("memory_estimate", stats)
 
     def test_singleton(self):
         """Test singleton pattern"""
@@ -175,5 +180,5 @@ class TestPerformanceOptimizer(unittest.TestCase):
         self.assertIs(opt1, opt2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -4,10 +4,11 @@ Integration tests for WeatherStar 4000
 Tests complete workflows and component interactions
 """
 
-import unittest
 import sys
+import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pygame
 
 # Add parent directory to path
@@ -25,17 +26,14 @@ class TestWeatherStarIntegration(unittest.TestCase):
         """Clean up pygame"""
         pygame.quit()
 
-    @patch('weatherstar_modules.data_fetchers.requests.get')
+    @patch("weatherstar_modules.data_fetchers.requests.get")
     def test_weather_data_workflow(self, mock_get):
         """Test complete weather data fetch and display workflow"""
         # Mock API response
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'properties': {
-                'temperature': {'value': 22},
-                'relativeHumidity': {'value': 65}
-            }
+            "properties": {"temperature": {"value": 22}, "relativeHumidity": {"value": 65}}
         }
         mock_get.return_value = mock_response
 
@@ -45,12 +43,13 @@ class TestWeatherStarIntegration(unittest.TestCase):
 
     def test_settings_persistence_workflow(self):
         """Test settings save and load workflow"""
-        from weatherstar_modules import weatherstar_settings
-        import tempfile
         import os
+        import tempfile
+
+        from weatherstar_modules import weatherstar_settings
 
         # Create temp file
-        temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json')
+        temp_file = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")
         temp_file.close()
         weatherstar_settings.SETTINGS_FILE = Path(temp_file.name)
 
@@ -72,5 +71,5 @@ class TestWeatherStarIntegration(unittest.TestCase):
         self.assertTrue(True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
