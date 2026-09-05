@@ -1,6 +1,6 @@
 # Big Bang Refactor
 
-I want to refactor this entire application. I like the functionality it has now, but the code and the configuration system. I want the existing screens, their content, etc. preserved in the new code, but implemented in the new method. 
+I want to refactor this entire application. I like the functionality it has now, but not the code and the configuration system. I want the existing screens, their content, etc. preserved in the new code, but implemented in the new method. 
 
 I want to add the following abstractions:
 - Screen: the top-most container for content to be displayed. I think these are currently "Displays"
