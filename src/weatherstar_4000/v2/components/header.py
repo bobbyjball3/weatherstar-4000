@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pygame
+from pydantic import Field
 
 from weatherstar_4000.v2.component import Component
 from weatherstar_4000.v2.registry import plugin
@@ -24,9 +25,11 @@ class Header(Component):
 
     name = "header"
 
-    title_top: str = "WeatherStar"
-    title_bottom: str = "4000"
-    has_noaa: bool = False
+    title_top: str = Field(default="WeatherStar", description="Top line of the screen header.")
+    title_bottom: str = Field(default="4000", description="Bottom line of the screen header.")
+    has_noaa: bool = Field(
+        default=False, description="Show the NOAA mark to the right of the header title."
+    )
 
     def render(self, surface: pygame.Surface, ctx: AppContext) -> None:
         from weatherstar_4000.v2 import render
@@ -46,7 +49,9 @@ class Background(Component):
 
     name = "background"
 
-    background_name: str = "1"
+    background_name: str = Field(
+        default="1", description="Background asset key to fill the screen (e.g. '1'..'6')."
+    )
 
     def render(self, surface: pygame.Surface, ctx: AppContext) -> None:
         backgrounds = ctx.assets.get("backgrounds") or {}

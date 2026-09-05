@@ -122,7 +122,7 @@ class Builder:
         deps: dict[str, set[str]] | None = None,
     ) -> AppContext:
         """Build a fully-populated AppContext for a set of plugin dependencies."""
-        from weatherstar_4000.themes import get_theme
+        from weatherstar_4000.v2.themes import get_theme
 
         ctx = AppContext(
             surface=surface,

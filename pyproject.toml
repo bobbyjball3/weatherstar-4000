@@ -20,7 +20,6 @@ dependencies = [
 ]
 
 [project.scripts]
-weatherstar4000 = "weatherstar_4000.__main__:main"
 weatherstar4000-v2 = "weatherstar_4000.v2.cli:main"
 
 # External plugins register here (built-ins register via the built-in registry).
@@ -63,8 +62,8 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-# Ratchet: raised to 65 when legacy-only; set to 60 while the large v2 tree is
-# being ported/covered. Raise as v2 coverage grows.
+# Ratchet: rendering internals are only smoke-tested, so coverage sits below
+# 100%. Raise fail_under as coverage grows.
 fail_under = 60
 
 [tool.coverage.xml]

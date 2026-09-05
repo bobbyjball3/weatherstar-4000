@@ -16,7 +16,7 @@ import random
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from pydantic import PrivateAttr
+from pydantic import Field, PrivateAttr
 
 from weatherstar_4000.v2.logging_setup import get_logger
 from weatherstar_4000.v2.media import Media
@@ -34,8 +34,8 @@ MUSIC_GLOB = ("*.mp3", "*.ogg", "*.wav")
 class Music(Media):
     name = "music"
 
-    enabled: bool = False
-    volume: float = 0.6
+    enabled: bool = Field(default=False, description="Play background music during the show.")
+    volume: float = Field(default=0.6, description="Music volume, from 0.0 (silent) to 1.0 (full).")
 
     _playlist: list[str] = PrivateAttr(default_factory=list)
     _track_index: int = PrivateAttr(default=0)

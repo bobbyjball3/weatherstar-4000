@@ -5,8 +5,8 @@ other / later sections, and (2) alert content (and expiry) rendering underneath
 the engine's bottom ticker banner (which starts at y=430).
 """
 
-from weatherstar_4000.themes import CLASSIC_THEME
 from weatherstar_4000.v2.context import AppContext, DataRegistry, Location
+from weatherstar_4000.v2.themes import CLASSIC_THEME
 
 _TICKER_TOP = 430
 

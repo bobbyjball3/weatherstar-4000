@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 
 from weatherstar_4000.v2.datasource import Datasource
 from weatherstar_4000.v2.registry import plugin
@@ -18,7 +18,10 @@ class NoaaAlertsDatasource(Datasource):
 
     name = "alerts"
 
-    severity_priority: str = "extreme:severe:moderate"
+    severity_priority: str = Field(
+        default="extreme:severe:moderate",
+        description="Colon-separated severity order used to sort alerts (most severe first).",
+    )
 
     def active(self, lat: float, lon: float) -> list[dict]:
         key = self._cache_key("alerts", lat, lon)
@@ -68,8 +71,10 @@ def _parse_alerts(data: dict) -> list[dict]:
 class EarthquakesDatasource(Datasource):
     name = "earthquakes"
 
-    min_magnitude: float = 3.0
-    limit: int = 10
+    min_magnitude: float = Field(
+        default=3.0, description="Minimum earthquake magnitude to include."
+    )
+    limit: int = Field(default=10, description="Maximum number of earthquakes to fetch.")
 
     def recent(self, lat: float, lon: float) -> list[dict]:
         key = self._cache_key("quakes", lat, lon, self.min_magnitude, self.limit)
@@ -101,7 +106,7 @@ class EarthquakesDatasource(Datasource):
 class UvIndexDatasource(Datasource):
     name = "uv_index"
 
-    days: int = 7
+    days: int = Field(default=7, description="Number of days of UV index forecast to fetch.")
 
     def daily(self, lat: float, lon: float) -> list[dict]:
         key = self._cache_key("uv", lat, lon, self.days)
@@ -146,10 +151,19 @@ class StockMarketDatasource(Datasource):
 
     name = "stocks"
 
-    api_key: SecretStr
-    api_key_param: str = "apikey"
-    api_key_header: str | None = None
-    symbols: str = "DIA,SPY,QQQ"
+    api_key: SecretStr = Field(
+        description="Alpha Vantage API key (required; sent with each request)."
+    )
+    api_key_param: str = Field(
+        default="apikey", description="Query parameter the API key is sent under."
+    )
+    api_key_header: str | None = Field(
+        default=None,
+        description="Header the API key is sent under instead (leave blank to use the query parameter).",
+    )
+    symbols: str = Field(
+        default="DIA,SPY,QQQ", description="Comma-separated stock/index symbols to display."
+    )
 
     def quotes(self) -> list[dict]:
         symbols = [s.strip() for s in self.symbols.split(",") if s.strip()]

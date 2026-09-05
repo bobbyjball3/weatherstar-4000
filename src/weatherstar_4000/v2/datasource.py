@@ -12,7 +12,7 @@ import time
 from typing import Any, ClassVar
 
 import requests
-from pydantic import PrivateAttr, SecretStr
+from pydantic import Field, PrivateAttr, SecretStr
 
 from weatherstar_4000.v2.logging_setup import get_logger
 from weatherstar_4000.v2.plugin import Plugin
@@ -29,8 +29,11 @@ class Datasource(Plugin):
     kind = "datasource"
 
     # Optional common config: each datasource may override defaults.
-    timeout: int = 10
-    user_agent: str = "WeatherStar4000/v2 (python)"
+    timeout: int = Field(default=10, description="HTTP request timeout in seconds.")
+    user_agent: str = Field(
+        default="WeatherStar4000/v2 (python)",
+        description="User-Agent header sent with upstream API requests.",
+    )
 
     #: Default TTL (seconds) for the base cache; subclasses override.
     _default_cache_ttl: ClassVar[int] = 300

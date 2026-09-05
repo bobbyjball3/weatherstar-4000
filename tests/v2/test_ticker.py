@@ -4,8 +4,8 @@ import time
 
 import pygame
 
-from weatherstar_4000.themes import CLASSIC_THEME
 from weatherstar_4000.v2.context import AppContext, DataRegistry, Location
+from weatherstar_4000.v2.themes import CLASSIC_THEME
 from weatherstar_4000.v2.ticker import SCROLL_SPEED, BottomTicker
 
 

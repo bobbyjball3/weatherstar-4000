@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from pydantic import Field
+
 from weatherstar_4000.v2.plugin import Plugin
 
 if TYPE_CHECKING:
@@ -21,7 +23,10 @@ class Media(Plugin):
 
     kind = "media"
 
-    asset_dir: str = "static_assets"
+    asset_dir: str = Field(
+        default="static_assets",
+        description="Directory containing this media's assets (project-relative or absolute).",
+    )
 
     def load(self, ctx: AppContext) -> Any:
         """Load this media into ``ctx`` (fonts/assets) and return the resource.

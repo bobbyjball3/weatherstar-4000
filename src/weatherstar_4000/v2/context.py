@@ -12,7 +12,7 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000.themes import CLASSIC_THEME, ColorTheme
+from weatherstar_4000.v2.themes import CLASSIC_THEME, ColorTheme
 
 
 @dataclass

@@ -5,7 +5,7 @@ try:  # Python >= 3.11
 except ModuleNotFoundError:  # Python 3.10 backport
     import tomli as tomllib
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 
 from weatherstar_4000.v2.plugin import Plugin
 from weatherstar_4000.v2.registry import registry
@@ -75,3 +75,32 @@ def test_skeleton_logging_block_defaults():
     data = tomllib.loads(text)
     assert data["logging"]["level"] == "INFO"
     assert data["logging"]["console"] is True
+
+
+class _DocScreen(Plugin):
+    kind = "screen"
+    name = "doc_screen"
+    interval: int = Field(default=10, description="Interval between updates, in seconds.")
+
+
+def test_skeleton_emits_field_descriptions_and_top_level_sections():
+    registry.register("screen", "doc_screen", _DocScreen)
+    try:
+        text = render_skeleton(sequence_name="night", screen_names=["doc_screen"])
+        # Field descriptions surface as comments above their keys.
+        assert "# Interval between updates, in seconds." in text
+        assert "interval = 10" in text
+        # Top-level sections and their commented examples are present.
+        assert "[location]" in text
+        assert "# lat = 28.5383" in text
+        assert "# lon = -81.3792" in text
+        assert "[video]" in text
+        assert "width = 640" in text
+        assert "[logging]" in text
+        assert "# Minimum log level" in text
+        # TOML remains parseable with all comments stripped by the parser.
+        data = tomllib.loads(text)
+        assert data["video"] == {"width": 640, "height": 480, "fps": 30}
+        assert data["location"]["auto_detect"] is True
+    finally:
+        registry._plugins.get("screen", {}).pop("doc_screen", None)
