@@ -50,6 +50,9 @@ env/
 *~
 .DS_Store
 
+# Ruff
+.ruff_cache
+
 # Logs
 logs/
 *.log
