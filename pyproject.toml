@@ -62,9 +62,9 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-# Ratchet: rendering internals are only smoke-tested, so coverage sits below
-# 100%. Raise fail_under as coverage grows.
-fail_under = 60
+# Ratchet: rendering is exercised headlessly via populated-data screen tests;
+# coverage currently sits around 85%. Raise fail_under as coverage grows.
+fail_under = 80
 
 [tool.coverage.xml]
 output = "coverage.xml"

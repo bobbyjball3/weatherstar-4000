@@ -152,6 +152,59 @@ def test_run_sequence_polls_music_controller(pygame_env):
     assert controller.polls >= 5
 
 
+def _slide_pair_ctx(pygame_env):
+    import pygame
+
+    from weatherstar_4000.v2.context import AppContext, DataRegistry, Location
+
+    class _FakeSlide:
+        def __init__(self, name):
+            self.name = name
+
+        def step(self, ctx, dt):
+            pass
+
+        def draw(self, surface, ctx, dt):
+            pass
+
+    seq = Sequence.from_config("m", {"pause": 0.001, "slides": [{"screen": "a"}, {"screen": "b"}]})
+    ctx = AppContext(
+        surface=pygame.Surface((640, 480)),
+        data=DataRegistry(),
+        location=Location(lat=28.0, lon=-81.0),
+    )
+    return ctx, [_FakeSlide("a"), _FakeSlide("b")], seq
+
+
+def test_run_sequence_noninteractive_completes_single_pass(pygame_env):
+    from weatherstar_4000.v2.engine import run_sequence
+
+    ctx, screens, seq = _slide_pair_ctx(pygame_env)
+    frames = run_sequence(ctx, screens, seq)
+    # Finishes a single pass quickly (does not loop forever).
+    assert frames >= 1
+
+
+def test_run_sequence_stop_event(pygame_env):
+    import threading
+
+    from weatherstar_4000.v2.engine import run_sequence
+
+    ctx, screens, seq = _slide_pair_ctx(pygame_env)
+    stop = threading.Event()
+    stop.set()
+    frames = run_sequence(ctx, screens, seq, interactive=True, stop_event=stop)
+    assert frames < 100  # stops promptly instead of running forever
+
+
+def test_run_sequence_max_frames(pygame_env):
+    from weatherstar_4000.v2.engine import run_sequence
+
+    ctx, screens, seq = _slide_pair_ctx(pygame_env)
+    frames = run_sequence(ctx, screens, seq, interactive=True, max_frames=7)
+    assert frames == 7
+
+
 def _register_temporary_screen(**typed_fields):
     """Register a temp screen; pass ``field_name=(Type,)`` or ``field_name=(Type, default)``."""
     attrs = {
