@@ -6,6 +6,7 @@ temperature-scaled gradient bars and per-day high/low labels.
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any
 
 import pygame
@@ -24,6 +25,8 @@ _GRAPH_WIDTH = 480
 _GRAPH_HEIGHT = 250
 _BAR_WIDTH = 40
 _GRADIENT_STEPS = 5
+#: Breathing room between a temperature number and its bar end (px).
+_LABEL_GAP = 6
 
 
 @plugin
@@ -86,12 +89,16 @@ class TemperatureGraphScreen(Screen):
         )
 
         font_small = self.font(ctx, "small")
+        text_h = font_small.get_height()
+        plot_top, plot_bottom, label_offset = self._plot_band(text_h)
+        plot_span = plot_bottom - plot_top
+
         bar_width = _GRAPH_WIDTH // len(temps)
         for i, ((high, low), label) in enumerate(zip(temps, labels)):
             x = _GRAPH_LEFT + i * bar_width + bar_width // 2
 
-            high_y = _GRAPH_TOP + _GRAPH_HEIGHT - ((high - min_temp) / temp_range * _GRAPH_HEIGHT)
-            low_y = _GRAPH_TOP + _GRAPH_HEIGHT - ((low - min_temp) / temp_range * _GRAPH_HEIGHT)
+            high_y = plot_bottom - ((high - min_temp) / temp_range * plot_span)
+            low_y = plot_bottom - ((low - min_temp) / temp_range * plot_span)
 
             bar_x = x - 20
             bar_height = abs(low_y - high_y)
@@ -111,14 +118,34 @@ class TemperatureGraphScreen(Screen):
                     (bar_x, high_y + j * step_height, _BAR_WIDTH, step_height + 1),
                 )
 
-            if font_small is not None:
-                high_text = font_small.render(str(high), True, yellow)
-                surface.blit(high_text, high_text.get_rect(center=(x, high_y - 10)))
-                low_text = font_small.render(str(low), True, white)
-                surface.blit(low_text, low_text.get_rect(center=(x, low_y + 20)))
-                label_text = font_small.render(label, True, white)
-                label_rect = label_text.get_rect(center=(x, _GRAPH_TOP + _GRAPH_HEIGHT + 10))
-                surface.blit(label_text, label_rect)
+            high_text = font_small.render(str(high), True, yellow)
+            surface.blit(high_text, high_text.get_rect(center=(x, high_y - label_offset)))
+            low_text = font_small.render(str(low), True, white)
+            surface.blit(low_text, low_text.get_rect(center=(x, low_y + label_offset)))
+            label_text = font_small.render(label, True, white)
+            label_rect = label_text.get_rect(center=(x, _GRAPH_TOP + _GRAPH_HEIGHT + 10))
+            surface.blit(label_text, label_rect)
+
+    @staticmethod
+    def _plot_band(text_h: int) -> tuple[float, float, int]:
+        """Top/bottom of the bar plotting band plus the numeric label offset.
+
+        The band is inset from the chart frame by a full label height plus
+        ``_LABEL_GAP`` on each side so the high/low numbers always clear their
+        bar end and the extreme ones still stay inside the chart instead of
+        spilling past the axes.
+        """
+        inset = text_h + _LABEL_GAP
+        plot_top = _GRAPH_TOP + inset
+        plot_bottom = _GRAPH_TOP + _GRAPH_HEIGHT - inset
+        return plot_top, plot_bottom, text_h // 2 + _LABEL_GAP
+
+    def _column_label(self, day_period: Any, night_period: Any, fallback: date) -> str:
+        """Weekday abbreviation (e.g. ``SAT``) for one day/night column."""
+        for period in (day_period, night_period):
+            if period and period.get("isDaytime"):
+                return self.weekday_label(period, fallback=fallback)
+        return self.weekday_label(day_period, fallback=fallback)
 
     def _collect_periods(self, ctx: Any) -> tuple[list[tuple[int, int]], list[str]]:
         """Return (high, low) pairs + day labels from up to 7 forecast days."""
@@ -134,6 +161,7 @@ class TemperatureGraphScreen(Screen):
 
         temps: list[tuple[int, int]] = []
         labels: list[str] = []
+        today = date.today()
         for i in range(0, min(len(periods), 14), 2):
             if i >= len(periods):
                 break
@@ -159,6 +187,7 @@ class TemperatureGraphScreen(Screen):
                 temps.append((int(high), int(low)))
             except (TypeError, ValueError):
                 continue
-            labels.append((day_period.get("name") or "")[:3].upper())
+            fallback = today + timedelta(days=len(temps) - 1)
+            labels.append(self._column_label(day_period, night_period, fallback))
 
         return temps, labels

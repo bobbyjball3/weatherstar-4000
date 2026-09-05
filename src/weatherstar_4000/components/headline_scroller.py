@@ -106,7 +106,10 @@ class HeadlineScroller(Component):
             if _HEADLINE_VISIBLE[0] < y_pos < _HEADLINE_VISIBLE[1]:
                 if self.numbered:
                     number = num_font.render(f"{i}.", True, yellow)
-                    surface.blit(number, (_NUMBER_X, y_pos))
+                    # Align the number's baseline with the first text line's
+                    # baseline so small numbers sit level with taller headlines.
+                    baseline = y_pos + news_font.get_ascent()
+                    surface.blit(number, (_NUMBER_X, baseline - num_font.get_ascent()))
 
                 line_y = y_pos
                 for line in lines:

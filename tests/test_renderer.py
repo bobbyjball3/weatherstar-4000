@@ -160,6 +160,19 @@ def test_icon_helpers(screen):
         "Partly-Cloudy"
     )
     assert renderer.icon_name("") is None
+    # Real NOAA forecast tokens carry coverage/intensity suffixes.
+    assert renderer.icon_name("https://api.weather.gov/icons/land/day/tsra_hi,40?size=medium") == (
+        "Thunderstorm"
+    )
+    assert renderer.icon_name("https://api.weather.gov/icons/land/day/tsra_sct,50?size=medium") == (
+        "Thunderstorm"
+    )
+    assert renderer.icon_name("https://api.weather.gov/icons/land/night/nsct?size=medium") == (
+        "Partly-Cloudy"
+    )
+    assert renderer.icon_name("https://api.weather.gov/icons/land/day/few?size=medium") == "Sunny"
+    assert renderer.icon_name("https://api.weather.gov/icons/land/night/few?size=medium") == "Clear"
+    assert renderer.icon_name("https://api.weather.gov/icons/land/day/mystery_condition") is None
 
     icon = pygame.Surface((10, 10))
     icon.fill((50, 60, 70))

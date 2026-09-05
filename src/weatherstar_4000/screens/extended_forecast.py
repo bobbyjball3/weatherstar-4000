@@ -63,14 +63,7 @@ class ExtendedForecastScreen(Screen):
             x_pos = start_x + (day_count * (day_width + side_margin))
             col_center = x_pos + day_width // 2
 
-            name = str(day_period.get("name", ""))
-            if "Tonight" in name or "Overnight" in name:
-                day_name = "TONIGHT"
-            elif "Today" in name:
-                day_name = "TODAY"
-            else:
-                day_name = name.upper().split()[0][:3] if name.split() else ""
-
+            day_name = self._day_label(day_period, night_period)
             if day_name:
                 name_surf = self.font(ctx, "extended").render(day_name, True, yellow)
                 surface.blit(name_surf, name_surf.get_rect(center=(col_center, 120)))
@@ -127,3 +120,18 @@ class ExtendedForecastScreen(Screen):
                 surface.blit(hi_surf, hi_surf.get_rect(center=(hi_x_center, 335)))
 
             day_count += 1
+
+    def _day_label(self, day_period: Any, night_period: Any) -> str:
+        """Weekday abbreviation for a day/night column (e.g. SAT, SUN, MON)."""
+        chosen = None
+        for period in (day_period, night_period):
+            if period and period.get("isDaytime"):
+                chosen = period
+                break
+        if chosen is None:
+            chosen = day_period or night_period
+        return self._weekday_abbrev(chosen)
+
+    def _weekday_abbrev(self, period: Any) -> str:
+        """Weekday abbreviation for a period (e.g. SAT, SUN, MON)."""
+        return self.weekday_label(period)

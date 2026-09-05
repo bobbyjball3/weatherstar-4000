@@ -15,7 +15,8 @@ so constants live at module scope.
 
 from __future__ import annotations
 
-from datetime import datetime
+import calendar
+from datetime import date, datetime
 from typing import Any
 
 import pygame
@@ -57,9 +58,11 @@ _CARDINALS = [
 ]
 
 #: NOAA condition token -> weather icon name (classic WeatherStar set).
+#: Exact tokens are tried first; see ``_icon_for_token`` for the fallback
+#: classification of compound tokens (e.g. ``tsra_hi,40``).  Clear-sky tokens
+#: are intentionally absent so the classifier can pick the day "Sunny" vs the
+#: night "Clear" icon from the URL's day/night segment.
 _ICON_NAMES = {
-    "skc": "Clear",
-    "few": "Clear",
     "sct": "Partly-Cloudy",
     "bkn": "Cloudy",
     "ovc": "Cloudy",
@@ -70,6 +73,61 @@ _ICON_NAMES = {
     "fog": "Fog",
     "wind": "Windy",
 }
+
+
+def _icon_for_token(token: str, night: bool = False) -> str | None:
+    """Classify a NOAA icon token into a named weather icon (or ``None``).
+
+    NOAA forecast icons carry coverage/intensity suffixes the classic set has
+    no asset for (``tsra_hi,40``, ``tsra_sct,50``, ``nsct`` ...).  Substring
+    classification keeps those pointing at the nearest available icon instead of
+    collapsing every unknown condition onto a single default.
+    """
+    t = token.lower()
+    if t in _ICON_NAMES:
+        return _ICON_NAMES[t]
+    if "tsra" in t or "thunder" in t or "tstm" in t or "tstorm" in t:
+        return "Thunderstorm"
+    if "blizzard" in t:
+        return "Heavy-Snow"
+    if "fzra" in t or "freezing" in t:
+        if "sleet" in t:
+            return "Freezing-Rain-Sleet"
+        if "snow" in t:
+            return "Freezing-Rain-Snow"
+        return "Freezing-Rain"
+    if "snow" in t:
+        if "rain" in t:
+            return "Snow-to-Rain"
+        if "heavy" in t:
+            return "Heavy-Snow"
+        if "sleet" in t:
+            return "Snow-Sleet"
+        if "shower" in t or "shra" in t:
+            return "Scattered-Snow-Showers"
+        return "Light-Snow"
+    if "sleet" in t or t in ("ip", "mix"):
+        return "Sleet"
+    if "smoke" in t or "dust" in t or t in ("du", "fu"):
+        return "Smoke"
+    if "wind" in t:
+        return "Windy"
+    if "fog" in t or t == "br":
+        return "Fog"
+    if "rain" in t or "shower" in t or "shra" in t or t == "ra":
+        if "snow" in t or "sleet" in t:
+            return "Rain-Snow"
+        if "shower" in t or "shra" in t:
+            return "Shower"
+        return "Rain"
+    if "clear" in t or "sunny" in t or t in ("skc", "few", "fair"):
+        # Classic set distinguishes the day sun from the night clear sky.
+        return "Clear" if night else "Sunny"
+    if "partly" in t or "sct" in t:
+        return "Partly-Cloudy"
+    if "cloudy" in t or t in ("bkn", "ovc", "overcast"):
+        return "Cloudy"
+    return None
 
 
 class Renderer:
@@ -222,6 +280,53 @@ class Renderer:
         except (TypeError, ValueError):
             return str(date_str)
 
+    # -- calendar helpers ---------------------------------------------------
+
+    def period_start_date(self, period: Any) -> date | None:
+        """Calendar date a NOAA forecast ``startTime`` falls on, or ``None``.
+
+        NOAA timestamps may end in ``Z`` or carry a numeric UTC offset; parse
+        leniently so label logic never raises on odd payloads.
+        """
+        if not isinstance(period, dict):
+            return None
+        start_time = period.get("startTime")
+        if not start_time:
+            return None
+        try:
+            iso = str(start_time).replace("Z", "+00:00")
+            return datetime.fromisoformat(iso).date()
+        except (TypeError, ValueError):
+            return None
+
+    def weekday_label(self, period: Any, fallback: date | None = None) -> str:
+        """Abbreviated weekday (``SAT``) for a forecast period.
+
+        The weekday comes from ``startTime`` when present (the reliable source),
+        then from a weekday name embedded in the period ``name`` (NOAA drops the
+        weekday for labels like "Tonight"/"Labor Day"), then ``fallback`` or
+        today.  ``calendar`` tables keep the result stable regardless of locale.
+        """
+        start = self.period_start_date(period)
+        if start is not None:
+            return calendar.day_abbr[start.weekday()].upper()
+        if isinstance(period, dict):
+            name = str(period.get("name", "")).lower()
+            for index, day in enumerate(calendar.day_name):
+                if day.lower() in name:
+                    return calendar.day_abbr[index].upper()
+        if fallback is None and not isinstance(period, dict):
+            return ""
+        chosen = fallback or datetime.now().date()
+        return calendar.day_abbr[chosen.weekday()].upper()
+
+    @staticmethod
+    def weekday_name(day: date | None) -> str:
+        """Full weekday name (``SUNDAY``) for a date, or ``""`` when unusable."""
+        if day is None:
+            return ""
+        return calendar.day_name[day.weekday()].upper()
+
     # -- weather observation payload access --------------------------------
 
     def num(self, props: Any, key: str) -> float | None:
@@ -286,8 +391,9 @@ class Renderer:
             return None
         parts = icon_url.split("/")
         if len(parts) >= 2:
-            condition = parts[-1].split("?")[0]
-            return _ICON_NAMES.get(condition, "Clear")
+            token = parts[-1].split("?")[0].split(",")[0]
+            night = "night" in parts[-2].lower() if len(parts) >= 2 else False
+            return _icon_for_token(token, night=night)
         return None
 
     def icon_surface(
