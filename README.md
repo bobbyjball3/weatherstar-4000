@@ -182,7 +182,17 @@ Run `weatherstar4000 --help` for available options.
   narration, logging, emergency alerts, performance) and smoke+helper coverage
   for the pygame display modules. The suite runs headless via dummy SDL
   drivers (`tests/conftest.py`) with external APIs mocked. `task coverage`
-  enforces `--cov-fail-under=65`; raise the threshold as coverage grows.
-  Rendering internals are intentionally smoke-tested rather than
-  branch-by-branch, so package-wide coverage sits below 100%.
+  enforces `--cov-fail-under` (see pyproject; currently 60 while the v2 tree is
+  being covered — ratchet up as it grows). Rendering internals are
+  intentionally smoke-tested rather than branch-by-branch, so package-wide
+  coverage sits below 100%.
+- A **plugin-driven v2 engine** is under construction in
+  `src/weatherstar_4000/v2/` as a parallel implementation (the original app and
+  `weatherstar4000` entrypoint are untouched). It adds Screen/Component/Media/
+  Datasource/Sequence abstractions plus a `ConfigValue` descriptor system that
+  auto-registers plugin config scopes into a TOML config
+  (`~/.config/weatherstar4000/config.toml`, overridable via `--config` /
+  `WEATHERSTAR_CONFIG`). Datasource auth settings are masked in repr/str/logs.
+  Run it with the new `weatherstar4000-v2` entrypoint; `--validate` renders
+  every slide headlessly, and `generate-config` emits a skeleton TOML.
 
