@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Any
 
 import pygame
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2.registry import plugin
 from weatherstar_4000.v2.screen import Screen
@@ -70,8 +71,8 @@ class SevereWeatherAlertScreen(Screen):
     name = "severe_weather_alert"
     datasources = ("alerts",)
 
-    def __init__(self) -> None:
-        self._font_cache: dict[int, pygame.font.Font] = {}
+    _font_cache: dict[int, pygame.font.Font] = PrivateAttr(default_factory=dict)
+    _elapsed: float = PrivateAttr(default=0.0)
 
     # -- fonts ---------------------------------------------------------------
 

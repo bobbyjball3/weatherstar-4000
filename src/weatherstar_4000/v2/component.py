@@ -2,13 +2,13 @@
 
 Components are small, composable renderers (headers, text, icons, tables,
 scrolling tickers, charts).  They receive the shared :class:`AppContext` and the
-target surface at render time and read config through their own ConfigValue
-descriptors.
+target surface at render time and read config through their own typed Pydantic
+fields.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pygame
 
@@ -24,7 +24,7 @@ class Component(Plugin):
     kind = "component"
 
     #: (x, y) position within the screen (0..1 normalised, or absolute px).
-    position = (0, 0)
+    position: ClassVar[tuple[int, int]] = (0, 0)
 
     def render(self, surface: pygame.Surface, ctx: AppContext) -> None:
         """Render this component onto ``surface`` using ``ctx``.

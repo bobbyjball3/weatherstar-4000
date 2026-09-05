@@ -8,7 +8,7 @@ slide in the Sequence.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pygame
 
@@ -24,14 +24,14 @@ class Screen(Plugin):
     kind = "screen"
 
     #: Ordered names of Component plugins to render before ``draw``.
-    components: tuple[str, ...] = ()
+    components: ClassVar[tuple[str, ...]] = ()
     #: Names of Datasource plugins this screen consumes.
-    datasources: tuple[str, ...] = ()
+    datasources: ClassVar[tuple[str, ...]] = ()
     #: Names of Media plugins this screen decorates itself with.
-    media: tuple[str, ...] = ()
+    media: ClassVar[tuple[str, ...]] = ()
 
     #: Optional per-slide background asset (e.g. "1") applied before draw.
-    background: str | None = None
+    background: ClassVar[str | None] = None
 
     def draw(self, surface: pygame.Surface, ctx: AppContext, dt: float) -> None:
         """Render this screen onto ``surface`` for the current frame."""

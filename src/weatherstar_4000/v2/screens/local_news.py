@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any
 
 import pygame
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2 import render
 from weatherstar_4000.v2.registry import plugin
@@ -57,6 +58,7 @@ class LocalNewsScreen(Screen):
     name = "local_news"
     media = ("backgrounds", "fonts", "logos")
     datasources = ("local_news", "weather")
+    _scroll: float = PrivateAttr(default=200.0)
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         render.draw_background(surface, ctx, "1")

@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 import pygame
 
 from weatherstar_4000.v2.component import Component
-from weatherstar_4000.v2.config import ConfigValue
 from weatherstar_4000.v2.registry import plugin
 
 if TYPE_CHECKING:
@@ -25,9 +24,9 @@ class Header(Component):
 
     name = "header"
 
-    title_top = ConfigValue(default="WeatherStar", type=str)
-    title_bottom = ConfigValue(default="4000", type=str)
-    has_noaa = ConfigValue(default=False, type=bool)
+    title_top: str = "WeatherStar"
+    title_bottom: str = "4000"
+    has_noaa: bool = False
 
     def render(self, surface: pygame.Surface, ctx: AppContext) -> None:
         from weatherstar_4000.v2 import render
@@ -37,7 +36,7 @@ class Header(Component):
             ctx,
             self.title_top,
             self.title_bottom or None,
-            has_noaa=bool(self.has_noaa),
+            has_noaa=self.has_noaa,
         )
 
 
@@ -47,7 +46,7 @@ class Background(Component):
 
     name = "background"
 
-    background_name = ConfigValue(default="1", type=str)
+    background_name: str = "1"
 
     def render(self, surface: pygame.Surface, ctx: AppContext) -> None:
         backgrounds = ctx.assets.get("backgrounds") or {}

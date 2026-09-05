@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pygame
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2 import render
 from weatherstar_4000.v2.registry import plugin
@@ -199,6 +200,7 @@ class CurrentConditionsScreen(Screen):
     name = "current_conditions"
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
+    _pressure_history: list | None = PrivateAttr(default=None)
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         _ensure_fonts(ctx)

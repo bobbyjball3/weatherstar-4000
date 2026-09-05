@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 import pygame
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2 import render
 from weatherstar_4000.v2.registry import plugin
@@ -63,6 +64,8 @@ class AirQualityScreen(Screen):
     name = "air_quality"
     media = ("backgrounds",)
     datasources = ()
+    _scroll_offset: float = PrivateAttr(default=0.0)
+    _scroll_dir: float = PrivateAttr(default=1.0)
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         render.draw_background(surface, ctx, "5")

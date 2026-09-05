@@ -7,6 +7,8 @@ bundled simulated headlines.  City names resolve via the NOAA weather datasource
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from weatherstar_4000.v2.datasource import Datasource
 from weatherstar_4000.v2.registry import plugin
 
@@ -22,8 +24,7 @@ from weatherstar_4000 import get_local_news as _simulated_news
 class LocalNewsDatasource(Datasource):
     name = "local_news"
 
-    def __init__(self, cache_ttl: int = 900):
-        super().__init__(cache_ttl=cache_ttl)
+    _default_cache_ttl: ClassVar[int] = 900
 
     def city_name(self, lat: float, lon: float) -> str:
         key = self._cache_key("city", lat, lon)

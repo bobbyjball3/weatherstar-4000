@@ -8,9 +8,8 @@ and Components can reference the loaded resource by name.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from weatherstar_4000.v2.config import ConfigValue
 from weatherstar_4000.v2.plugin import Plugin
 
 if TYPE_CHECKING:
@@ -22,7 +21,7 @@ class Media(Plugin):
 
     kind = "media"
 
-    asset_dir = ConfigValue(default="static_assets", type=str)
+    asset_dir: str = "static_assets"
 
     def load(self, ctx: AppContext) -> Any:
         """Load this media into ``ctx`` (fonts/assets) and return the resource.
@@ -51,8 +50,8 @@ class AssetMedia(Media):
     :meth:`load_asset`.
     """
 
-    #: Plain attribute (not a ConfigValue) naming the ctx.assets entry.
-    asset_key: str | None = None
+    #: Class attribute (not a config field) naming the ctx.assets entry.
+    asset_key: ClassVar[str | None] = None
 
     def load_asset(self, ctx: AppContext) -> Any:
         raise NotImplementedError

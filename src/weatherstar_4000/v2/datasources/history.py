@@ -6,6 +6,10 @@ the Datasource plugin interface.
 
 from __future__ import annotations
 
+from typing import Any, ClassVar
+
+from pydantic import PrivateAttr
+
 from weatherstar_4000.history_graphs import get_weather_history
 from weatherstar_4000.v2.datasource import Datasource
 from weatherstar_4000.v2.registry import plugin
@@ -15,9 +19,9 @@ from weatherstar_4000.v2.registry import plugin
 class HistoryDatasource(Datasource):
     name = "history"
 
-    def __init__(self, cache_ttl: int = 3600):
-        super().__init__(cache_ttl=cache_ttl)
-        self._client = get_weather_history()
+    _default_cache_ttl: ClassVar[int] = 3600
+
+    _client: Any = PrivateAttr(default_factory=get_weather_history)
 
     def refresh(self, lat: float, lon: float) -> bool:
         return bool(self._client.fetch_history_data(lat, lon))

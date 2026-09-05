@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import pygame
 
@@ -16,7 +16,7 @@ class ProgressScreen(Screen):
     name = "progress"
     media = ("backgrounds",)
 
-    status = "Loading WeatherStar 4000..."
+    status: ClassVar[str] = "Loading WeatherStar 4000..."
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         render.draw_background(surface, ctx, "1")

@@ -55,7 +55,7 @@ def render_skeleton(
     screen_names = list(screen_names) if screen_names is not None else None
     parts: list[str] = [
         "# WeatherStar 4000 v2 configuration skeleton.",
-        "# Generated per-plugin from declared ConfigValue defaults.",
+        "# Generated per-plugin from declared typed config field defaults.",
         "",
         f"# Sequence to execute (override with --sequence or {ENV_SEQUENCE}).",
         f'sequence = "{sequence_name}"',

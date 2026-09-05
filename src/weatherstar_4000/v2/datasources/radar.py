@@ -10,6 +10,7 @@ seconds).  All HTTP goes through the base Datasource helpers.
 from __future__ import annotations
 
 import io
+from typing import ClassVar
 
 import pygame
 
@@ -39,8 +40,7 @@ class NoaaRadar(Datasource):
 
     name = "radar"
 
-    def __init__(self, cache_ttl: int = _FRAME_TTL):
-        super().__init__(cache_ttl=cache_ttl)
+    _default_cache_ttl: ClassVar[int] = _FRAME_TTL
 
     # -- crop math (also unit-tested directly) --------------------------------
 

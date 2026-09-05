@@ -91,10 +91,11 @@ def _fake_pygame(monkeypatch, fake_mixer):
     return fake
 
 
-def _make_music(enabled=True, volume=0.4) -> Music:
-    music = Music()
-    music.apply_config({"enabled": enabled, "volume": volume})
-    return music
+def _make_music(enabled=True, volume=0.4, asset_dir=None) -> Music:
+    values = {"enabled": enabled, "volume": volume}
+    if asset_dir is not None:
+        values["asset_dir"] = asset_dir
+    return Music.model_validate(values)
 
 
 def test_music_load_only_discovers(screen, monkeypatch, tmp_path):
@@ -104,8 +105,7 @@ def test_music_load_only_discovers(screen, monkeypatch, tmp_path):
     track.parent.mkdir()
     track.write_bytes(b"not really audio")
     ctx = AppContext(surface=screen, data=DataRegistry(), location=Location(lat=0.0, lon=0.0))
-    music = _make_music(enabled=True, volume=0.4)
-    music.apply_config({"asset_dir": str(tmp_path), "enabled": True, "volume": 0.4})
+    music = _make_music(enabled=True, volume=0.4, asset_dir=str(tmp_path))
     tracks = music.load(ctx)
     assert tracks == [str(track)]
     assert ctx.assets["music"] == tracks
@@ -116,10 +116,10 @@ def test_music_play_starts_only_when_enabled(screen, monkeypatch):
     fake = _fake_pygame(monkeypatch, _FakeMixer())
     ctx = AppContext(surface=screen, data=DataRegistry(), location=Location(lat=0.0, lon=0.0))
     ctx.assets["music"] = ["/tmp/example.mp3"]
-    music = _make_music(enabled=False)
-    assert music.play(ctx) is False
+    disabled = _make_music(enabled=False)
+    assert disabled.play(ctx) is False
     assert fake.mixer.music.loaded is None
-    music.apply_config({"enabled": True, "volume": 0.4})
+    music = _make_music(enabled=True, volume=0.4)
     assert music.play(ctx) is True
     assert fake.mixer.music.loaded == "/tmp/example.mp3"
     assert fake.mixer.music.volume == 0.4

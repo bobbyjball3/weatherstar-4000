@@ -1,52 +1,46 @@
-"""Tests for the Plugin base: config collection, binding, repr masking."""
+"""Tests for the Plugin base: Pydantic fields, binding, repr masking."""
 
 import pytest
+from pydantic import SecretStr
 
 from weatherstar_4000.v2 import InvalidConfiguration
 from weatherstar_4000.v2.plugin import Plugin
 
 
-def _make_cls(**defaults):
-    attrs = {"kind": "widget", "name": "sample", "__module__": __name__}
-    attrs.update(defaults)
-    return type("Widget", (Plugin,), attrs)
+class Widget(Plugin):
+    kind = "widget"
+    name = "sample"
+    timeout: int = 10
+    retries: int = 0
 
 
-def test_config_spec_collects_descriptors():
-    from weatherstar_4000.v2.config import ConfigValue
-
-    cls = _make_cls(
-        timeout=ConfigValue(default=10),
-        retries=ConfigValue(default=0),
-    )
-    assert set(cls.config_spec) == {"timeout", "retries"}
+def test_model_fields_collects_annotations():
+    assert set(Widget.model_fields) == {"timeout", "retries"}
 
 
-def test_inherited_config_spec_merged():
-    from weatherstar_4000.v2.config import ConfigValue
+def test_inherited_fields_merged():
+    class FancyWidget(Widget):
+        mode: str = "a"
 
-    base = _make_cls(timeout=ConfigValue(default=10))
-    child = type("FancyWidget", (base,), {"__module__": __name__})
-    assert set(child.config_spec) == {"timeout"}
-
-
-def test_apply_config_merges_defaults():
-    from weatherstar_4000.v2.config import ConfigValue
-
-    cls = _make_cls(timeout=ConfigValue(default=10), mode=ConfigValue(default="a"))
-    instance = cls()
-    instance.apply_config({"mode": "b"})
-    assert instance.timeout == 10
-    assert instance.mode == "b"
+    assert set(FancyWidget.model_fields) == {"timeout", "retries", "mode"}
+    assert FancyWidget().timeout == 10
 
 
-def test_apply_config_required_missing_raises_with_example():
-    from weatherstar_4000.v2.config import ConfigValue
+def test_model_validate_merges_defaults():
+    instance = Widget.model_validate({"timeout": 30})
+    assert instance.timeout == 30
+    assert instance.retries == 0
 
-    cls = _make_cls(api_key=ConfigValue(required=True, sensitive=True))
-    instance = cls()
+
+class KeyedWidget(Plugin):
+    kind = "widget"
+    name = "sample"
+    api_key: SecretStr
+
+
+def test_from_config_required_missing_raises_with_example():
     with pytest.raises(InvalidConfiguration) as excinfo:
-        instance.apply_config({})
+        KeyedWidget.from_config({})
     message = str(excinfo.value)
     assert "widget.sample" in message
     assert "api_key" in message
@@ -55,44 +49,46 @@ def test_apply_config_required_missing_raises_with_example():
 
 
 def test_default_config_includes_required_placeholder():
-    from weatherstar_4000.v2.config import ConfigValue
-
-    cls = _make_cls(
-        a=ConfigValue(default=3),
-        b=ConfigValue(required=True),
-    )
-    defaults = cls.default_config()
-    assert defaults["a"] == 3
-    assert defaults["b"] == "<required>"
-    assert cls.required_keys() == ("b",)
+    assert Widget.default_config() == {"timeout": 10, "retries": 0}
+    assert Widget.required_keys() == ()
+    assert KeyedWidget.default_config() == {"api_key": "<required>"}
+    assert KeyedWidget.required_keys() == ("api_key",)
 
 
 def test_config_scope_builds_kind_dot_name():
-    from weatherstar_4000.v2.config import ConfigValue
+    assert Widget.config_scope() == "widget.sample"
 
-    cls = _make_cls(a=ConfigValue(default=1))
-    assert cls.config_scope() == "widget.sample"
+
+class SecretWidget(Plugin):
+    kind = "widget"
+    name = "secret"
+    api_key: SecretStr = SecretStr("topsecret")
+    label: str = "hello"
 
 
 def test_repr_masks_sensitive_values():
-    from weatherstar_4000.v2.config import ConfigValue
-
-    cls = _make_cls(
-        api_key=ConfigValue(default="topsecret", sensitive=True),
-        label=ConfigValue(default="hello"),
-    )
-    instance = cls()
-    instance.apply_config({})
-    text = repr(instance)
+    text = repr(SecretWidget())
     assert "topsecret" not in text
     assert "***" in text
     assert "hello" in text
 
 
 def test_str_is_safe_for_sensitive():
-    from weatherstar_4000.v2.config import ConfigValue
+    assert "topsecret" not in str(SecretWidget())
 
-    cls = _make_cls(token=ConfigValue(default="hunter2", sensitive=True))
-    instance = cls()
-    instance.apply_config({})
-    assert "hunter2" not in str(instance)
+
+def test_secret_default_never_emitted_by_default_config():
+    assert SecretWidget.default_config()["api_key"] == "<required>"
+
+
+def test_extra_scope_keys_not_treated_as_fields():
+    instance = Widget.model_validate({"timeout": 1, "bogus": "ignored"})
+    assert instance.timeout == 1
+    assert "bogus" not in Widget.model_fields
+    assert not hasattr(type(instance), "bogus")
+
+
+def test_invalid_value_type_raises_invalid_configuration():
+    with pytest.raises(InvalidConfiguration) as excinfo:
+        Widget.from_config({"timeout": "not-a-number"})
+    assert "widget.sample" in str(excinfo.value)

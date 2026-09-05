@@ -5,7 +5,8 @@ try:  # Python >= 3.11
 except ModuleNotFoundError:  # Python 3.10 backport
     import tomli as tomllib
 
-from weatherstar_4000.v2.config import ConfigValue
+from pydantic import SecretStr
+
 from weatherstar_4000.v2.plugin import Plugin
 from weatherstar_4000.v2.registry import registry
 from weatherstar_4000.v2.skeleton import render_skeleton
@@ -14,8 +15,17 @@ from weatherstar_4000.v2.skeleton import render_skeleton
 _BASE_REGISTRY = {k: dict(v) for k, v in registry._plugins.items()}
 
 
-def _reg(kind, name, module="tests.v2.test_skeleton", **configs):
-    attrs = {"kind": kind, "name": name, "__module__": module, **configs}
+def _reg(kind, name, fields=None, module="tests.v2.test_skeleton"):
+    """Register a plugin; ``fields`` maps field_name -> (type, default)."""
+    attrs = {"kind": kind, "name": name, "__module__": module}
+    annotations: dict[str, type] = {}
+    for field_name, spec in (fields or {}).items():
+        annotation = spec[0]
+        annotations[field_name] = annotation
+        if len(spec) > 1:
+            attrs[field_name] = spec[1]
+    if annotations:
+        attrs["__annotations__"] = annotations
     cls = type(name, (Plugin,), attrs)
     registry.register(kind, name, cls)
     return cls
@@ -27,14 +37,10 @@ def _restore():
 
 
 def test_render_skeleton_contains_sections_and_parses():
-    _reg("screen", "current_conditions", header_text=ConfigValue(default="Now"))
-    _reg("screen", "radar", refresh=ConfigValue(default=300, type=int))
-    _reg("datasource", "noaa", user_agent=ConfigValue(default="WeatherStar4000/1.0"))
-    _reg(
-        "datasource",
-        "alpha_vantage",
-        api_key=ConfigValue(required=True, sensitive=True),
-    )
+    _reg("screen", "current_conditions", fields={"header_text": (str, "Now")})
+    _reg("screen", "radar", fields={"refresh": (int, 300)})
+    _reg("datasource", "noaa", fields={"user_agent": (str, "WeatherStar4000/1.0")})
+    _reg("datasource", "alpha_vantage", fields={"api_key": (SecretStr,)})
     try:
         text = render_skeleton(sequence_name="night", screen_names=["current_conditions", "radar"])
         data = tomllib.loads(text)

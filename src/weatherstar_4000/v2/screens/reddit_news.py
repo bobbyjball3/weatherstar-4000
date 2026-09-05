@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 
 import pygame
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2 import render
 from weatherstar_4000.v2.registry import plugin
@@ -93,6 +94,7 @@ def _color(ctx: Any, key: str, default: tuple[int, int, int]) -> tuple[int, int,
 class RedditNewsScreen(Screen):
     name = "reddit_news"
     media = ("backgrounds", "fonts", "logos")
+    _scroll: float = PrivateAttr(default=200.0)
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         render.draw_background(surface, ctx, "1")

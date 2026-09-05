@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 import pygame
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2 import render
 from weatherstar_4000.v2.registry import plugin
@@ -43,10 +44,9 @@ class RadarScreen(Screen):
     media = ("fonts", "backgrounds", "logos")
     datasources = ("radar",)
 
-    def prepare(self, ctx: Any) -> None:
-        self._frames: list[pygame.Surface] = []
-        self._frame_index = 0
-        self._frame_timer = 0.0
+    _frames: list[pygame.Surface] = PrivateAttr(default_factory=list)
+    _frame_index: int = PrivateAttr(default=0)
+    _frame_timer: float = PrivateAttr(default=0.0)
 
     def _radar_frames(self, ctx: Any) -> list[pygame.Surface]:
         location = getattr(ctx, "location", None)

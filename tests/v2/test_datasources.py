@@ -1,9 +1,8 @@
 """Tests for datasource plugins (parsing, caching, masking, graceful failure)."""
 
 import pytest
+from pydantic import ValidationError
 
-from weatherstar_4000.v2 import InvalidConfiguration
-from weatherstar_4000.v2.config import MISSING
 from weatherstar_4000.v2.datasources.feeds import (
     EarthquakesDatasource,
     NoaaAlertsDatasource,
@@ -13,20 +12,23 @@ from weatherstar_4000.v2.datasources.feeds import (
 )
 
 
+def _stocks(**values):
+    defaults = {"api_key": "k", "symbols": "DIA,SPY,QQQ"}
+    defaults.update(values)
+    return StockMarketDatasource.model_validate(defaults)
+
+
 def test_stock_datasource_requires_sensitive_api_key():
-    ds = StockMarketDatasource()
-    assert ds.api_key is MISSING
-    with pytest.raises(InvalidConfiguration):
-        ds.apply_config({})
-    ds.apply_config({"api_key": "secret"})
+    with pytest.raises(ValidationError):
+        StockMarketDatasource.model_validate({})
+    ds = StockMarketDatasource.model_validate({"api_key": "secret"})
     assert "secret" not in repr(ds)
     assert "***" in repr(ds)
-    assert ds.api_key.unwrap() == "secret"
+    assert ds.api_key.get_secret_value() == "secret"
 
 
 def test_stock_quote_parses_and_caches(monkeypatch):
-    ds = StockMarketDatasource()
-    ds.apply_config({"api_key": "k", "symbols": "DIA"})
+    ds = _stocks(symbols="DIA")
     payload = {
         "Global Quote": {
             "01. symbol": "DIA",
@@ -42,15 +44,13 @@ def test_stock_quote_parses_and_caches(monkeypatch):
 
 
 def test_stock_api_key_injected_as_query_param():
-    ds = StockMarketDatasource()
-    ds.apply_config({"api_key": "k", "symbols": "DIA"})
+    ds = _stocks(symbols="DIA")
     params = ds._query_params({"function": "GLOBAL_QUOTE", "symbol": "DIA"})
     assert params["apikey"] == "k"
 
 
 def test_stock_quote_graceful_when_api_fails(monkeypatch):
-    ds = StockMarketDatasource()
-    ds.apply_config({"api_key": "k", "symbols": "DIA"})
+    ds = _stocks(symbols="DIA")
     monkeypatch.setattr(ds, "http_get_json", lambda *a, **k: None)
     assert ds.quotes() == []
 
@@ -88,7 +88,6 @@ def test_alerts_critical():
 
 def test_uv_daily_parsing_and_protection(monkeypatch):
     ds = UvIndexDatasource()
-    ds.apply_config({"days": 7})
 
     def fake(url, params=None, timeout=None):
         return {
@@ -108,7 +107,6 @@ def test_uv_daily_parsing_and_protection(monkeypatch):
 
 def test_earthquakes_recent_parse(monkeypatch):
     ds = EarthquakesDatasource()
-    ds.apply_config({"min_magnitude": 3.0, "limit": 10})
 
     def fake(url, params=None, timeout=None):
         return {

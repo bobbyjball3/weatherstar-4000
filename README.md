@@ -189,10 +189,11 @@ Run `weatherstar4000 --help` for available options.
 - A **plugin-driven v2 engine** is under construction in
   `src/weatherstar_4000/v2/` as a parallel implementation (the original app and
   `weatherstar4000` entrypoint are untouched). It adds Screen/Component/Media/
-  Datasource/Sequence abstractions plus a `ConfigValue` descriptor system that
-  auto-registers plugin config scopes into a TOML config
+  Datasource/Sequence abstractions where each plugin is a Pydantic model whose
+  typed fields auto-register their config scope into a TOML config
   (`~/.config/weatherstar4000/config.toml`, overridable via `--config` /
-  `WEATHERSTAR_CONFIG`). Datasource auth settings are masked in repr/str/logs.
+  `WEATHERSTAR_CONFIG`). Datasource auth fields are typed `SecretStr` and masked
+  in repr/str/logs.
   Run it with the new `weatherstar4000-v2` entrypoint; `--validate` renders
   every slide headlessly, and `generate-config` emits a skeleton TOML.
 

@@ -1,9 +1,9 @@
 """Tests for the engine: building plugins and running/validating a sequence."""
 
 import pytest
+from pydantic import SecretStr
 
 from weatherstar_4000.v2 import InvalidConfiguration
-from weatherstar_4000.v2.config import ConfigValue
 from weatherstar_4000.v2.config_file import AppConfig
 from weatherstar_4000.v2.engine import Builder, SequenceRunner, resolve_location
 from weatherstar_4000.v2.plugin import Plugin
@@ -152,25 +152,28 @@ def test_run_sequence_polls_music_controller(pygame_env):
     assert controller.polls >= 5
 
 
-def _register_temporary_screen(**configs):
+def _register_temporary_screen(**typed_fields):
+    """Register a temp screen; pass ``field_name=(Type,)`` or ``field_name=(Type, default)``."""
     attrs = {
         "kind": "screen",
         "name": "needs_key_tmp",
         "__module__": "tests.v2.test_engine",
-        "datasources": (),
-        "media": (),
-        "components": (),
-        **configs,
     }
+    annotations: dict[str, type] = {}
+    for name, spec in typed_fields.items():
+        annotation = spec[0]
+        annotations[name] = annotation
+        if len(spec) > 1:
+            attrs[name] = spec[1]
+    if annotations:
+        attrs["__annotations__"] = annotations
     cls = type("NeedsKeyTmpScreen", (Plugin,), attrs)
     registry.register("screen", "needs_key_tmp", cls)
     return cls
 
 
 def test_missing_required_config_raises_with_example(appcfg, tmp_path):
-    _register_temporary_screen(
-        api_key=ConfigValue(required=True, sensitive=True),
-    )
+    _register_temporary_screen(api_key=(SecretStr,))
     try:
         cfg_text = CFG.replace(
             'slides = [{ screen = "progress" }]', 'slides = [{ screen = "needs_key_tmp" }]'

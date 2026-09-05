@@ -7,7 +7,9 @@ All HTTP goes through the base Datasource helpers with TTL caching.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
+
+from pydantic import PrivateAttr
 
 from weatherstar_4000.v2.datasource import Datasource
 from weatherstar_4000.v2.registry import plugin
@@ -19,9 +21,9 @@ BASE_URL = "https://api.weather.gov"
 class NoaaWeather(Datasource):
     name = "weather"
 
-    def __init__(self, cache_ttl: int = 300):
-        super().__init__(cache_ttl=cache_ttl)
-        self._grid_cache: dict[str, dict[str, Any]] = {}
+    _default_cache_ttl: ClassVar[int] = 300
+
+    _grid_cache: dict[str, dict[str, Any]] = PrivateAttr(default_factory=dict)
 
     # -- grid point ----------------------------------------------------------
 

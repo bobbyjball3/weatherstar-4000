@@ -16,7 +16,8 @@ import random
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from weatherstar_4000.v2.config import ConfigValue
+from pydantic import PrivateAttr
+
 from weatherstar_4000.v2.logging_setup import get_logger
 from weatherstar_4000.v2.media import Media
 from weatherstar_4000.v2.registry import plugin
@@ -33,8 +34,11 @@ MUSIC_GLOB = ("*.mp3", "*.ogg", "*.wav")
 class Music(Media):
     name = "music"
 
-    enabled = ConfigValue(default=False, type=bool)
-    volume = ConfigValue(default=0.6, type=float)
+    enabled: bool = False
+    volume: float = 0.6
+
+    _playlist: list[str] = PrivateAttr(default_factory=list)
+    _track_index: int = PrivateAttr(default=0)
 
     def _tracks(self) -> list[str]:
         directory = Path(self.asset_dir) / "music"

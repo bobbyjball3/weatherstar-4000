@@ -14,18 +14,39 @@ from pathlib import Path
 from typing import Any
 
 import structlog
+from pydantic import SecretStr
 
-from weatherstar_4000.v2.config import Sensitive, is_sensitive_key
+#: Substrings that mark a dict key / log key as sensitive.
+SENSITIVE_KEY_PARTS = (
+    "token",
+    "secret",
+    "password",
+    "passwd",
+    "api_key",
+    "apikey",
+    "api-key",
+    "auth",
+    "credential",
+    "cookie",
+)
 
 LOGGER_NAME = "weatherstar4000.v2"
 
 _config_installed = False
 
 
+def is_sensitive_key(key: str) -> bool:
+    """Return True if a log/config key looks sensitive by name."""
+    lowered = str(key).lower().replace("_", "-").replace(" ", "-")
+    return any(part in lowered for part in SENSITIVE_KEY_PARTS)
+
+
 def _redact(value: Any) -> Any:
     """Return a safe-to-log version of ``value``."""
-    if isinstance(value, Sensitive):
+    if isinstance(value, SecretStr):
         return "***"
+    if isinstance(value, str):
+        return value
     if isinstance(value, dict):
         return {k: ("***" if is_sensitive_key(k) else _redact(v)) for k, v in value.items()}
     if isinstance(value, (list, tuple)):

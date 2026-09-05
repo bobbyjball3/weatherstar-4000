@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from weatherstar_4000.v2.config import ConfigValue
+from pydantic import SecretStr
+
 from weatherstar_4000.v2.datasource import Datasource
 from weatherstar_4000.v2.registry import plugin
 
@@ -17,7 +18,7 @@ class NoaaAlertsDatasource(Datasource):
 
     name = "alerts"
 
-    severity_priority = ConfigValue(default="extreme:severe:moderate", type=str)
+    severity_priority: str = "extreme:severe:moderate"
 
     def active(self, lat: float, lon: float) -> list[dict]:
         key = self._cache_key("alerts", lat, lon)
@@ -67,8 +68,8 @@ def _parse_alerts(data: dict) -> list[dict]:
 class EarthquakesDatasource(Datasource):
     name = "earthquakes"
 
-    min_magnitude = ConfigValue(default=3.0, type=float)
-    limit = ConfigValue(default=10, type=int)
+    min_magnitude: float = 3.0
+    limit: int = 10
 
     def recent(self, lat: float, lon: float) -> list[dict]:
         key = self._cache_key("quakes", lat, lon, self.min_magnitude, self.limit)
@@ -100,7 +101,7 @@ class EarthquakesDatasource(Datasource):
 class UvIndexDatasource(Datasource):
     name = "uv_index"
 
-    days = ConfigValue(default=7, type=int)
+    days: int = 7
 
     def daily(self, lat: float, lon: float) -> list[dict]:
         key = self._cache_key("uv", lat, lon, self.days)
@@ -145,10 +146,10 @@ class StockMarketDatasource(Datasource):
 
     name = "stocks"
 
-    api_key = ConfigValue(required=True, sensitive=True)
-    api_key_param = ConfigValue(default="apikey", type=str)
-    api_key_header = ConfigValue(default=None, type=str)
-    symbols = ConfigValue(default="DIA,SPY,QQQ", type=str)
+    api_key: SecretStr
+    api_key_param: str = "apikey"
+    api_key_header: str | None = None
+    symbols: str = "DIA,SPY,QQQ"
 
     def quotes(self) -> list[dict]:
         symbols = [s.strip() for s in self.symbols.split(",") if s.strip()]

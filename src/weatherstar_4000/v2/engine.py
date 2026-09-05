@@ -72,9 +72,7 @@ class Builder:
 
     def make(self, kind: str, name: str) -> Any:
         cls = registry.get(kind, name)
-        instance = cls()
-        instance.apply_config(self.appcfg.scope(kind, name))
-        return instance
+        return cls.from_config(self.appcfg.scope(kind, name))
 
     def build_data(self, names: Iterable[str]) -> DataRegistry:
         data = DataRegistry()

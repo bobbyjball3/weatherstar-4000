@@ -3,7 +3,9 @@
 import io
 import logging
 
-from weatherstar_4000.v2 import Sensitive, logging_setup
+from pydantic import SecretStr
+
+from weatherstar_4000.v2 import logging_setup
 
 
 def _render_via_console(event_dict, colors=True):
@@ -44,13 +46,11 @@ def test_console_renderer_can_disable_colors():
 
 
 def test_redact_processor_masks_sensitive_keys_and_values():
-    from weatherstar_4000.v2.config import is_sensitive_key
-
     event = {
         "event": "calling api",
         "url": "https://api.example.com/v1",
         "headers": {"Authorization": "Bearer abc", "X-Key": "secret-value"},
-        "api_key": Sensitive("k"),
+        "api_key": SecretStr("k"),
         "token": "raw-token",
         "status": 200,
     }
@@ -60,12 +60,12 @@ def test_redact_processor_masks_sensitive_keys_and_values():
     assert cleaned["headers"]["Authorization"] == "***"
     assert cleaned["url"] == event["url"]
     assert cleaned["status"] == 200
-    assert is_sensitive_key("api_key")
-    assert not is_sensitive_key("url")
+    assert logging_setup.is_sensitive_key("api_key")
+    assert not logging_setup.is_sensitive_key("url")
 
 
 def test_redact_processor_handles_sensitive_values():
-    cleaned = logging_setup.redact_sensitive(None, None, {"secret_obj": Sensitive("v")})
+    cleaned = logging_setup.redact_sensitive(None, None, {"secret_obj": SecretStr("v")})
     assert cleaned["secret_obj"] == "***"
 
 
