@@ -15,7 +15,7 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000.media import AssetMedia
+from weatherstar_4000.media.base import AssetMedia
 from weatherstar_4000.registry import plugin
 
 

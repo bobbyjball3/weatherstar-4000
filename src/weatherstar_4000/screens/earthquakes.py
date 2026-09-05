@@ -9,7 +9,7 @@ import pygame
 
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
-from weatherstar_4000.screen import Screen
+from weatherstar_4000.screens.base import Screen
 
 _MAX_ROWS = 8
 
@@ -33,14 +33,6 @@ class EarthquakesScreen(Screen):
             return (255, 255, 0)
         return (255, 255, 255)
 
-    @staticmethod
-    def _format_time(time_ms: Any) -> str:
-        try:
-            epoch = float(time_ms) / 1000.0
-            return datetime.utcfromtimestamp(epoch).strftime("%m/%d %H:%M")
-        except Exception:  # noqa: BLE001 - unparseable timestamp
-            return ""
-
     layout = (
         ComponentSpec(component="background", config={"background_name": "5"}),
         ComponentSpec(
@@ -49,6 +41,14 @@ class EarthquakesScreen(Screen):
         ),
         ComponentSpec(component="clock"),
     )
+
+    @staticmethod
+    def _format_time(time_ms: Any) -> str:
+        try:
+            epoch = float(time_ms) / 1000.0
+            return datetime.utcfromtimestamp(epoch).strftime("%m/%d %H:%M")
+        except Exception:  # noqa: BLE001 - unparseable timestamp
+            return ""
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         lat, lon = self.latlon(ctx)

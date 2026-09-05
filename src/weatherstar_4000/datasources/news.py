@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from weatherstar_4000.datasource import Datasource
+from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
 
 #: (title, url) pairs of simulated local headlines.

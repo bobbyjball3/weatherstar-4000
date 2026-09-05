@@ -14,7 +14,7 @@ from typing import ClassVar
 
 import pygame
 
-from weatherstar_4000.datasource import Datasource
+from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
 
 # Candidate image templates, newest first ordering handled per-frame below.

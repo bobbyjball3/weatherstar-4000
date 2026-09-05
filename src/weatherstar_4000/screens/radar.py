@@ -15,7 +15,7 @@ from pydantic import PrivateAttr
 
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
-from weatherstar_4000.screen import Screen
+from weatherstar_4000.screens.base import Screen
 
 _RADAR_RECT = pygame.Rect(70, 100, 500, 300)
 _FRAME_DURATION = 0.5  # seconds per radar frame

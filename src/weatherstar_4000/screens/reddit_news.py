@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
-from weatherstar_4000.screen import Screen
+from weatherstar_4000.screens.base import Screen
 
 #: Literal headline set ported from ``displays.py::draw_reddit_news``.
 REDDIT_HEADLINES: list[tuple[str, str]] = [

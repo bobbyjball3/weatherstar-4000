@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import Field, SecretStr
 
-from weatherstar_4000.datasource import Datasource
+from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
 
 NOAA_ALERTS_URL = "https://api.weather.gov/alerts/active"

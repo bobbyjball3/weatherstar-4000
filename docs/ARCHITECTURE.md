@@ -50,7 +50,7 @@ implementation instead of re-declaring `_font`/`_color` helpers per file.
 
 ### Screens
 
-`Screen` (in `screen.py`) subclasses declare metadata as `ClassVar`s —
+`Screen` (in `screens/base.py`) subclasses declare metadata as `ClassVar`s —
 `layout`, `datasources`, `media` — so Pydantic never treats them as config
 fields. A screen's `layout` is an ordered tuple of `ComponentSpec` entries
 (component name + per-instance config); the engine builds one component
@@ -84,7 +84,7 @@ through the context.
 
 ### Datasources
 
-`Datasource` (in `datasource.py`) is a `Plugin` with common config
+`Datasource` (in `datasources/base.py`) is a `Plugin` with common config
 (`timeout`, `user_agent`) and HTTP plumbing shared by all feeds:
 
 - a `requests.Session` built lazily per instance with the configured

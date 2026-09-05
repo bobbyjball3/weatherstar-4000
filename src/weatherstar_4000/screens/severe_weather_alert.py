@@ -19,7 +19,7 @@ import pygame
 from pydantic import PrivateAttr
 
 from weatherstar_4000.registry import plugin
-from weatherstar_4000.screen import Screen
+from weatherstar_4000.screens.base import Screen
 
 _BORDER = 8
 _WIDTH, _HEIGHT = 640, 480

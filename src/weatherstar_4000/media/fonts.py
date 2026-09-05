@@ -12,7 +12,7 @@ from typing import Any
 import pygame
 
 from weatherstar_4000.logging_setup import get_logger
-from weatherstar_4000.media import FontSet
+from weatherstar_4000.media.base import FontSet
 from weatherstar_4000.registry import plugin
 
 log = get_logger("weatherstar4000.fonts")

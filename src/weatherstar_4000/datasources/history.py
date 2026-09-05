@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 
 from pydantic import PrivateAttr
 
-from weatherstar_4000.datasource import Datasource
+from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
 
 _HISTORY_URL = "https://api.open-meteo.com/v1/forecast"

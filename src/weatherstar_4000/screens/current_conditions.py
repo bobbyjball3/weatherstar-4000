@@ -10,7 +10,7 @@ from pydantic import PrivateAttr
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
-from weatherstar_4000.screen import Screen
+from weatherstar_4000.screens.base import Screen
 
 
 @plugin

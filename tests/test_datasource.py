@@ -5,7 +5,7 @@ import time
 import requests
 from pydantic import Field, SecretStr
 
-from weatherstar_4000.datasource import Datasource
+from weatherstar_4000.datasources.base import Datasource
 
 
 class AuthDS(Datasource):

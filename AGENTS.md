@@ -76,7 +76,7 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 - `registry.py` — `@plugin`, `PluginRegistry`, built-in + entry-point discovery.
 - `renderer.py` — `Renderer` mixin: concrete font/color/data/blit/wrap helpers
   shared by both Screens and Components.
-- `screen.py`, `components/base.py`, `datasource.py`, `media/__init__.py` — the
+- `screens/base.py`, `components/base.py`, `datasources/base.py`, `media/base.py` — the
   plugin-kind bases. Screens declare an ordered `layout` of `ComponentSpec`
   (component name + per-instance config); the engine binds a component instance
   per spec, and `Screen.draw` steps+renders them then calls `compose`.

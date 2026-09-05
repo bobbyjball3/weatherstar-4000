@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from pydantic import Field, PrivateAttr
 
 from weatherstar_4000.logging_setup import get_logger
-from weatherstar_4000.media import Media
+from weatherstar_4000.media.base import Media
 from weatherstar_4000.registry import plugin
 
 if TYPE_CHECKING:

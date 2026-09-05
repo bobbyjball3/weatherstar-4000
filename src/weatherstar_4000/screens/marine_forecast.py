@@ -12,7 +12,7 @@ import pygame
 
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
-from weatherstar_4000.screen import Screen
+from weatherstar_4000.screens.base import Screen
 
 #: Literal (label, value) rows ported from ``displays.py::draw_marine_forecast``.
 MARINE_CONDITIONS: list[tuple[str, str]] = [
