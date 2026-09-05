@@ -11,6 +11,7 @@ from typing import Any
 import pygame
 
 from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
@@ -25,38 +26,37 @@ _BAR_WIDTH = 40
 _GRADIENT_STEPS = 5
 
 
-def _bar_color(avg_temp: float) -> tuple[int, int, int]:
-    """Pick the base bar color from the average temperature."""
-    if avg_temp < 32:
-        return (100, 150, 255)
-    if avg_temp < 50:
-        return (150, 200, 255)
-    if avg_temp < 65:
-        return (150, 255, 150)
-    if avg_temp < 75:
-        return (255, 255, 100)
-    if avg_temp < 85:
-        return (255, 200, 100)
-    return (255, 100, 100)
-
-
-def _font(ctx: Any, key: str) -> pygame.font.Font | None:
-    font = ctx.fonts.get(key)
-    if font is None and ctx.fonts:
-        font = next(iter(ctx.fonts.values()))
-    return font
-
-
 @plugin
 class TemperatureGraphScreen(Screen):
     name = "temperature_graph"
     media = ("backgrounds",)
     datasources = ("weather",)
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "1-chart")
-        render.draw_header(surface, ctx, "7-Day", "Temperature")
+    @staticmethod
+    def _bar_color(avg_temp: float) -> tuple[int, int, int]:
+        """Pick the base bar color from the average temperature."""
+        if avg_temp < 32:
+            return (100, 150, 255)
+        if avg_temp < 50:
+            return (150, 200, 255)
+        if avg_temp < 65:
+            return (150, 255, 150)
+        if avg_temp < 75:
+            return (255, 255, 100)
+        if avg_temp < 85:
+            return (255, 200, 100)
+        return (255, 100, 100)
 
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "1-chart"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "7-Day", "title_bottom": "Temperature", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
+
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         colors = ctx.colors
         yellow = colors.get("yellow", _YELLOW)
         white = colors.get("white", _WHITE)
@@ -85,7 +85,7 @@ class TemperatureGraphScreen(Screen):
             2,
         )
 
-        font_small = _font(ctx, "small")
+        font_small = self.font(ctx, "small")
         bar_width = _GRAPH_WIDTH // len(temps)
         for i, ((high, low), label) in enumerate(zip(temps, labels)):
             x = _GRAPH_LEFT + i * bar_width + bar_width // 2
@@ -95,7 +95,7 @@ class TemperatureGraphScreen(Screen):
 
             bar_x = x - 20
             bar_height = abs(low_y - high_y)
-            bar_color = _bar_color((high + low) / 2)
+            bar_color = self._bar_color((high + low) / 2)
 
             step_height = bar_height / _GRADIENT_STEPS
             for j in range(_GRADIENT_STEPS):

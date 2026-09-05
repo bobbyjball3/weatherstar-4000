@@ -85,13 +85,21 @@ class Builder:
             media = self.make("media", name)
             media.load(ctx)
 
-    def build_components(self, names: Iterable[str], ctx: AppContext) -> dict[str, Any]:
-        built: dict[str, Any] = {}
-        for name in sorted(names):
-            component = self.make("component", name)
-            component.prepare(ctx)
-            built[name] = component
-        return built
+    def make_component(self, spec: Any) -> Any:
+        """Instantiate a component for one ``ComponentSpec`` (scope + spec config)."""
+        cls = registry.get("component", spec.component)
+        scope = self.appcfg.scope("component", spec.component)
+        return cls.from_config({**scope, **spec.config})
+
+    def bind_components(self, screens: Iterable[Any], ctx: AppContext) -> None:
+        """Build each screen's layout components and prepare them once."""
+        for screen in screens:
+            instances = []
+            for spec in screen.layout:
+                component = self.make_component(spec)
+                component.prepare(ctx)
+                instances.append(component)
+            screen.bind_components(instances)
 
     def build_screens(self, sequence: Sequence) -> list[Any]:
         return [self.make("screen", name) for name in sequence.screen_names()]
@@ -104,7 +112,6 @@ class Builder:
             cls = registry.get("screen", name)
             kinds["datasource"].update(cls.datasources or ())
             kinds["media"].update(cls.media or ())
-            kinds["component"].update(cls.components or ())
         # Auto include registered base media that every screen may rely on.
         available = set(registry.names("media"))
         kinds["media"].update(n for n in _BASE_MEDIA if n in available)
@@ -141,9 +148,8 @@ class Builder:
     ) -> tuple[AppContext, list[Any]]:
         deps = self.sequence_dependencies(sequence)
         ctx = self.build_context(surface, location=location, deps=deps)
-        components = self.build_components(deps["component"], ctx)
-        ctx.assets["components"] = components
         screens = self.build_screens(sequence)
+        self.bind_components(screens, ctx)
         for screen in screens:
             screen.prepare(ctx)
         return ctx, screens

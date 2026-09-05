@@ -11,26 +11,12 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
 _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
-
-
-def _font(ctx: Any, key: str) -> pygame.font.Font | None:
-    font = ctx.fonts.get(key)
-    if font is None and ctx.fonts:
-        font = next(iter(ctx.fonts.values()))
-    return font
-
-
-def _blit(surface: pygame.Surface, ctx: Any, font_key: str, text: str, pos, color) -> None:
-    font = _font(ctx, font_key)
-    if font is None:
-        return
-    surface.blit(font.render(text, True, color), pos)
 
 
 @plugin
@@ -39,10 +25,16 @@ class SunMoonScreen(Screen):
     media = ("backgrounds",)
     datasources = ()
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "1")
-        render.draw_header(surface, ctx, "Sun & Moon", "Data")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "1"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Sun & Moon", "title_bottom": "Data", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         colors = ctx.colors
         yellow = colors.get("yellow", _YELLOW)
         white = colors.get("white", _WHITE)
@@ -51,7 +43,7 @@ class SunMoonScreen(Screen):
         right_col_x = 335
         y_pos = 120
 
-        _blit(surface, ctx, "normal", "SUN", (left_col_x, y_pos), yellow)
+        self.blit_text(surface, ctx, "SUN", (left_col_x, y_pos), font_name="normal", color=yellow)
         sun_y = y_pos + 30
 
         now = datetime.now()
@@ -75,7 +67,7 @@ class SunMoonScreen(Screen):
             self._draw_row(surface, ctx, label, value, left_col_x, sun_y, white, yellow, 110)
             sun_y += 24
 
-        _blit(surface, ctx, "normal", "MOON", (right_col_x, y_pos), yellow)
+        self.blit_text(surface, ctx, "MOON", (right_col_x, y_pos), font_name="normal", color=yellow)
         moon_y = y_pos + 30
 
         moon_age = now.day % 30
@@ -109,8 +101,8 @@ class SunMoonScreen(Screen):
             self._draw_row(surface, ctx, label, value, right_col_x, moon_y, white, yellow, 100)
             moon_y += 24
 
-    @staticmethod
     def _draw_row(
+        self,
         surface: pygame.Surface,
         ctx: Any,
         label: str,
@@ -121,7 +113,7 @@ class SunMoonScreen(Screen):
         yellow,
         min_value_x: int,
     ) -> None:
-        font = _font(ctx, "tiny")
+        font = self.font(ctx, "tiny")
         if font is None:
             return
         label_surf = font.render(f"{label}:", True, white)

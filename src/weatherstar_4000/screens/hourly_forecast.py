@@ -8,66 +8,9 @@ from typing import Any
 import pygame
 
 from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
-
-_FONT_SIZES = {
-    "title": 32,
-    "large": 32,
-    "extended": 32,
-    "small": 28,
-    "normal": 20,
-    "forecast": 24,
-    "tiny": 16,
-    "scroller": 24,
-}
-
-
-def _ensure_fonts(ctx: Any) -> None:
-    fonts = getattr(ctx, "fonts", None)
-    if not isinstance(fonts, dict):
-        return
-    for name, size in _FONT_SIZES.items():
-        fonts.setdefault(name, pygame.font.Font(None, size))
-
-
-def _font(ctx: Any, name: str) -> pygame.font.Font:
-    fonts = getattr(ctx, "fonts", None)
-    if isinstance(fonts, dict):
-        found = fonts.get(name)
-        if found is not None:
-            return found
-    return pygame.font.Font(None, _FONT_SIZES.get(name, 20))
-
-
-def _color(
-    ctx: Any, key: str, fallback: tuple[int, int, int] = (255, 255, 255)
-) -> tuple[int, int, int]:
-    try:
-        return (ctx.colors or {}).get(key, fallback)
-    except Exception:
-        return fallback
-
-
-def _weather(ctx: Any) -> Any:
-    try:
-        return ctx.data.get("weather")
-    except Exception:
-        return None
-
-
-def _data(ctx: Any, method: str) -> Any:
-    ds = _weather(ctx)
-    if ds is None:
-        return None
-    fn = getattr(ds, method, None)
-    loc = getattr(ctx, "location", None)
-    if fn is None or loc is None:
-        return None
-    try:
-        return fn(loc.lat, loc.lon)
-    except Exception:
-        return None
 
 
 @plugin
@@ -76,25 +19,30 @@ class HourlyForecastScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        _ensure_fonts(ctx)
-        render.draw_background(surface, ctx, "4")
-        render.draw_header(surface, ctx, "Hourly", "Forecast")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "4"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Hourly", "title_bottom": "Forecast", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
-        hourly = _data(ctx, "get_hourly") or {}
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        hourly = self.weather_data(ctx, "get_hourly") or {}
         try:
             periods = hourly.get("periods") or []
         except Exception:
             periods = []
         if not periods:
-            forecast = _data(ctx, "get_forecast") or {}
+            forecast = self.weather_data(ctx, "get_forecast") or {}
             try:
                 periods = forecast.get("periods") or []
             except Exception:
                 periods = []
 
-        yellow = _color(ctx, "yellow")
-        white = _color(ctx, "white")
+        yellow = self.color(ctx, "yellow")
+        white = self.color(ctx, "white")
 
         if not periods:
             render.draw_centered_text(
@@ -111,7 +59,7 @@ class HourlyForecastScreen(Screen):
         scroll_time = pygame.time.get_ticks() // 50
         scroll_offset = scroll_time % (total_content_height + content_height)
 
-        header_surf = _font(ctx, "small").render("TIME  TEMP  CONDITIONS", True, yellow)
+        header_surf = self.font(ctx, "small").render("TIME  TEMP  CONDITIONS", True, yellow)
         surface.blit(header_surf, (65, content_top))
 
         clip_rect = pygame.Rect(0, content_top + 30, 640, content_height)
@@ -143,7 +91,7 @@ class HourlyForecastScreen(Screen):
 
                     short = str(period.get("shortForecast", ""))[:35]
                     text = f"{time_display:6}{temp_display:5}{short}"
-                    period_surf = _font(ctx, "normal").render(text, True, white)
+                    period_surf = self.font(ctx, "normal").render(text, True, white)
                     surface.blit(period_surf, (65, y_pos))
 
         surface.set_clip(None)

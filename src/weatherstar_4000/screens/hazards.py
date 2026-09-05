@@ -6,7 +6,7 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
@@ -22,47 +22,26 @@ _SAFETY_TIPS = (
 )
 
 
-def _font(ctx: Any, name: str, size: int) -> pygame.font.Font:
-    fonts = getattr(ctx, "fonts", None) or {}
-    return fonts.get(name) or pygame.font.Font(None, size)
-
-
-def _color(ctx: Any, key: str, default: tuple[int, int, int]) -> tuple[int, int, int]:
-    colors = getattr(ctx, "colors", None) or {}
-    return colors.get(key, default)
-
-
-def _ds(ctx: Any, name: str) -> Any:
-    data = getattr(ctx, "data", None)
-    if data is None:
-        return None
-    try:
-        return data.get(name)
-    except Exception:  # noqa: BLE001 - optional datasource
-        return None
-
-
-def _latlon(ctx: Any) -> tuple[float, float]:
-    location = getattr(ctx, "location", None)
-    if location is None:
-        return 0.0, 0.0
-    return float(getattr(location, "lat", 0.0)), float(getattr(location, "lon", 0.0))
-
-
 @plugin
 class HazardsScreen(Screen):
     name = "hazards"
     media = ("backgrounds", "fonts", "logos")
     datasources = ("weather",)
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "3")
-        render.draw_header(surface, ctx, "Weather", "Alerts")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "3"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Weather", "title_bottom": "Alerts", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
-        white = _color(ctx, "white", (255, 255, 255))
-        yellow = _color(ctx, "yellow", (255, 255, 0))
-        normal = _font(ctx, "normal", 20)
-        extended = _font(ctx, "extended", 24)
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        white = self.color(ctx, "white", (255, 255, 255))
+        yellow = self.color(ctx, "yellow", (255, 255, 0))
+        normal = self.font(ctx, "normal")
+        extended = self.font(ctx, "extended")
 
         y_pos = 175
         title = extended.render("CURRENT HAZARDS", True, yellow)
@@ -112,8 +91,8 @@ class HazardsScreen(Screen):
                 y_pos += 25
 
     def _forecast_periods(self, ctx: Any) -> list[dict]:
-        lat, lon = _latlon(ctx)
-        weather = _ds(ctx, "weather")
+        lat, lon = self.latlon(ctx)
+        weather = self.datasource(ctx, "weather")
         if weather is None:
             return []
         try:

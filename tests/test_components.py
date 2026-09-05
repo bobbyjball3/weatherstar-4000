@@ -2,7 +2,9 @@
 
 import pygame
 
-from weatherstar_4000.components.header import Background, Clock, Header
+from weatherstar_4000.components.background import Background
+from weatherstar_4000.components.clock import Clock
+from weatherstar_4000.components.header import Header
 from weatherstar_4000.context import AppContext, DataRegistry, Location
 from weatherstar_4000.themes import CLASSIC_THEME
 

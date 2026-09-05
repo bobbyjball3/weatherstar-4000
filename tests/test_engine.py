@@ -69,6 +69,24 @@ def test_build_runtime_and_validate_progress(appcfg, pygame_env):
     )
 
 
+def test_layout_components_bound_and_drawn(appcfg, pygame_env):
+    import pygame
+
+    builder = Builder(appcfg)
+    name, data = appcfg.select_sequence(None)
+    sequence = Sequence.from_config(name, data)
+    surface = pygame.Surface((640, 480))
+    ctx, screens = builder.build_runtime(sequence, surface, resolve_location(appcfg))
+    screen = screens[0]
+    # Engine built one component per layout spec, in order.
+    assert [c.name for c in screen._components] == ["background", "header", "clock"]
+    # Drawing steps+renders the components then the compose hook.
+    screen.draw(surface, ctx, dt=1 / 30)
+    # Header band shows the yellow title text.
+    colors = {surface.get_at((x, y))[:3] for x in range(170, 320, 5) for y in range(25, 60, 5)}
+    assert ctx.colors["yellow"] in colors
+
+
 def test_run_sequence_advances_all_slides(appcfg, pygame_env):
     import pygame
 

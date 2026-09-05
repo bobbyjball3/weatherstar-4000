@@ -34,8 +34,13 @@ def draw_header(
     title_top: str,
     title_bottom: str | None = None,
     has_noaa: bool = False,
+    include_clock: bool = True,
 ) -> None:
-    """Draw the standard header: corner logo, yellow title, NOAA mark, clock/date."""
+    """Draw the standard header: corner logo, yellow title, NOAA mark, clock/date.
+
+    ``include_clock`` lets compositors draw the top-right clock/date separately
+    (e.g. via the ``clock`` component) instead of inside the header band.
+    """
     logos = ctx.assets.get("logos") or {}
     colors = ctx.colors
     fonts = ctx.fonts
@@ -55,6 +60,9 @@ def draw_header(
 
     if has_noaa and "noaa" in logos:
         surface.blit(logos["noaa"], (356, 39))
+
+    if not include_clock:
+        return
 
     small = fonts.get("small", title_font)
     time_str = datetime.now().strftime("%I:%M %p").lstrip("0")

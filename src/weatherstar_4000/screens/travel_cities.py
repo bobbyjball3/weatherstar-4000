@@ -6,46 +6,9 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
-
-_FONT_SIZES = {
-    "title": 32,
-    "large": 32,
-    "extended": 32,
-    "small": 28,
-    "normal": 20,
-    "forecast": 24,
-    "tiny": 16,
-    "scroller": 24,
-}
-
-
-def _ensure_fonts(ctx: Any) -> None:
-    fonts = getattr(ctx, "fonts", None)
-    if not isinstance(fonts, dict):
-        return
-    for name, size in _FONT_SIZES.items():
-        fonts.setdefault(name, pygame.font.Font(None, size))
-
-
-def _font(ctx: Any, name: str) -> pygame.font.Font:
-    fonts = getattr(ctx, "fonts", None)
-    if isinstance(fonts, dict):
-        found = fonts.get(name)
-        if found is not None:
-            return found
-    return pygame.font.Font(None, _FONT_SIZES.get(name, 20))
-
-
-def _color(
-    ctx: Any, key: str, fallback: tuple[int, int, int] = (255, 255, 255)
-) -> tuple[int, int, int]:
-    try:
-        return (ctx.colors or {}).get(key, fallback)
-    except Exception:
-        return fallback
 
 
 @plugin
@@ -54,11 +17,16 @@ class TravelCitiesScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ()
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        _ensure_fonts(ctx)
-        render.draw_background(surface, ctx, "5")
-        render.draw_header(surface, ctx, "Travel Cities", "Weather")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "5"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Travel Cities", "title_bottom": "Weather", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         cities = [
             ("NEW YORK", 72, "Partly Cloudy"),
             ("LOS ANGELES", 78, "Sunny"),
@@ -70,8 +38,8 @@ class TravelCitiesScreen(Screen):
             ("ATLANTA", 79, "Partly Cloudy"),
         ]
 
-        yellow = _color(ctx, "yellow")
-        white = _color(ctx, "white")
+        yellow = self.color(ctx, "yellow")
+        white = self.color(ctx, "white")
         y_pos = 120
 
         for i, (city, temp, conditions) in enumerate(cities):
@@ -79,13 +47,13 @@ class TravelCitiesScreen(Screen):
                 bar_rect = pygame.Rect(60, y_pos - 5, 520, 30)
                 pygame.draw.rect(surface, (0, 0, 60), bar_rect)
 
-            city_surf = _font(ctx, "normal").render(city, True, yellow)
+            city_surf = self.font(ctx, "normal").render(city, True, yellow)
             surface.blit(city_surf, (80, y_pos))
 
-            temp_surf = _font(ctx, "normal").render(f"{temp}\N{DEGREE SIGN}", True, white)
+            temp_surf = self.font(ctx, "normal").render(f"{temp}\N{DEGREE SIGN}", True, white)
             surface.blit(temp_surf, (320, y_pos))
 
-            cond_surf = _font(ctx, "normal").render(conditions, True, white)
+            cond_surf = self.font(ctx, "normal").render(conditions, True, white)
             surface.blit(cond_surf, (400, y_pos))
 
             y_pos += 35

@@ -3,23 +3,47 @@
 Components are small, composable renderers (headers, text, icons, tables,
 scrolling tickers, charts).  They receive the shared :class:`AppContext` and the
 target surface at render time and read config through their own typed Pydantic
-fields.
+fields.  Screens declare which components they want (and how each is configured)
+via :class:`ComponentSpec` entries in their ``layout``.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pygame
+from pydantic import BaseModel, ConfigDict, Field
 
 from weatherstar_4000.plugin import Plugin
+from weatherstar_4000.renderer import Renderer
 
 if TYPE_CHECKING:
     from weatherstar_4000.context import AppContext
 
 
-class Component(Plugin):
-    """Base class for renderable components."""
+class ComponentSpec(BaseModel):
+    """One component placement in a Screen's ``layout``.
+
+    ``component`` names a registered Component plugin (kind=component) and
+    ``config`` supplies per-instance field overrides, merged over any
+    ``[component.<name>]`` config scope.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    component: str = Field(description="Registered component name (kind 'component').")
+    config: dict[str, Any] = Field(
+        default_factory=dict, description="Per-instance config overrides for the component."
+    )
+
+
+class Component(Renderer, Plugin):
+    """Base class for renderable components.
+
+    Subclasses are ``@plugin``-registered Pydantic models: config fields become
+    ``[component.<name>]`` config keys, while non-config metadata (``kind``,
+    ``name``, ``position``) stays as ``ClassVar``.
+    """
 
     kind = "component"
 

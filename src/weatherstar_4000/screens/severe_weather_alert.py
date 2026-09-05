@@ -29,43 +29,6 @@ _BODY_X = 80
 _BODY_WIDTH = 480
 
 
-def _color(ctx: Any, key: str, default: tuple[int, int, int]) -> tuple[int, int, int]:
-    colors = getattr(ctx, "colors", None) or {}
-    return colors.get(key, default)
-
-
-def _ds(ctx: Any, name: str) -> Any:
-    data = getattr(ctx, "data", None)
-    if data is None:
-        return None
-    try:
-        return data.get(name)
-    except Exception:  # noqa: BLE001 - optional datasource
-        return None
-
-
-def _latlon(ctx: Any) -> tuple[float, float]:
-    location = getattr(ctx, "location", None)
-    if location is None:
-        return 0.0, 0.0
-    return float(getattr(location, "lat", 0.0)), float(getattr(location, "lon", 0.0))
-
-
-def _wrap(font: pygame.font.Font, text: str, max_width: int) -> list[str]:
-    lines: list[str] = []
-    current = ""
-    for word in text.split():
-        candidate = f"{current} {word}".strip() if current else word
-        if font.size(candidate)[0] > max_width and current:
-            lines.append(current)
-            current = word
-        else:
-            current = candidate
-    if current:
-        lines.append(current)
-    return lines
-
-
 @plugin
 class SevereWeatherAlertScreen(Screen):
     name = "severe_weather_alert"
@@ -87,9 +50,9 @@ class SevereWeatherAlertScreen(Screen):
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         alerts: list[dict] = []
-        ds = _ds(ctx, "alerts")
+        ds = self.datasource(ctx, "alerts")
         if ds is not None:
-            lat, lon = _latlon(ctx)
+            lat, lon = self.latlon(ctx)
             try:
                 alerts = list(ds.active(lat, lon) or [])
             except Exception:  # noqa: BLE001 - data is optional
@@ -103,15 +66,15 @@ class SevereWeatherAlertScreen(Screen):
     # -- all clear -----------------------------------------------------------
 
     def _draw_all_clear(self, surface: pygame.Surface, ctx: Any) -> None:
-        surface.fill(_color(ctx, "blue_gradient_2", (0, 16, 64)))
+        surface.fill(self.color(ctx, "blue_gradient_2", (0, 16, 64)))
 
         text = self._font(48).render(
-            "NO ACTIVE WEATHER ALERTS", True, _color(ctx, "white", (255, 255, 255))
+            "NO ACTIVE WEATHER ALERTS", True, self.color(ctx, "white", (255, 255, 255))
         )
         surface.blit(text, text.get_rect(center=(_WIDTH // 2, 230)))
 
         subtext = self._font(30).render(
-            "All weather conditions normal", True, _color(ctx, "white", (255, 255, 255))
+            "All weather conditions normal", True, self.color(ctx, "white", (255, 255, 255))
         )
         surface.blit(subtext, subtext.get_rect(center=(_WIDTH // 2, 285)))
 
@@ -124,7 +87,7 @@ class SevereWeatherAlertScreen(Screen):
         dt: float,
         alert: dict[str, Any],
     ) -> None:
-        base_red = _color(ctx, "red", (255, 0, 0))
+        base_red = self.color(ctx, "red", (255, 0, 0))
         accent = self._pulse_color(base_red, dt)
         white = (255, 255, 255)
 
@@ -217,7 +180,7 @@ class SevereWeatherAlertScreen(Screen):
         Text never renders past ``max_y``; if the block was truncated for space
         an ellipsis is appended to the last drawn line.
         """
-        lines = _wrap(font, text, max_width)
+        lines = self.wrap(font, text, max_width)
         truncated = len(lines) > max_lines
         lines = lines[:max_lines]
         if truncated:

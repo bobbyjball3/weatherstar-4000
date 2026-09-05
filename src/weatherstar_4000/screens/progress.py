@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
@@ -15,13 +15,16 @@ from weatherstar_4000.screen import Screen
 class ProgressScreen(Screen):
     name = "progress"
     media = ("backgrounds",)
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "1"}),
+        ComponentSpec(
+            component="header", config={"title_top": "WeatherStar", "title_bottom": "4000"}
+        ),
+        ComponentSpec(component="clock"),
+    )
 
     status: ClassVar[str] = "Loading WeatherStar 4000..."
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "1")
-        render.draw_header(surface, ctx, "WeatherStar", "4000")
-        render.draw_centered_text(surface, ctx, self.status, 240, font_name="large")
-        render.draw_centered_text(
-            surface, ctx, "Retrieving current conditions and forecasts...", 300
-        )
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        self.centered(surface, ctx, self.status, 240, font_name="large")
+        self.centered(surface, ctx, "Retrieving current conditions and forecasts...", 300)

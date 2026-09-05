@@ -11,26 +11,12 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
 _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
-
-
-def _font(ctx: Any, key: str) -> pygame.font.Font | None:
-    font = ctx.fonts.get(key)
-    if font is None and ctx.fonts:
-        font = next(iter(ctx.fonts.values()))
-    return font
-
-
-def _blit(surface: pygame.Surface, ctx: Any, font_key: str, text: str, pos, color) -> None:
-    font = _font(ctx, font_key)
-    if font is None:
-        return
-    surface.blit(font.render(text, True, color), pos)
 
 
 @plugin
@@ -39,10 +25,16 @@ class WeatherRecordsScreen(Screen):
     media = ("backgrounds",)
     datasources = ()
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "4")
-        render.draw_header(surface, ctx, "Weather", "Records")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "4"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Weather", "title_bottom": "Records", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         colors = ctx.colors
         yellow = colors.get("yellow", _YELLOW)
         white = colors.get("white", _WHITE)
@@ -51,7 +43,7 @@ class WeatherRecordsScreen(Screen):
         date_str = now.strftime("%B %d")
         y_pos = 120
 
-        font_normal = _font(ctx, "normal")
+        font_normal = self.font(ctx, "normal")
         if font_normal is not None:
             title = font_normal.render(f"Records for {date_str}", True, yellow)
             surface.blit(title, title.get_rect(center=(320, y_pos)))
@@ -67,13 +59,20 @@ class WeatherRecordsScreen(Screen):
         ]
 
         for label, value in records:
-            _blit(surface, ctx, "normal", f"{label}:", (120, y_pos), white)
-            _blit(surface, ctx, "normal", value, (350, y_pos), yellow)
+            self.blit_text(surface, ctx, f"{label}:", (120, y_pos), font_name="normal", color=white)
+            self.blit_text(surface, ctx, value, (350, y_pos), font_name="normal", color=yellow)
             y_pos += 35
 
         y_pos += 20
-        _blit(surface, ctx, "extended", "THIS DAY IN WEATHER HISTORY", (60, y_pos), yellow)
+        self.blit_text(
+            surface,
+            ctx,
+            "THIS DAY IN WEATHER HISTORY",
+            (60, y_pos),
+            font_name="extended",
+            color=yellow,
+        )
         y_pos += 35
 
         history_text = "1992: Hurricane Andrew made landfall in Florida"
-        _blit(surface, ctx, "small", history_text, (80, y_pos), white)
+        self.blit_text(surface, ctx, history_text, (80, y_pos), font_name="small", color=white)

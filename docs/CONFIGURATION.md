@@ -52,9 +52,9 @@ sequence = "main"
 
 [location]
 # Latitude used to center weather data (e.g. 28.5383).
-lat = 28.5383
+# lat = 28.5383
 # Longitude used to center weather data (e.g. -81.3792).
-lon = -81.3792
+# lon = -81.3792
 # Human-readable location label shown on screen (optional).
 description = "Orlando, FL"
 # Attempt automatic location detection when no lat/lon given.
@@ -196,6 +196,27 @@ background_name = "1"
 
 [component.clock]
 
+[component.data_table]
+# Datasource whose rows this table shows.
+# REQUIRED - supply a value for this key.
+# datasource_name = "value"
+# Datasource method called with (lat, lon) to fetch rows.
+# REQUIRED - supply a value for this key.
+# rows_method = "value"
+# Ordered column definitions.
+# REQUIRED - supply a value for this key.
+# columns = "value"
+# Index into datasource scroll_offsets used when scrolling.
+scroll_offset_index = 0
+# Advance via datasource.scroll() when rows exceed max_rows.
+scroll = true
+# Rows visible before scrolling engages.
+max_rows = 8
+# Top of the header row.
+start_y = 120
+# Centered empty message.
+empty_text = "Data unavailable"
+
 [component.header]
 # Top line of the screen header.
 title_top = "WeatherStar"
@@ -203,6 +224,20 @@ title_top = "WeatherStar"
 title_bottom = "4000"
 # Show the NOAA mark to the right of the header title.
 has_noaa = false
+
+[component.headlines]
+# Prefix each headline with a yellow number (1., 2., ...).
+numbered = true
+# Headline accent style: split categories on ':' or color tokens.
+accent = "category"
+# Category keywords drawn in red (category accent only).
+red_terms = ["BREAKING", "EMERGENCY", "ALERT"]
+# Category keywords drawn in yellow (category accent only).
+yellow_terms = ["UPDATE"]
+# Optional datasource whose headlines() supplies content each render.
+datasource_name = ""
+# Centered message shown when there is no content.
+empty_text = "No headlines are available right now"
 
 [screen.air_quality]
 
@@ -265,5 +300,4 @@ level = "INFO"
 console = true
 # Optional JSON-lines log file path (comment out to disable).
 # file = "logs/weatherstar.jsonl"
-
 ```

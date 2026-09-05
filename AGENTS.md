@@ -74,8 +74,13 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 `src/weatherstar_4000/`:
 - `plugin.py` — `Plugin(BaseModel)`; config helpers.
 - `registry.py` — `@plugin`, `PluginRegistry`, built-in + entry-point discovery.
-- `screen.py`, `component.py`, `datasource.py`, `media/__init__.py` — the four
-  plugin kinds. (`sequence.py` sequences are config-declared, not plugins.)
+- `renderer.py` — `Renderer` mixin: concrete font/color/data/blit/wrap helpers
+  shared by both Screens and Components.
+- `screen.py`, `components/base.py`, `datasource.py`, `media/__init__.py` — the
+  plugin-kind bases. Screens declare an ordered `layout` of `ComponentSpec`
+  (component name + per-instance config); the engine binds a component instance
+  per spec, and `Screen.draw` steps+renders them then calls `compose`.
+  (`sequence.py` sequences are config-declared, not plugins.)
 - `context.py` — `AppContext`, `DataRegistry`, `Location`.
 - `engine.py` — `Builder` (build runtime from config) + `run_sequence` /
   `SequenceRunner` (render + headless validate).
@@ -92,7 +97,7 @@ Kinds and current inventories:
 - **datasource (8):** `alerts`, `earthquakes`, `history`, `local_news`,
   `radar`, `stocks`, `uv_index`, `weather`.
 - **media (5):** `fonts`, `backgrounds`, `logos`, `icons`, `music`.
-- **component (3):** `header`, `background`, `clock`.
+- **component (5):** `background`, `clock`, `header`, `headlines`, `data_table`.
 
 ## Hard rules for plugin classes (Pydantic `BaseModel`)
 

@@ -38,27 +38,38 @@ grouped by `kind`:
 | Kind | Base class | Example | Purpose |
 | --- | --- | --- | --- |
 | `screen` | `Screen` | `radar`, `current_conditions` | One full-screen "display" |
-| `component` | `Component` | `header`, `background`, `clock` | Reusable renderers placed on screens |
+| `component` | `Component` | `header`, `background`, `clock`, `headlines`, `data_table` | Reusable renderers placed on screens |
 | `media` | `Media` | `fonts`, `backgrounds`, `icons`, `music` | Loads local assets into the context |
 | `datasource` | `Datasource` | `weather`, `history`, `stocks` | Fetches data behind a typed API |
 | `sequence` | (config-declared) | `main` | Named ordered run of screens |
 
+Both `Screen` and `Component` inherit `Renderer` (in `renderer.py`), a mixin of
+*concrete* drawing helpers (`font`, `color`, `datasource`, `latlon`,
+`blit_text`, `wrap`, `centered`, `format_date`, …) so renderers share one
+implementation instead of re-declaring `_font`/`_color` helpers per file.
+
 ### Screens
 
 `Screen` (in `screen.py`) subclasses declare metadata as `ClassVar`s —
-`components`, `datasources`, `media`, `background` — so Pydantic never treats
-them as config fields. Concrete screens implement `draw(surface, ctx, dt)`;
-animated screens can also implement `step(ctx, dt)` / `prepare(ctx)`. Screens
-are deliberately defensive: they read data through helpers that catch and
-degrade to a "no data" message, so a missing or slow datasource never crashes
-the show.
+`layout`, `datasources`, `media` — so Pydantic never treats them as config
+fields. A screen's `layout` is an ordered tuple of `ComponentSpec` entries
+(component name + per-instance config); the engine builds one component
+instance per spec and `Screen.draw` (concrete) steps + renders them before
+calling the `compose(surface, ctx, dt)` hook. Screens are therefore mostly
+"what components to place", leaving only genuinely screen-specific placement/
+animation to `compose`. Screens are deliberately defensive: they read data
+through helpers that catch and degrade to a "no data" message, so a missing or
+slow datasource never crashes the show.
 
 ### Components
 
-`Component` (in `component.py`) is the smallest composable renderer. The
-engine builds a screen's declared components and exposes them under
-`ctx.assets["components"]`. Example: the `header` component draws the yellow
-title, clock/date and optional NOAA mark used by most screens.
+`Component` (in `components/base.py`) is the smallest composable renderer. The
+engine builds each screen's layout components (merging `[component.<name>]`
+config scope with the spec's `config`) and `Screen.draw` renders them in order.
+Stateful components (e.g. `headlines`, `data_table`) keep their scroll offsets
+as `PrivateAttr`, advance in `step(ctx, dt)` and draw in `render(surface, ctx)`.
+Components that fetch their own data take a `datasource_name` config and read
+through the context.
 
 ### Media
 
@@ -134,10 +145,11 @@ missing key still has a sensible value.
 `engine.py` contains the two main pieces:
 
 - `Builder` resolves the sequence, then constructs every referenced plugin from
-  config: `build_data`, `build_media`, `build_components`, `build_screens`, and
-  `build_context`, which assembles the fully-populated `AppContext` for the
-  run. It also owns music lifecycle (`start_music`, `advance_music`,
-  `stop_music`).
+  config: `build_data`, `build_media`, `build_screens`, `make_component`, and
+  `bind_components` (which builds each screen's layout components and prepares
+  them), plus `build_context`, which assembles the fully-populated
+  `AppContext` for the run. It also owns music lifecycle (`start_music`,
+  `advance_music`, `stop_music`).
 - `run_sequence(...)` is the render loop (30 fps by default). Each frame it
   steps and draws the current slide, advances on the slide's `pause`, wraps
   around forever in interactive mode (or does one pass in non-interactive
@@ -190,6 +202,11 @@ integration test swaps the real `DataRegistry` for benign stubs.
 - **Runtime state is `PrivateAttr`.** Pydantic forbids undeclared attributes, so
   engine-injected state (sessions, caches, scroll offsets, playlist) is declared
   as private attributes.
+- **Screens compose components.** A screen's job is *which* components to place
+  and *how/if* to animate them; `layout` + `ComponentSpec` describe that
+  declaratively, `Screen.draw` renders the bound components, and heavy
+  behaviors (scrolling headline lists, row-jump tables) live in stateful
+  components that own their data and scroll state.
 - **Config discovery is standard-library.** `--config` > env var > XDG file,
   and plugin discovery via importlib entry points — no framework needed.
 - **Rendering is defensive.** Every datasource read is wrapped; missing data

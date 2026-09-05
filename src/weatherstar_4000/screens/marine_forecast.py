@@ -10,7 +10,7 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
@@ -30,31 +30,27 @@ MARINE_CONDITIONS: list[tuple[str, str]] = [
 _HIGHLIGHT_FRAGMENTS = ("MODERATE", "High")
 
 
-def _font(ctx: Any, name: str, size: int) -> pygame.font.Font:
-    fonts = getattr(ctx, "fonts", None) or {}
-    return fonts.get(name) or pygame.font.Font(None, size)
-
-
-def _color(ctx: Any, key: str, default: tuple[int, int, int]) -> tuple[int, int, int]:
-    colors = getattr(ctx, "colors", None) or {}
-    return colors.get(key, default)
-
-
 @plugin
 class MarineForecastScreen(Screen):
     name = "marine_forecast"
     media = ("backgrounds", "fonts", "logos")
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "3")
-        render.draw_header(surface, ctx, "Marine", "Forecast")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "3"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Marine", "title_bottom": "Forecast", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
-        yellow = _color(ctx, "yellow", (255, 255, 0))
-        white = _color(ctx, "white", (255, 255, 255))
-        normal = _font(ctx, "normal", 20)
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        yellow = self.color(ctx, "yellow", (255, 255, 0))
+        white = self.color(ctx, "white", (255, 255, 255))
+        normal = self.font(ctx, "normal")
 
         y_pos = 120
-        title = _font(ctx, "extended", 24).render("COASTAL CONDITIONS", True, yellow)
+        title = self.font(ctx, "extended").render("COASTAL CONDITIONS", True, yellow)
         surface.blit(title, (60, y_pos))
         y_pos += 35
 

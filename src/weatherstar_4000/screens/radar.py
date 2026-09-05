@@ -13,7 +13,7 @@ from typing import Any
 import pygame
 from pydantic import PrivateAttr
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
@@ -26,16 +26,6 @@ _LEGEND = (
     ((255, 140, 0), "Heavy"),
     ((255, 0, 0), "Intense"),
 )
-
-
-def _font(ctx: Any, name: str, size: int) -> pygame.font.Font:
-    fonts = getattr(ctx, "fonts", None) or {}
-    return fonts.get(name) or pygame.font.Font(None, size)
-
-
-def _color(ctx: Any, key: str, default: tuple[int, int, int]) -> tuple[int, int, int]:
-    colors = getattr(ctx, "colors", None) or {}
-    return colors.get(key, default)
 
 
 @plugin
@@ -58,13 +48,19 @@ class RadarScreen(Screen):
         except Exception:
             return []
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "6")
-        render.draw_header(surface, ctx, "Live", "Radar")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "6"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Live", "title_bottom": "Radar", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         rect = _RADAR_RECT
-        white = _color(ctx, "white", (255, 255, 255))
-        yellow = _color(ctx, "yellow", (255, 255, 0))
+        white = self.color(ctx, "white", (255, 255, 255))
+        yellow = self.color(ctx, "yellow", (255, 255, 0))
 
         frames = self._frames or self._radar_frames(ctx)
         self._frames = frames
@@ -76,32 +72,32 @@ class RadarScreen(Screen):
                 self._frame_index = (self._frame_index + 1) % len(frames)
             surface.blit(frames[self._frame_index], rect)
             self._draw_legend(surface, ctx, rect)
-            frame_text = _font(ctx, "tiny", 16).render(
+            frame_text = self.font(ctx, "tiny").render(
                 f"Frame {self._frame_index + 1}/{len(frames)}", True, white
             )
             surface.blit(frame_text, (rect.right - 100, rect.bottom - 20))
         else:
             pygame.draw.rect(surface, (0, 20, 40), rect)
-            msg = _font(ctx, "large", 32).render("RADAR UPDATING", True, yellow)
+            msg = self.font(ctx, "large").render("RADAR UPDATING", True, yellow)
             surface.blit(msg, msg.get_rect(center=rect.center))
-            msg2 = _font(ctx, "normal", 20).render("Connecting to NOAA Radar...", True, white)
+            msg2 = self.font(ctx, "normal").render("Connecting to NOAA Radar...", True, white)
             surface.blit(msg2, msg2.get_rect(center=(rect.centerx, rect.centery + 30)))
 
         pygame.draw.rect(surface, yellow, rect, 2)
 
         location = self._location_text(ctx)
-        loc_font = _font(ctx, "normal", 20)
+        loc_font = self.font(ctx, "normal")
         loc_text = loc_font.render(location.upper(), True, yellow)
         surface.blit(loc_text, loc_text.get_rect(center=(320, 420)))
 
-        attr = _font(ctx, "tiny", 16).render("Radar: NOAA/NWS", True, white)
+        attr = self.font(ctx, "tiny").render("Radar: NOAA/NWS", True, white)
         surface.blit(attr, (rect.left, rect.bottom + 5))
 
     def _draw_legend(self, surface: pygame.Surface, ctx: Any, rect: pygame.Rect) -> None:
         legend_y = rect.top + 10
         legend_x = rect.left + 10
-        white = _color(ctx, "white", (255, 255, 255))
-        tiny = _font(ctx, "tiny", 16)
+        white = self.color(ctx, "white", (255, 255, 255))
+        tiny = self.font(ctx, "tiny")
         for i, (color, label) in enumerate(_LEGEND):
             box = pygame.Rect(legend_x, legend_y + i * 20, 15, 15)
             pygame.draw.rect(surface, color, box)

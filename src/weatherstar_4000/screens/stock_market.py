@@ -11,7 +11,7 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000 import render
+from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screen import Screen
 
@@ -26,64 +26,50 @@ _SYMBOL_NAMES = {
 }
 
 
-def _font(ctx: Any, name: str, size: int) -> pygame.font.Font:
-    fonts = getattr(ctx, "fonts", None) or {}
-    return fonts.get(name) or pygame.font.Font(None, size)
-
-
-def _color(ctx: Any, key: str, default: tuple[int, int, int]) -> tuple[int, int, int]:
-    colors = getattr(ctx, "colors", None) or {}
-    return colors.get(key, default)
-
-
-def _ds(ctx: Any, name: str) -> Any:
-    data = getattr(ctx, "data", None)
-    if data is None:
-        return None
-    try:
-        return data.get(name)
-    except Exception:  # noqa: BLE001 - optional datasource
-        return None
-
-
-def _format_price(value: Any) -> str:
-    try:
-        return f"{float(value):,.2f}"
-    except (TypeError, ValueError):
-        return "N/A"
-
-
-def _format_change(value: Any) -> tuple[str, tuple[int, int, int]]:
-    try:
-        change = float(value)
-    except (TypeError, ValueError):
-        return "N/A", _GREEN
-    sign = "+" if change >= 0 else ""
-    color = _GREEN if change >= 0 else _RED
-    return f"{sign}{change:,.2f}", color
-
-
 @plugin
 class StockMarketScreen(Screen):
     name = "stock_market"
     media = ("backgrounds", "fonts", "logos")
     datasources = ("stocks",)
 
-    def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        render.draw_background(surface, ctx, "5")
-        render.draw_header(surface, ctx, "Stock Market", "Update")
+    layout = (
+        ComponentSpec(component="background", config={"background_name": "5"}),
+        ComponentSpec(
+            component="header",
+            config={"title_top": "Stock Market", "title_bottom": "Update", "has_noaa": False},
+        ),
+        ComponentSpec(component="clock"),
+    )
 
-        yellow = _color(ctx, "yellow", (255, 255, 0))
-        white = _color(ctx, "white", (255, 255, 255))
-        normal = _font(ctx, "normal", 20)
+    @staticmethod
+    def _format_price(value: Any) -> str:
+        try:
+            return f"{float(value):,.2f}"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    @staticmethod
+    def _format_change(value: Any) -> tuple[str, tuple[int, int, int]]:
+        try:
+            change = float(value)
+        except (TypeError, ValueError):
+            return "N/A", _GREEN
+        sign = "+" if change >= 0 else ""
+        color = _GREEN if change >= 0 else _RED
+        return f"{sign}{change:,.2f}", color
+
+    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        yellow = self.color(ctx, "yellow", (255, 255, 0))
+        white = self.color(ctx, "white", (255, 255, 255))
+        normal = self.font(ctx, "normal")
 
         y_pos = 150
-        title = _font(ctx, "extended", 24).render("MARKET INDICES", True, yellow)
+        title = self.font(ctx, "extended").render("MARKET INDICES", True, yellow)
         surface.blit(title, title.get_rect(center=(320, y_pos)))
         y_pos += 50
 
         quotes: list[dict] = []
-        ds = _ds(ctx, "stocks")
+        ds = self.datasource(ctx, "stocks")
         if ds is not None:
             try:
                 quotes = list(ds.quotes() or [])
@@ -98,9 +84,9 @@ class StockMarketScreen(Screen):
         for quote in quotes:
             symbol = str(quote.get("symbol") or "")
             name = _SYMBOL_NAMES.get(symbol, symbol)
-            price = _format_price(quote.get("price"))
-            change, color = _format_change(quote.get("change"))
-            percent = _format_change(quote.get("change_percent"))[0]
+            price = self._format_price(quote.get("price"))
+            change, color = self._format_change(quote.get("change"))
+            percent = self._format_change(quote.get("change_percent"))[0]
 
             name_text = normal.render(name, True, white)
             price_text = normal.render(price, True, white)
