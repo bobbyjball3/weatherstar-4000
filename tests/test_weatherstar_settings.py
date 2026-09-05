@@ -1,108 +1,148 @@
-#!/usr/bin/env python3
-"""
-Unit tests for WeatherStar 4000 settings manager
-"""
+"""Tests for the weatherstar settings manager."""
 
-import os
-import sys
-import tempfile
-import unittest
-from pathlib import Path
+import json
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import pytest
 
 from weatherstar_4000 import weatherstar_settings
 
-
-class TestWeatherStarSettings(unittest.TestCase):
-    """Test settings manager functionality"""
-
-    def setUp(self):
-        """Set up test with temporary settings file"""
-        # Use temporary file for testing
-        self.temp_file = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")
-        self.temp_file.close()
-        weatherstar_settings.SETTINGS_FILE = Path(self.temp_file.name)
-
-    def tearDown(self):
-        """Clean up temporary settings file"""
-        if os.path.exists(self.temp_file.name):
-            os.unlink(self.temp_file.name)
-
-    def test_load_default_settings(self):
-        """Test loading default settings when file doesn't exist"""
-        # Remove temp file to test defaults
-        if os.path.exists(self.temp_file.name):
-            os.unlink(self.temp_file.name)
-
-        settings = weatherstar_settings.load_settings()
-
-        self.assertIn("location", settings)
-        self.assertIn("display", settings)
-        self.assertEqual(settings["location"]["auto_detect"], True)
-        self.assertIsInstance(settings["display"]["music_volume"], float)
-
-    def test_save_and_load_settings(self):
-        """Test saving and loading settings"""
-        test_settings = {
-            "location": {
-                "auto_detect": False,
-                "lat": 40.7128,
-                "lon": -74.0060,
-                "description": "New York, NY",
-            },
-            "display": {"show_marine": True, "music_volume": 0.5},
-        }
-
-        success = weatherstar_settings.save_settings(test_settings)
-        self.assertTrue(success)
-
-        loaded = weatherstar_settings.load_settings()
-        self.assertEqual(loaded["location"]["lat"], 40.7128)
-        self.assertEqual(loaded["location"]["lon"], -74.0060)
-
-    def test_save_location(self):
-        """Test saving location preference"""
-        success = weatherstar_settings.save_location(
-            lat=34.0522, lon=-118.2437, description="Los Angeles, CA", auto_detect=False
-        )
-        self.assertTrue(success)
-
-        settings = weatherstar_settings.load_settings()
-        self.assertEqual(settings["location"]["lat"], 34.0522)
-        self.assertEqual(settings["location"]["lon"], -118.2437)
-        self.assertEqual(settings["location"]["description"], "Los Angeles, CA")
-
-    def test_get_saved_location(self):
-        """Test retrieving saved location"""
-        weatherstar_settings.save_location(
-            lat=41.8781, lon=-87.6298, description="Chicago, IL", auto_detect=False
-        )
-
-        location = weatherstar_settings.get_saved_location()
-        self.assertIsNotNone(location)
-        self.assertEqual(location[0], 41.8781)
-        self.assertEqual(location[1], -87.6298)
-
-    def test_save_display_preferences(self):
-        """Test saving display preferences"""
-        prefs = {"show_marine": True, "show_trends": False, "music_volume": 0.7}
-
-        success = weatherstar_settings.save_display_preferences(prefs)
-        self.assertTrue(success)
-
-        loaded_prefs = weatherstar_settings.get_display_preferences()
-        self.assertEqual(loaded_prefs["show_marine"], True)
-        self.assertEqual(loaded_prefs["show_trends"], False)
-        self.assertAlmostEqual(loaded_prefs["music_volume"], 0.7)
-
-    def test_get_display_preferences(self):
-        """Test retrieving display preferences"""
-        prefs = weatherstar_settings.get_display_preferences()
-        self.assertIsInstance(prefs, dict)
-        self.assertIn("music_volume", prefs)
+DEFAULT_DISPLAY_VOLUME = 0.3
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.fixture()
+def settings_file(tmp_path, monkeypatch):
+    """Point the module at a temp settings file."""
+    path = tmp_path / "settings.json"
+    monkeypatch.setattr(weatherstar_settings, "SETTINGS_FILE", path)
+    return path
+
+
+def test_load_settings_returns_defaults_when_missing(settings_file):
+    # Act
+    settings = weatherstar_settings.load_settings()
+
+    # Assert
+    assert settings["location"]["auto_detect"] is True
+    assert settings["location"]["lat"] is None
+    assert settings["display"]["music_volume"] == DEFAULT_DISPLAY_VOLUME
+    assert settings["display"]["show_marine"] is False
+
+
+def test_load_settings_merges_partial_saved_settings(settings_file):
+    # Arrange
+    settings_file.write_text(json.dumps({"display": {"music_volume": 0.7}}))
+
+    # Act
+    settings = weatherstar_settings.load_settings()
+
+    # Assert
+    assert settings["display"]["music_volume"] == 0.7
+    assert settings["location"]["auto_detect"] is True
+
+
+def test_load_settings_preserves_unknown_saved_keys(settings_file):
+    # Arrange
+    settings_file.write_text(json.dumps({"display": {"custom": "value"}}))
+
+    # Act
+    settings = weatherstar_settings.load_settings()
+
+    # Assert
+    assert settings["display"]["custom"] == "value"
+
+
+def test_load_settings_returns_defaults_on_corrupt_json(settings_file):
+    # Arrange
+    settings_file.write_text("{not valid json")
+
+    # Act
+    settings = weatherstar_settings.load_settings()
+
+    # Assert
+    assert settings["location"]["auto_detect"] is True
+
+
+def test_save_settings_writes_file(settings_file):
+    # Act
+    result = weatherstar_settings.save_settings({"display": {"music_volume": 0.5}})
+
+    # Assert
+    assert result is True
+    assert json.loads(settings_file.read_text())["display"]["music_volume"] == 0.5
+
+
+def test_save_settings_returns_false_on_error(tmp_path, monkeypatch):
+    # Arrange
+    monkeypatch.setattr(weatherstar_settings, "SETTINGS_FILE", tmp_path / "no" / "dir" / "f.json")
+
+    # Act
+    result = weatherstar_settings.save_settings({"a": 1})
+
+    # Assert
+    assert result is False
+
+
+def test_save_and_load_round_trip(settings_file):
+    # Act
+    weatherstar_settings.save_location(40.7128, -74.0060, "New York, NY", False)
+
+    # Assert
+    location = weatherstar_settings.get_saved_location()
+    assert location == (40.7128, -74.0060, "New York, NY")
+
+
+@pytest.mark.parametrize(
+    "saved_location, expected",
+    [
+        ({"auto_detect": True, "lat": 40.7, "lon": -74.0}, None),
+        ({"auto_detect": False, "lat": None, "lon": -74.0}, None),
+        ({"auto_detect": False, "lat": 0, "lon": -74.0}, None),
+        ({"auto_detect": False, "lat": 40.7, "lon": 0}, None),
+        # Description key absent: get_saved_location returns None for it.
+        ({"auto_detect": False, "lat": 40.7, "lon": -74.0}, (40.7, -74.0, None)),
+        (
+            {"auto_detect": False, "lat": 40.7, "lon": -74.0, "description": "NYC"},
+            (40.7, -74.0, "NYC"),
+        ),
+    ],
+)
+def test_get_saved_location_variants(settings_file, saved_location, expected):
+    # Arrange
+    settings = weatherstar_settings.load_settings()
+    settings["location"] = saved_location
+    weatherstar_settings.save_settings(settings)
+
+    # Act
+    result = weatherstar_settings.get_saved_location()
+
+    # Assert
+    assert result == expected
+
+
+def test_save_location_generates_description_when_omitted(settings_file):
+    # Act
+    weatherstar_settings.save_location(lat=34.0522, lon=-118.2437, auto_detect=False)
+
+    # Assert
+    settings = weatherstar_settings.load_settings()
+    assert settings["location"]["description"] == "34.0522, -118.2437"
+
+
+def test_save_display_preferences_merges_into_existing(settings_file):
+    # Act
+    weatherstar_settings.save_display_preferences({"music_volume": 0.7, "show_marine": True})
+
+    # Assert
+    prefs = weatherstar_settings.get_display_preferences()
+    assert prefs["music_volume"] == 0.7
+    assert prefs["show_marine"] is True
+    assert "show_trends" in prefs
+
+
+def test_get_display_preferences_returns_defaults(settings_file):
+    # Act
+    prefs = weatherstar_settings.get_display_preferences()
+
+    # Assert
+    assert isinstance(prefs, dict)
+    assert prefs["music_volume"] == DEFAULT_DISPLAY_VOLUME

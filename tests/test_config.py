@@ -1,58 +1,67 @@
-#!/usr/bin/env python3
-"""
-Unit tests for WeatherStar 4000 configuration module
-"""
+"""Tests for the weatherstar configuration module."""
 
-import sys
-import unittest
-from pathlib import Path
+import pytest
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from weatherstar_4000.config import *
-
-
-class TestConfig(unittest.TestCase):
-    """Test configuration constants and enums"""
-
-    def test_screen_dimensions(self):
-        """Test that screen dimensions are set correctly"""
-        self.assertEqual(SCREEN_WIDTH, 640)
-        self.assertEqual(SCREEN_HEIGHT, 480)
-
-    def test_display_timing(self):
-        """Test display timing constants"""
-        self.assertEqual(DISPLAY_DURATION_MS, 15000)
-        self.assertEqual(SCROLL_SPEED, 100)
-
-    def test_font_sizes(self):
-        """Test font size constants"""
-        self.assertEqual(FONT_SIZE_SMALL, 16)
-        self.assertEqual(FONT_SIZE_NORMAL, 20)
-        self.assertEqual(FONT_SIZE_LARGE, 24)
-        self.assertEqual(FONT_SIZE_HEADER, 36)
-
-    def test_colors_palette(self):
-        """Test that color palette is defined"""
-        self.assertIn("blue", COLORS)
-        self.assertIn("white", COLORS)
-        self.assertIn("yellow", COLORS)
-        self.assertIsInstance(COLORS["blue"], tuple)
-        self.assertEqual(len(COLORS["blue"]), 3)
-
-    def test_display_modes_enum(self):
-        """Test DisplayMode enum"""
-        self.assertTrue(hasattr(DisplayMode, "CURRENT_CONDITIONS"))
-        self.assertTrue(hasattr(DisplayMode, "LOCAL_FORECAST"))
-        self.assertTrue(hasattr(DisplayMode, "RADAR"))
-        self.assertTrue(hasattr(DisplayMode, "HAZARDS"))
-
-    def test_display_mode_values(self):
-        """Test DisplayMode enum values are strings"""
-        for mode in DisplayMode:
-            self.assertIsInstance(mode.value, str)
+from weatherstar_4000.config import (
+    COLORS,
+    DISPLAY_DURATION_MS,
+    FONT_SIZE_HEADER,
+    FONT_SIZE_LARGE,
+    FONT_SIZE_NORMAL,
+    FONT_SIZE_SMALL,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    SCROLL_SPEED,
+    DisplayMode,
+)
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_screen_dimensions():
+    # Assert
+    assert SCREEN_WIDTH == 640
+    assert SCREEN_HEIGHT == 480
+
+
+def test_display_timing():
+    # Assert
+    assert DISPLAY_DURATION_MS == 15000
+    assert SCROLL_SPEED == 100
+
+
+@pytest.mark.parametrize(
+    "constant, expected",
+    [
+        (FONT_SIZE_SMALL, 16),
+        (FONT_SIZE_NORMAL, 20),
+        (FONT_SIZE_LARGE, 24),
+        (FONT_SIZE_HEADER, 36),
+    ],
+)
+def test_font_sizes(constant, expected):
+    # Assert
+    assert constant == expected
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["blue", "white", "yellow", "black", "gray", "green", "red", "cyan", "dark_blue", "orange"],
+)
+def test_colors_palette_defines_key(key):
+    # Assert
+    assert key in COLORS
+    assert len(COLORS[key]) == 3
+    assert all(isinstance(channel, int) for channel in COLORS[key])
+
+
+def test_display_mode_is_an_enum_of_strings():
+    # Assert
+    for mode in DisplayMode:
+        assert isinstance(mode.value, str)
+
+
+def test_display_mode_values_are_unique():
+    # Arrange
+    values = [mode.value for mode in DisplayMode]
+
+    # Assert
+    assert len(values) == len(set(values))

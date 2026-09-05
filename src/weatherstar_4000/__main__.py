@@ -1072,7 +1072,7 @@ class WeatherStar4000Complete:
         date_rect = date_text.get_rect(right=590, y=54)
         self.screen.blit(date_text, date_rect)
 
-    def show_context_menu(self):
+    def show_context_menu(self):  # pragma: no cover - interactive right-click menu
         """Show Windows 95-style menu on right-click"""
         # Classic Windows 95 colors
         WIN95_GREY = (192, 192, 192)  # Classic Windows grey
@@ -1430,7 +1430,7 @@ class WeatherStar4000Complete:
             self.narrator.set_enabled(True)
             self.narrator.announce_display(new_mode.value, self.weather_data)
 
-    def run(self):
+    def run(self):  # pragma: no cover - interactive main loop
         """Main application loop"""
         logger.main_logger.info("Starting main loop")
 
@@ -1663,7 +1663,7 @@ class WeatherStar4000Complete:
             print("=" * 60)
 
 
-def main():
+def main():  # pragma: no cover - CLI entrypoint exercised manually / e2e
     """Main entry point"""
     import argparse
 

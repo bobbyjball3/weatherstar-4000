@@ -177,4 +177,12 @@ Run `weatherstar4000 --help` for available options.
 - The former standalone launcher `run_weatherstar.py` has been moved into the
   package as `src/weatherstar_4000/__main__.py` and exposed as the
   `weatherstar4000` entrypoint.
+- Tests were added to cover the behavior/contracts of the logic modules
+  (settings, themes, weather/Open-Meteo APIs, local news, history, voice
+  narration, logging, emergency alerts, performance) and smoke+helper coverage
+  for the pygame display modules. The suite runs headless via dummy SDL
+  drivers (`tests/conftest.py`) with external APIs mocked. `task coverage`
+  enforces `--cov-fail-under=65`; raise the threshold as coverage grows.
+  Rendering internals are intentionally smoke-tested rather than
+  branch-by-branch, so package-wide coverage sits below 100%.
 

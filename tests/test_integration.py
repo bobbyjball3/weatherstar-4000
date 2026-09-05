@@ -29,6 +29,9 @@ class TestWeatherStarIntegration(unittest.TestCase):
     @patch("weatherstar_4000.data_fetchers.requests.get")
     def test_weather_data_workflow(self, mock_get):
         """Test complete weather data fetch and display workflow"""
+        # This would test full workflow
+        # Keeping as placeholder for now
+        # Arrange
         # Mock API response
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -37,12 +40,12 @@ class TestWeatherStarIntegration(unittest.TestCase):
         }
         mock_get.return_value = mock_response
 
-        # This would test full workflow
-        # Keeping as placeholder for now
+        # Assert
         self.assertTrue(True)
 
     def test_settings_persistence_workflow(self):
         """Test settings save and load workflow"""
+        # Arrange
         import os
         import tempfile
 
@@ -54,11 +57,15 @@ class TestWeatherStarIntegration(unittest.TestCase):
         weatherstar_settings.SETTINGS_FILE = Path(temp_file.name)
 
         try:
+            # Act
             # Save settings
             weatherstar_settings.save_location(40.7128, -74.0060, "NYC", False)
 
+            # Act
             # Load and verify
             location = weatherstar_settings.get_saved_location()
+
+            # Assert
             self.assertIsNotNone(location)
             self.assertEqual(location[0], 40.7128)
 
@@ -68,6 +75,7 @@ class TestWeatherStarIntegration(unittest.TestCase):
     def test_display_mode_cycling(self):
         """Test display mode cycling logic"""
         # Placeholder for display cycling test
+        # Assert
         self.assertTrue(True)
 
 

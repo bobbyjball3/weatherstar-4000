@@ -53,9 +53,9 @@ tasks:
       - uv run pytest
 
   coverage:
-    desc: Run pytest with coverage (package-owned code, branch) and Cobertura XML
+    desc: Run pytest with coverage (source/branch/fail-under/xml configured in pyproject.toml)
     cmds:
-      - uv run pytest --cov=src/weatherstar_4000 --cov-report=term-missing --cov-report=xml:coverage.xml
+      - uv run pytest --cov --cov-report=term-missing --cov-report=xml
 
   install-hooks:
     desc: Install pre-commit hooks
