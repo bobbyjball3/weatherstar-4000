@@ -141,11 +141,10 @@ Taskfile.yml              task runner commands
 .pre-commit-config.yaml   commit-time ruff (fix mode) hooks
 .github/workflows/ci.yml  Quality + Testing CI pipeline
 .github/actions/setup     reusable CI step: uv + task + dependency sync
-src/weatherstar_4000/     the package (src layout)
-  v2/                     the plugin-driven v2 engine (see docs/ARCHITECTURE.md)
+src/weatherstar_4000/     the plugin-driven engine (see docs/ARCHITECTURE.md)
 tests/
   conftest.py             headless SDL dummy drivers + pygame fixtures
-  v2/                     unit + integration tests for the v2 engine
+  test_*.py               unit + integration tests for the engine
 docs/                     user + developer documentation
 static_assets/            bundled fonts, backgrounds, icons, logos, music
 reports/                  JUnit output (gitignored, generated)
@@ -155,18 +154,18 @@ README.old.md             original project README (features, packaging)
 
 ## Current status
 
-- The app is a **plugin-driven v2 engine** under `src/weatherstar_4000/v2/`
-  (the legacy monolithic `weatherstar_4000` package was removed). Plugins are
-  Pydantic models whose typed fields drive a TOML config, auto-discovery and a
-  generated commented config skeleton.
+- The app is a **plugin-driven engine** under `src/weatherstar_4000/` (the
+  legacy monolithic implementation was removed). Plugins are Pydantic models
+  whose typed fields drive a TOML config, auto-discovery and a generated
+  commented config skeleton.
 - The test suite runs headless via dummy SDL drivers (`tests/conftest.py`) with
   external APIs mocked. Screens are exercised both with empty stubs (the
-  no-data path) and with populated-data stubs (`tests/v2/test_screens_rich.py`)
+  no-data path) and with populated-data stubs (`tests/test_screens_rich.py`)
   that drive the real rendering branches. `task coverage` enforces
   `--cov-fail-under` (see pyproject; currently 80 — ratchet up as coverage
   grows); package-wide coverage is ~85%.
 - Useful smoke checks:
   ```sh
-  uv run weatherstar4000-v2 generate-config --sequence main   # commented TOML
-  uv run weatherstar4000-v2 --sequence main --lat 28.54 --lon -81.38 --validate
+  uv run weatherstar4000 generate-config --sequence main   # commented TOML
+  uv run weatherstar4000 --sequence main --lat 28.54 --lon -81.38 --validate
   ```

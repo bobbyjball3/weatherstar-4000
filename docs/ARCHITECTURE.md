@@ -1,7 +1,7 @@
 # Architecture
 
-This document explains how the WeatherStar 4000 v2 engine is put together.
-Everything lives under `src/weatherstar_4000/v2/`.
+This document explains how the WeatherStar 4000 plugin engine is put together.
+Everything lives under `src/weatherstar_4000/`.
 
 ## At a glance
 
@@ -90,7 +90,7 @@ only at the point of use (`get_secret_value()`), and query-param style keys
 
 `registry.py` holds a process-wide `PluginRegistry` mapping
 `(kind, name) -> class`. Built-ins are discovered by importing every module in
-the `v2` sub-packages (`v2/plugins/__init__.py` walks `screens`, `components`,
+the plugin bags (`plugins/__init__.py` walks `screens`, `components`,
 `media`, `datasources`, `sequences`). External plugins register through entry
 points in the `weatherstar4000.plugins` group. `registry.discover()` is
 idempotent and is called once by the engine/CLI.
@@ -110,7 +110,7 @@ Pydantic:
 
 Because plugins are Pydantic models with `Field(description=...)` annotations,
 `skeleton.py` can generate a fully commented example config
-(`weatherstar4000-v2 generate-config`) — descriptions are rendered inline as
+(`weatherstar4000 generate-config`) — descriptions are rendered inline as
 `#` comments, and required/secret fields appear as commented `# key = "value"`
 placeholders. See `docs/CONFIGURATION.md`.
 
@@ -125,7 +125,7 @@ placeholders. See `docs/CONFIGURATION.md`.
   `location`, and conveniences (`colors`, `font`, `asset`, `size`). It replaces
   the old monolithic `ws` object; screens never reach into a god object.
 
-Themes live in `v2/themes.py` (a `ColorTheme` + a set of named palettes).
+Themes live in `themes.py` (a `ColorTheme` + a set of named palettes).
 `AppContext.colors` merges the selected theme over the classic palette so a
 missing key still has a sensible value.
 
@@ -146,7 +146,7 @@ missing key still has a sensible value.
 
 `SequenceRunner.validate(...)` reuses the built screens but only *draws* each
 slide once headlessly (no window, datasources usually stubbed) — this powers
-`weatherstar4000-v2 --validate` and the integration tests.
+`weatherstar4000 --validate` and the integration tests.
 
 ### Bottom ticker
 

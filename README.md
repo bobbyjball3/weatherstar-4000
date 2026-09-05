@@ -23,10 +23,10 @@ Requires Python 3.10 and [uv](https://docs.astral.sh/uv/).
 uv sync
 
 # Create a commented config (see docs/CONFIGURATION.md), then run:
-uv run weatherstar4000-v2 --config ~/.config/weatherstar4000/config.toml
+uv run weatherstar4000 --config ~/.config/weatherstar4000/config.toml
 
 # Or run ad hoc with command-line location + a built-in default sequence:
-uv run weatherstar4000-v2 --sequence main --lat 28.5383 --lon -81.3792
+uv run weatherstar4000 --sequence main --lat 28.5383 --lon -81.3792
 ```
 
 Useful flags:
@@ -39,12 +39,12 @@ Useful flags:
 | `--validate` | Headless: render every slide once and report failures |
 | `generate-config` | Emit a commented config skeleton to stdout or `-o PATH` |
 
-Run `weatherstar4000-v2 --help` for the full list.
+Run `weatherstar4000 --help` for the full list.
 
 ## Documentation
 
 | Doc | Contents |
 | --- | --- |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Configuring the app — with a fully commented example config |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the v2 plugin engine is put together |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the plugin engine is put together |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Tooling, tests, CI, and the dev workflow |

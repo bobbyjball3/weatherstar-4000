@@ -1,0 +1,154 @@
+"""Tests for the NOAA weather datasource (grid/stations/observations/forecast)."""
+
+from weatherstar_4000.datasources.noaa import NoaaWeather
+
+BASE = "https://api.weather.gov"
+
+POINT_URL = f"{BASE}/points/28.5383,-81.3792"
+STATIONS_URL = f"{BASE}/stations"
+STATION = "KMLB"
+
+
+def _point() -> dict:
+    return {
+        "properties": {
+            "observationStations": STATIONS_URL,
+            "gridId": "MLB",
+            "gridX": 45,
+            "gridY": 32,
+            "relativeLocation": {"properties": {"city": "Melbourne", "state": "FL"}},
+            "radarStation": "KMLB",
+        }
+    }
+
+
+def _stations() -> dict:
+    return {
+        "features": [
+            {"properties": {"stationIdentifier": STATION}},
+            {"properties": {"stationIdentifier": "CIVT"}},
+            {"properties": {"stationIdentifier": "KLONG"}},
+        ]
+    }
+
+
+def _props() -> dict:
+    return {"temperature": {"value": 25.0}, "textDescription": "Fair"}
+
+
+def _router(*, point=_point(), stations=_stations(), props=_props(), forecast=None):
+    """Return an http_get_json fake keyed by URL."""
+    calls = []
+
+    def fake(url, params=None, timeout=None):
+        calls.append(url)
+        if url == POINT_URL:
+            return point
+        if url == STATIONS_URL:
+            return stations
+        if url == f"{BASE}/stations/{STATION}/observations/latest":
+            return {"properties": props}
+        if "forecast/hourly" in url:
+            return {"properties": forecast or {"periods": []}}
+        if "forecast" in url:
+            return {"properties": forecast or {"periods": []}}
+        return None
+
+    fake.calls = calls
+    return fake
+
+
+def _ds(monkeypatch, fake) -> NoaaWeather:
+    ds = NoaaWeather()
+    monkeypatch.setattr(ds, "http_get_json", fake)
+    return ds
+
+
+def test_get_point_success_and_cache(monkeypatch):
+    fake = _router()
+    ds = _ds(monkeypatch, fake)
+    first = ds.get_point(28.5383, -81.3792)
+    second = ds.get_point(28.5383, -81.3792)
+    assert first["gridId"] == "MLB"
+    assert first is second  # served from cache
+    assert fake.calls.count(POINT_URL) == 1
+
+
+def test_get_point_none_without_properties(monkeypatch):
+    ds = _ds(monkeypatch, _router(point={"properties": {}}))
+    assert ds.get_point(28.5383, -81.3792) == {}  # empty props cached
+    ds2 = _ds(monkeypatch, _router(point=None))
+    assert ds2.get_point(28.5383, -81.3792) is None
+
+
+def test_observation_stations_prefers_4letter_non_uc(monkeypatch):
+    fake = _router()
+    ds = _ds(monkeypatch, fake)
+    stations = ds._observation_stations(28.5383, -81.3792)
+    # KMLB (4-letter, not U/C) is moved ahead of the others.
+    assert stations[0] == STATION
+    assert "CIVT" in stations and "KLONG" in stations
+
+
+def test_station_none_when_no_stations(monkeypatch):
+    fake = _router(stations={"features": []})
+    ds = _ds(monkeypatch, fake)
+    assert ds._station(28.5383, -81.3792) is None
+
+
+def test_get_current_returns_and_caches(monkeypatch):
+    fake = _router()
+    ds = _ds(monkeypatch, fake)
+    current = ds.get_current(28.5383, -81.3792)
+    assert current["temperature"]["value"] == 25.0
+    assert ds.get_current(28.5383, -81.3792) is current
+
+
+def test_get_current_none_when_station_missing(monkeypatch):
+    fake = _router(stations={"features": []})
+    ds = _ds(monkeypatch, fake)
+    assert ds.get_current(28.5383, -81.3792) is None
+
+
+def test_get_forecast_success_and_caches(monkeypatch):
+    periods = {"periods": [{"name": "Today", "temperature": 90}]}
+    fake = _router(forecast=periods)
+    ds = _ds(monkeypatch, fake)
+    forecast = ds.get_forecast(28.5383, -81.3792)
+    assert forecast["periods"][0]["temperature"] == 90
+    # A different units value uses a different cache key -> another fetch.
+    ds.get_forecast(28.5383, -81.3792, units="si")
+    forecast_fetches = [u for u in fake.calls if "forecast" in u and "hourly" not in u]
+    assert len(forecast_fetches) == 2
+    # Same key is cached -> no additional fetch.
+    ds.get_forecast(28.5383, -81.3792)
+    forecast_fetches = [u for u in fake.calls if "forecast" in u and "hourly" not in u]
+    assert len(forecast_fetches) == 2
+
+
+def test_get_hourly_success(monkeypatch):
+    periods = {"periods": [{"startTime": "2026-09-05T12:00:00Z"}]}
+    fake = _router(forecast=periods)
+    ds = _ds(monkeypatch, fake)
+    hourly = ds.get_hourly(28.5383, -81.3792)
+    assert hourly["periods"][0]["startTime"] == "2026-09-05T12:00:00Z"
+
+
+def test_grid_missing_returns_none_for_forecast(monkeypatch):
+    ds = _ds(monkeypatch, _router(point={"properties": {"observationStations": STATIONS_URL}}))
+    assert ds.get_forecast(28.5383, -81.3792) is None
+    assert ds.get_hourly(28.5383, -81.3792) is None
+
+
+def test_get_city_and_missing_point(monkeypatch):
+    ds = _ds(monkeypatch, _router())
+    assert ds.get_city(28.5383, -81.3792) == ("Melbourne", "FL")
+    ds2 = _ds(monkeypatch, _router(point=None))
+    assert ds2.get_city(28.5383, -81.3792) == ("", "")
+
+
+def test_get_radar_station(monkeypatch):
+    ds = _ds(monkeypatch, _router())
+    assert ds.get_radar_station(28.5383, -81.3792) == "KMLB"
+    ds2 = _ds(monkeypatch, _router(point=None))
+    assert ds2.get_radar_station(28.5383, -81.3792) is None

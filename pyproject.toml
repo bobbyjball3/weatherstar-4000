@@ -20,11 +20,11 @@ dependencies = [
 ]
 
 [project.scripts]
-weatherstar4000-v2 = "weatherstar_4000.v2.cli:main"
+weatherstar4000 = "weatherstar_4000.cli:main"
 
 # External plugins register here (built-ins register via the built-in registry).
 [project.entry-points."weatherstar4000.plugins"]
-placeholder = "weatherstar_4000.v2.plugins"
+placeholder = "weatherstar_4000.plugins"
 
 [dependency-groups]
 dev = [

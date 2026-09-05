@@ -4,14 +4,14 @@ Guidance for AI agents working in this repository. It captures how the code is
 structured, the non-obvious rules the codebase depends on, and the standards to
 follow when changing it.
 
-## Project status: v2-only plugin engine
+## Project status: plugin engine
 
 This is **`weatherstar-4000`**, a pygame recreation of the 1990s WeatherStar 4000
-local forecast. The app lives entirely under `src/weatherstar_4000/v2/` as a
-**plugin-driven engine**. There is no legacy monolith anymore — it was removed,
-so do not reintroduce references to modules like `weatherstar_4000.themes`,
-`displays`, `history_graphs`, `get_local_news`, etc. `v2/themes.py` and the
-`v2/datasources/*` clients are the self-contained replacements.
+local forecast. The app is a **plugin-driven engine** living directly under
+`src/weatherstar_4000/`. There is no legacy monolith anymore — it was removed,
+so do not reintroduce references to legacy modules like `displays`,
+`history_graphs`, `get_local_news`, etc. `themes.py` and the `datasources/*`
+clients are their self-contained replacements.
 
 Runtime + docs entry points:
 - `README.md` — minimal orientation only; links to `docs/`.
@@ -31,8 +31,8 @@ uv run pytest          # full suite (headless)
 uv run pytest --cov --cov-report=term-missing   # coverage (gate: 80)
 uv run ruff check src tests
 uv run ruff format src tests
-uv run weatherstar4000-v2 --sequence main --lat 28.5383 --lon -81.3792 --validate  # headless render check
-uv run weatherstar4000-v2 generate-config --sequence main                          # regenerates commented config skeleton
+uv run weatherstar4000 --sequence main --lat 28.5383 --lon -81.3792 --validate  # headless render check
+uv run weatherstar4000 generate-config --sequence main                          # regenerates commented config skeleton
 ```
 
 Run all quality gates with `task check` and tests+coverage with `task coverage`.
@@ -48,9 +48,9 @@ The CI runs `task check` and `task coverage` — a change is not done until
   "http_get_json", fake)`; never hit real APIs. Screens that would fetch (e.g.
   radar) are tested by swapping the whole data registry for stubs.
 - Two screen-testing styles:
-  - Empty/no-data stubs (the "NO DATA" path): `tests/v2/test_integration_screens.py`.
+  - Empty/no-data stubs (the "NO DATA" path): `tests/test_integration_screens.py`.
   - **Populated-data** stubs that drive the real rendering branches:
-    `tests/v2/test_screens_rich.py`. New data-dependent screen branches belong
+    `tests/test_screens_rich.py`. New data-dependent screen branches belong
     here (or in that style). The rich suite is why coverage is ~85%.
 - **Do not add `# pragma: no cover`.** Cover behavior honestly; raise the
   coverage `fail_under` in `pyproject.toml` only when the suite's real coverage
@@ -58,7 +58,7 @@ The CI runs `task check` and `task coverage` — a change is not done until
 - **Plugin import order pollution:** importing a plugin module (via the
   `@plugin` decorator) registers it in the global registry *at import time*.
   Pytest collects test modules alphabetically, so a module-level
-  `from weatherstar_4000.v2.screens.… import …` in one test file can change what
+  `from weatherstar_4000.screens.… import …` in one test file can change what
   a later file (e.g. `test_skeleton.py`, which snapshots the registry) sees.
   Keep plugin imports *inside test functions* unless the test file is
   self-contained about registry state.
@@ -71,7 +71,7 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
            overlays BottomTicker, advances the music controller
 ```
 
-`src/weatherstar_4000/v2/`:
+`src/weatherstar_4000/`:
 - `plugin.py` — `Plugin(BaseModel)`; config helpers.
 - `registry.py` — `@plugin`, `PluginRegistry`, built-in + entry-point discovery.
 - `screen.py`, `component.py`, `datasource.py`, `media/__init__.py` — the four
@@ -79,7 +79,7 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 - `context.py` — `AppContext`, `DataRegistry`, `Location`.
 - `engine.py` — `Builder` (build runtime from config) + `run_sequence` /
   `SequenceRunner` (render + headless validate).
-- `cli.py` — `weatherstar4000-v2` (run / `--validate` / `generate-config`).
+- `cli.py` — `weatherstar4000` (run / `--validate` / `generate-config`).
 - `skeleton.py` — generates the commented config from field descriptions.
 - `logging_setup.py` — structlog with SecretStr/key redaction.
 - `ticker.py` — bottom crawling banner over every screen.
