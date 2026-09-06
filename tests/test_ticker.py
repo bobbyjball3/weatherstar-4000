@@ -5,7 +5,11 @@ import time
 import pygame
 
 from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.ticker import SCROLL_SPEED, BottomTicker
+from weatherstar_4000.ticker import (
+    SCROLL_SPEED,
+    BottomTicker,
+    WeatherStar3000Scroll,
+)
 
 
 def _ctx(surface, description="Orlando"):
@@ -99,3 +103,36 @@ def test_ticker_draws_text_in_banner_band(screen):
             if screen.get_at((x, y))[:3] == (255, 255, 255):
                 white_pixels += 1
     assert white_pixels > 0
+
+
+def test_ws3000_scroll_draws_date_time_and_conditions(screen):
+    ctx = _ctx(screen)
+    ctx.fonts["large"] = pygame.font.Font(None, 28)
+    band = WeatherStar3000Scroll()
+    band._items = ["HELLO 3000 SCROLL"]
+    band.render(screen, ctx, 0.1)
+    white_pixels = sum(
+        1
+        for x in range(0, 640, 2)
+        for y in range(400, 475)
+        if screen.get_at((x, y))[:3] == (255, 255, 255)
+    )
+    assert white_pixels > 0
+
+
+def test_ws3000_scroll_rotates_short_messages(screen):
+    ctx = _ctx(screen)
+    ctx.fonts["large"] = pygame.font.Font(None, 28)
+    band = WeatherStar3000Scroll()
+    band._items = ["SHORT A", "SHORT B"]
+    # 10s of frames: each short message holds ~8s before rotating.
+    for _ in range(200):
+        band.render(screen, ctx, 0.05)
+    assert band._message_index == 1
+
+
+def test_ws3000_scroll_uppercases_conditions(screen):
+    ctx = _ctx(screen)
+    band = WeatherStar3000Scroll()
+    items = band._conditions(ctx)
+    assert items and items[0] == items[0].upper()

@@ -135,8 +135,11 @@ class HeadlineScroller(Component):
         if y_pos < _RESET_TOP:
             self._scroll = _RESET_SCROLL
 
-        footer = news_font.render(f"Updated: {datetime.now().strftime('%I:%M %p')}", True, yellow)
-        surface.blit(footer, footer.get_rect(center=(320, _FOOTER_Y)))
+        if self.layout_token(ctx, "show_headline_footer", True):
+            footer = news_font.render(
+                f"Updated: {datetime.now().strftime('%I:%M %p')}", True, yellow
+            )
+            surface.blit(footer, footer.get_rect(center=(320, _FOOTER_Y)))
 
     # -- internals --------------------------------------------------------
 

@@ -20,7 +20,7 @@ class HourlyForecastScreen(Screen):
     datasources = ("weather",)
 
     layout = (
-        ComponentSpec(component="background", config={"background_name": "4"}),
+        ComponentSpec(component="background", config={"background_name": "5"}),
         ComponentSpec(
             component="header",
             config={"title_top": "Hourly", "title_bottom": "Forecast", "has_noaa": False},

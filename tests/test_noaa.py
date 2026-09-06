@@ -158,3 +158,81 @@ def test_get_radar_station(monkeypatch):
     assert ds.get_radar_station(28.5383, -81.3792) == "KMLB"
     ds2 = _ds(monkeypatch, _router(point=None))
     assert ds2.get_radar_station(28.5383, -81.3792) is None
+
+
+def _region_router(*, props_per_station=None, forecast_per_station=None):
+    """Router that serves regional observation/forecast endpoints for two stations."""
+    calls = []
+
+    def fake(url, params=None, timeout=None):
+        calls.append(url)
+        if url == POINT_URL:
+            return _point()
+        if url == STATIONS_URL:
+            return {
+                "features": [
+                    {
+                        "properties": {
+                            "stationIdentifier": "KMLB",
+                            "name": "Melbourne International Airport",
+                        }
+                    },
+                    {
+                        "properties": {
+                            "stationIdentifier": "KXMR",
+                            "name": "Patrick Space Force Base",
+                        }
+                    },
+                ]
+            }
+        if url == f"{BASE}/stations/KMLB":
+            return {"properties": {"forecast": f"{BASE}/gridpoints/MLB/45,32/forecast"}}
+        if url == f"{BASE}/stations/KXMR":
+            return {"properties": {"forecast": f"{BASE}/gridpoints/MLB/44,32/forecast"}}
+        if url == f"{BASE}/stations/KMLB/observations/latest":
+            return {"properties": props_per_station or _props()}
+        if url == f"{BASE}/stations/KXMR/observations/latest":
+            return {"properties": _props()}
+        if "gridpoints" in url:
+            props = forecast_per_station or {
+                "periods": [
+                    {
+                        "name": "Today",
+                        "isDaytime": True,
+                        "temperature": 92,
+                        "shortForecast": "Sunny",
+                    },
+                    {"name": "Tonight", "isDaytime": False, "temperature": 72},
+                ]
+            }
+            return {"properties": props}
+        return None
+
+    fake.calls = calls
+    return fake
+
+
+def test_get_observations_multiple_stations(monkeypatch):
+    ds = _ds(monkeypatch, _region_router())
+    rows = ds.get_observations(28.5383, -81.3792)
+    assert len(rows) == 2
+    assert rows[0].station_name == "Melbourne"  # cleaned of "International Airport"
+    assert rows[1].station_name == "Patrick Space Force Base"
+    assert rows[0].temperature_c == 25.0
+
+
+def test_get_observations_skips_stations_without_temperature(monkeypatch):
+    bad = {"properties": {"temperature": {"value": None}, "textDescription": ""}}
+    ds = _ds(monkeypatch, _region_router(props_per_station=bad))
+    rows = ds.get_observations(28.5383, -81.3792)
+    assert len(rows) == 1
+
+
+def test_get_regional_forecast_rows(monkeypatch):
+    ds = _ds(monkeypatch, _region_router())
+    rows = ds.get_regional_forecast(28.5383, -81.3792)
+    assert len(rows) == 2
+    assert rows[0].location == "Melbourne"
+    assert rows[0].high == 92.0
+    assert rows[0].low == 72.0
+    assert rows[0].weather == "Sunny"

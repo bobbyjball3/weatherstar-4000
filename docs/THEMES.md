@@ -93,6 +93,29 @@ Optional map of the named font slots (`title`, `large`, `extended`, `small`,
 points these at its own TTF files (e.g. the WeatherStar 3000 typeface) uses them
 when present; otherwise the classic filenames are used.
 
+A theme may also **add** new slots, not just override existing ones. The 3000
+theme introduces a `datetime` slot for its bottom-band date/time block, which
+uses the separate short "Star3000 Small" face:
+
+```toml
+[fonts]
+datetime = ["Star3000 Small.ttf", 24]
+```
+
+### `bottom_band`
+
+Which always-on bottom band overlays every slide. Defaults to `"classic"` — the
+navy WeatherStar 4000 crawler. A theme that reserves the bottom of the canvas
+for a different band opts in with a value:
+
+```toml
+bottom_band = "3000"   # WeatherStar 3000 scroll: date + time over a crawling line
+```
+
+`"3000"` draws the real 3000 foot-of-canvas scroll (a small date/time row above a
+rotating current-conditions line, all over the shared background art). Screens
+must keep content above ~y=405 under that band.
+
 ### `text_shadow`
 
 The 1980s WeatherStar 3000 look draws every text glyph with a black outline ring
@@ -134,6 +157,33 @@ that has a genuinely different WeatherStar 3000 layout (e.g. Current Conditions
 as a plain text list) switch branches. Screens never branch on the theme *name* —
 they read tokens, and the classic WeatherStar 4000 baseline is simply the absence
 of tokens (screens fall back to their own constants).
+
+Two more header tokens deserve mention:
+
+- `title_text` / `title_sub` override the header *text itself*, so a screen's
+  classic two-line title can read differently under a theme without changing the
+  screen's layout component (the 3000 Almanac becomes "The Weatherstar Almanac"):
+  ```toml
+  [layout.almanac]
+  title_text = "The Weatherstar Almanac"
+  variant = "3000"
+  ```
+- `show_headline_footer` (default `true`) hides the news screens' "Updated …"
+  line, which the 3000 bottom band replaces.
+
+Screens may read any token for their own geometry (matching how `variant`
+switches whole layout branches). For example the 3000 theme tightens the Weather
+Records list so its last line clears the taller bottom band:
+
+```toml
+[layout.weather_records]
+row_step = 28
+section_gap = 12
+heading_gap = 30
+```
+
+Tokens are optional and default to each screen's in-code constants, so a theme
+that sets none of them reproduces the classic layout exactly.
 
 ## Adding your own theme
 

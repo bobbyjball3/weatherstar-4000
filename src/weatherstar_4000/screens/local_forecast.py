@@ -29,6 +29,13 @@ _GROUP_GAP = 8
 #: Line-to-line step for the wrapped forecast text (the star fonts carry large
 #: leading, so ~18px keeps glyph ink clear without crowding or truncation).
 _LINE_SPACING = 18
+#: WeatherStar 3000 rolling text column geometry (ws3kp local-forecast.scss:
+#: a 280px text column at the 35px margins, 40px line height).
+_3000_LEFT = 35
+_3000_WIDTH = 570
+_3000_TOP = 118
+_3000_HEIGHT = 280
+_3000_LINE_SPACING = 40
 
 
 @plugin
@@ -54,6 +61,10 @@ class LocalForecastScreen(Screen):
             render.draw_centered_text(
                 surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
             )
+            return
+
+        if self.variant(ctx) == "3000":
+            self._compose_3000(surface, ctx, periods)
             return
 
         yellow = self.color(ctx, "yellow")
@@ -106,6 +117,52 @@ class LocalForecastScreen(Screen):
                     line_surf.get_rect(center=(center_x, y_cursor + line_surf.get_height() // 2)),
                 )
                 y_cursor += line_spacing
+
+    # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
+
+    def _compose_3000(
+        self, surface: pygame.Surface, ctx: Any, periods: list[ForecastPeriod]
+    ) -> None:
+        """ws3kp Local Forecast: one tall rolling column of forecast pages.
+
+        Each of the first six periods becomes a ``DAYNAME... detailed text``
+        block (ws3kp localforecast.mjs), wrapped at the 35px margins and rolled
+        upward through the 280px text column so pages flow past like the real
+        3000 crawl.
+        """
+        white = self.color(ctx, "white")
+        font = self.font(ctx, "large")
+
+        lines: list[str] = []
+        for period in periods[:6]:
+            if not period.detailed_forecast:
+                continue
+            heading = f"{period.name.upper()}..."
+            text = f"{heading} {period.detailed_forecast.upper()}"
+            lines.extend(self.wrap(font, text, _3000_WIDTH))
+            lines.append("")
+
+        if not any(lines):
+            render.draw_centered_text(
+                surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
+            )
+            return
+
+        clip = pygame.Rect(0, _3000_TOP, surface.get_width(), _3000_HEIGHT)
+        surface.set_clip(clip)
+        total_height = len(lines) * _3000_LINE_SPACING
+        offset = (pygame.time.get_ticks() // 40) % total_height
+        base = _3000_TOP - offset
+        bottom = _3000_TOP + _3000_HEIGHT
+        for duplicate in range(2):
+            y = base + duplicate * total_height
+            for line in lines:
+                if line and _3000_TOP <= y <= bottom:
+                    self.draw_text(
+                        surface, ctx, line, (_3000_LEFT, y), font_name="large", color=white
+                    )
+                y += _3000_LINE_SPACING
+        surface.set_clip(None)
 
     # -- column selection & labels -----------------------------------------
 

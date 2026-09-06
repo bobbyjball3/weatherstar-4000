@@ -274,10 +274,13 @@ def run_sequence(
     """
     import pygame
 
-    from weatherstar_4000.ticker import BottomTicker
+    from weatherstar_4000.ticker import BottomTicker, WeatherStar3000Scroll
 
     runner = SequenceRunner(ctx, screens, sequence)
-    ticker = BottomTicker()
+    if getattr(getattr(ctx, "theme", None), "bottom_band", "classic") == "3000":
+        ticker: Any = WeatherStar3000Scroll()
+    else:
+        ticker = BottomTicker()
     clock = pygame.time.Clock()
     slide_index = 0
     slide_elapsed = 0.0

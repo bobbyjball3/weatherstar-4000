@@ -100,6 +100,7 @@ slides = [
     { screen = "progress" },
     { screen = "radar" },
     { screen = "reddit_news" },
+    { screen = "regional_forecast" },
     { screen = "regional_observations" },
     { screen = "severe_weather_alert" },
     { screen = "stock_market" },
@@ -283,6 +284,8 @@ empty_text = "No headlines are available right now"
 
 [screen.reddit_news]
 
+[screen.regional_forecast]
+
 [screen.regional_observations]
 
 [screen.severe_weather_alert]
@@ -312,4 +315,5 @@ level = "INFO"
 console = true
 # Optional JSON-lines log file path; omit to disable file logging.
 # file = "logs/weatherstar.jsonl"
+
 ```

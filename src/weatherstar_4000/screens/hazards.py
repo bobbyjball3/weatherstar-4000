@@ -47,7 +47,10 @@ class HazardsScreen(Screen):
         normal = self.font(ctx, "normal")
         extended = self.font(ctx, "extended")
 
-        y_pos = 175
+        # The classic layout sits high enough that the safety tips (and the
+        # alert list) finish inside the 4000's grey content panel (y~400), not
+        # spilling below it toward the bottom ticker band.
+        y_pos = 130
         title = extended.render("CURRENT HAZARDS", True, yellow)
         surface.blit(title, (60, y_pos))
         y_pos += 40
@@ -84,9 +87,9 @@ class HazardsScreen(Screen):
 
         if not has_alerts:
             no_alert = normal.render("No active weather alerts at this time", True, white)
-            surface.blit(no_alert, no_alert.get_rect(center=(320, 230)))
+            surface.blit(no_alert, no_alert.get_rect(center=(320, 195)))
 
-            y_pos = 290
+            y_pos = 245
             tips_title = extended.render("WEATHER SAFETY TIPS", True, yellow)
             surface.blit(tips_title, (60, y_pos))
             y_pos += 35

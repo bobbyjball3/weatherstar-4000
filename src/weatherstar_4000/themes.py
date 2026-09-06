@@ -140,6 +140,10 @@ class Theme:
     text_shadow_offset: int = 3
     #: Outline stroke width in px (black underlay around every glyph edge).
     text_shadow_outline: int = 2
+    #: Always-on bottom band style: ``"classic"`` (navy crawler) or ``"3000"``
+    #: (the WeatherStar 3000 scroll: date + time row over a crawling conditions
+    #: line). Screens that reserve the bottom of the canvas opt in here.
+    bottom_band: str = "classic"
     #: Per-screen layout tokens, keyed by screen name (plus a ``"default"``
     #: entry applied to every screen before the screen-specific one).
     layout: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -190,6 +194,7 @@ def _theme_from_file(path: Path) -> Theme | None:
         text_shadow = bool(data.get("text_shadow", False))
         text_shadow_offset = int(data.get("text_shadow_offset", 3))
         text_shadow_outline = int(data.get("text_shadow_outline", 2))
+        bottom_band = str(data.get("bottom_band") or "classic")
         raw_layout = data.get("layout") or {}
         layout: dict[str, dict[str, Any]] = {}
         if isinstance(raw_layout, dict):
@@ -210,6 +215,7 @@ def _theme_from_file(path: Path) -> Theme | None:
         text_shadow=text_shadow,
         text_shadow_offset=text_shadow_offset,
         text_shadow_outline=text_shadow_outline,
+        bottom_band=bottom_band,
         layout=layout,
     )
 

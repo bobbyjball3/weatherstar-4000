@@ -37,8 +37,7 @@ class WeekendForecastScreen(Screen):
         y_pos += 35
 
         for period in periods[:2]:
-            name = period.name
-            time_of_day = "DAY" if "Day" in name or "Night" not in name else "NIGHT"
+            time_of_day = "DAY" if period.is_daytime else "NIGHT"
             tod_surf = self.font(ctx, "normal").render(time_of_day, True, cyan)
             surface.blit(tod_surf, (col_x + 10, y_pos))
             y_pos += 25
@@ -72,7 +71,7 @@ class WeekendForecastScreen(Screen):
             y_pos += 15
 
     layout = (
-        ComponentSpec(component="background", config={"background_name": "4"}),
+        ComponentSpec(component="background", config={"background_name": "5"}),
         ComponentSpec(
             component="header",
             config={"title_top": "Weekend", "title_bottom": "Forecast", "has_noaa": False},
@@ -85,17 +84,7 @@ class WeekendForecastScreen(Screen):
 
         left_col_x = 60
         right_col_x = 340
-        saturday_periods: list[ForecastPeriod] = []
-        sunday_periods: list[ForecastPeriod] = []
-
-        for period in periods:
-            name = period.name
-            if "Saturday" in name:
-                saturday_periods.append(period)
-            elif "Sunday" in name:
-                sunday_periods.append(period)
-            if len(saturday_periods) >= 2 and len(sunday_periods) >= 2:
-                break
+        saturday_periods, sunday_periods = self._weekend_periods(periods)
 
         if saturday_periods:
             self._draw_day_column(surface, ctx, left_col_x, "SATURDAY", saturday_periods)
@@ -107,3 +96,36 @@ class WeekendForecastScreen(Screen):
                 "Weekend forecast not available", True, self.color(ctx, "white")
             )
             surface.blit(msg, msg.get_rect(center=(320, 240)))
+
+    @staticmethod
+    def _weekend_periods(
+        periods: list[ForecastPeriod],
+    ) -> tuple[list[ForecastPeriod], list[ForecastPeriod]]:
+        """Split the forecast into Saturday and Sunday periods.
+
+        Weekends are matched by the period's calendar date first (so a forecast
+        that starts on a weekend day and labels it "Today" is still counted),
+        then by an explicit weekday in the period name.  A forecast run on a
+        Sunday labels that day "Today", so the Sunday column comes from today
+        while Saturday is the next one the feed still reaches.
+        """
+        saturday: list[ForecastPeriod] = []
+        sunday: list[ForecastPeriod] = []
+        for period in periods:
+            weekday: int | None = None
+            start = period.start_date()
+            if start is not None:
+                weekday = start.weekday()
+            else:
+                name = period.name.lower()
+                if "saturday" in name:
+                    weekday = 5
+                elif "sunday" in name:
+                    weekday = 6
+            if weekday == 5:
+                saturday.append(period)
+            elif weekday == 6:
+                sunday.append(period)
+            if len(saturday) >= 2 and len(sunday) >= 2:
+                break
+        return saturday, sunday

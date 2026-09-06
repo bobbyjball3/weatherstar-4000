@@ -26,7 +26,7 @@ class WeatherRecordsScreen(Screen):
     datasources = ()
 
     layout = (
-        ComponentSpec(component="background", config={"background_name": "4"}),
+        ComponentSpec(component="background", config={"background_name": "5"}),
         ComponentSpec(
             component="header",
             config={"title_top": "Weather", "title_bottom": "Records", "has_noaa": False},
@@ -41,12 +41,13 @@ class WeatherRecordsScreen(Screen):
 
         now = datetime.now()
         date_str = now.strftime("%B %d")
-        y_pos = 120
+        y_pos = int(self.layout_token(ctx, "content_top", 120))
 
         font_normal = self.font(ctx, "normal")
         if font_normal is not None:
             title = font_normal.render(f"Records for {date_str}", True, yellow)
             surface.blit(title, title.get_rect(center=(320, y_pos)))
+        row_step = int(self.layout_token(ctx, "row_step", 28))
         y_pos += 40
 
         records = [
@@ -61,9 +62,11 @@ class WeatherRecordsScreen(Screen):
         for label, value in records:
             self.blit_text(surface, ctx, f"{label}:", (120, y_pos), font_name="normal", color=white)
             self.blit_text(surface, ctx, value, (350, y_pos), font_name="normal", color=yellow)
-            y_pos += 35
+            y_pos += row_step
 
-        y_pos += 20
+        section_gap = int(self.layout_token(ctx, "section_gap", 12))
+        heading_gap = int(self.layout_token(ctx, "heading_gap", 30))
+        y_pos += section_gap
         self.blit_text(
             surface,
             ctx,
@@ -72,7 +75,7 @@ class WeatherRecordsScreen(Screen):
             font_name="extended",
             color=yellow,
         )
-        y_pos += 35
+        y_pos += heading_gap
 
         history_text = "1992: Hurricane Andrew made landfall in Florida"
         self.blit_text(surface, ctx, history_text, (80, y_pos), font_name="small", color=white)

@@ -21,9 +21,9 @@ _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
 
 _GRAPH_LEFT = 80
-_GRAPH_TOP = 105
+_GRAPH_TOP = 140
 _GRAPH_WIDTH = 480
-_GRAPH_HEIGHT = 250
+_GRAPH_HEIGHT = 215
 _BAR_WIDTH = 40
 _GRADIENT_STEPS = 5
 #: Breathing room between a temperature number and its bar end (px).
@@ -52,7 +52,7 @@ class TemperatureGraphScreen(Screen):
         return (255, 100, 100)
 
     layout = (
-        ComponentSpec(component="background", config={"background_name": "1-chart"}),
+        ComponentSpec(component="background", config={"background_name": "1"}),
         ComponentSpec(
             component="header",
             config={"title_top": "7-Day", "title_bottom": "Temperature", "has_noaa": False},

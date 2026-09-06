@@ -109,10 +109,14 @@ def test_ws3000_theme_loads_with_assets(all_appcfg, pygame_env):
     theme = get_theme("weatherstar3000", dirs=theme_search_dirs())
     assert theme.text_shadow is True
     assert theme.text_shadow_offset == 3
+    assert theme.bottom_band == "3000"
     assert theme.colors["hazard_bg"] == (0x70, 0x23, 0x23)
     assert theme.layout_for("hazards")["variant"] == "3000"
     assert theme.layout_for("extended_forecast")["variant"] == "3000"
     assert theme.layout_for("current_conditions")["title_style"] == "hidden"
+    assert theme.layout_for("local_forecast")["title_text"] == "Your NWS Forecast"
+    assert theme.layout_for("almanac")["title_text"] == "The Weatherstar Almanac"
+    assert theme.layout_for("regional_forecast")["variant"] == "3000"
     repo_root = Path(__file__).resolve().parents[1]
     assert (repo_root / "static_assets_ws3000" / "fonts_ttf").is_dir()
     assert (repo_root / "static_assets_ws3000" / "backgrounds" / "1.png").is_file()
@@ -192,6 +196,43 @@ def test_text_shadow_underlay_rendered(pygame_env):
     # The glyph itself still renders white in both cases.
     assert any(p == (255, 255, 255, 255) for p in _scan(ws3000))
     assert any(p == (255, 255, 255, 255) for p in _scan(classic))
+
+
+def _has_white(surface, x0, y0, x1, y1):
+    return any(
+        surface.get_at((x, y)) == (255, 255, 255, 255) for y in range(y0, y1) for x in range(x0, x1)
+    )
+
+
+def test_ws3000_local_forecast_rolls_text_below_left_title(all_appcfg, pygame_env):
+    runner = _runner(all_appcfg, _registry())
+    surface = _step(runner, "local_forecast")
+    # Single left-aligned "Your NWS Forecast" title (uppercased) at the top left.
+    assert _has_white(surface, 35, 30, 320, 80)
+    # The rolling forecast column occupies the text band below the title.
+    assert _has_white(surface, 35, 118, 600, 400)
+
+
+def test_ws3000_almanac_draws_sun_and_moon(all_appcfg, pygame_env):
+    runner = _runner(all_appcfg, _registry())
+    surface = _step(runner, "almanac")
+    # Centered tall title, then sun rows (sunrise/sunset) and moon rows below.
+    assert _has_white(surface, 150, 40, 490, 85)
+    assert _has_white(surface, 35, 130, 600, 230)
+    assert _has_white(surface, 35, 270, 600, 400)
+
+
+def test_ws3000_regional_observations_table(all_appcfg, pygame_env):
+    runner = _runner(all_appcfg, _registry())
+    surface = _step(runner, "regional_observations")
+    # Column headers + per-station rows render in the band below the title.
+    assert _has_white(surface, 35, 100, 600, 405)
+
+
+def test_ws3000_regional_forecast_table(all_appcfg, pygame_env):
+    runner = _runner(all_appcfg, _registry())
+    surface = _step(runner, "regional_forecast")
+    assert _has_white(surface, 35, 100, 600, 405)
 
 
 def _scan(surface):

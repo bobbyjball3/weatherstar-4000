@@ -10,11 +10,13 @@ datasource/location is available).
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from weatherstar_4000.datasources.noaa import CurrentConditions, ForecastPeriod
+from weatherstar_4000.renderer import blit_text_shadowed
 
 if TYPE_CHECKING:
     from weatherstar_4000.context import AppContext
@@ -160,28 +162,12 @@ class BottomTicker:
         width = surface.get_width()
         height = surface.get_height()
 
-        now = time.time()
-        if not self._items or now - self._last_refresh >= REFRESH_SECONDS:
-            self._items = self._build_items(ctx)
-            self._last_refresh = now
-            if not self._current and self._items:
-                self._current = self._items[0]
-                self._x = float(width)
-
+        self._refresh(ctx, width)
         if not self._current:
             return
 
         font = self._font_for(ctx)
-        text_width = font.size(self._current)[0]
-
-        # Advance scroll position.
-        self._x -= SCROLL_SPEED * dt
-        if self._x + text_width < 0:
-            self._x = float(width)
-            if len(self._items) > 1:
-                self._items = self._items[1:] + self._items[:1]
-            self._current = self._items[0]
-            text_width = font.size(self._current)[0]
+        self._advance(dt, width, font)
 
         # Banner, opaque so content behind never bleeds through.
         banner_height = 30
@@ -192,3 +178,136 @@ class BottomTicker:
         text_y = banner_y + (banner_height - text_height) // 2
         rendered = font.render(self._current, True, (255, 255, 255))
         surface.blit(rendered, (int(self._x), text_y))
+
+    # -- shared scroll state -------------------------------------------------
+
+    def _refresh(self, ctx: Any, width: int) -> None:
+        now = time.time()
+        if not self._items or now - self._last_refresh >= REFRESH_SECONDS:
+            self._items = self._build_items(ctx)
+            self._last_refresh = now
+            if not self._current and self._items:
+                self._current = self._items[0]
+                self._x = float(width)
+
+    def _advance(self, dt: float, width: int, font: pygame.font.Font) -> None:
+        text_width = font.size(self._current)[0]
+        # Advance scroll position.
+        self._x -= SCROLL_SPEED * dt
+        if self._x + text_width < 0:
+            self._x = float(width)
+            if len(self._items) > 1:
+                self._items = self._items[1:] + self._items[:1]
+            self._current = self._items[0]
+            text_width = font.size(self._current)[0]
+
+
+#: Vertical layout of the WeatherStar 3000 scroll band (ws3kp _weather-display.scss
+#: .scroll: a 70px band at the foot of the canvas).  The band is transparent:
+#: it draws only the date/time row and the crawling conditions line over the
+#: shared background art, so screens reserve the canvas above it.
+_BAND_TOP = 405
+_BAND_LEFT = 35
+_BAND_RIGHT = 605
+
+#: How long one conditions line holds before the next takes its place (ws3kp
+#: currentweatherscroll.mjs updates every ~8 half-second ticks).
+_MESSAGE_HOLD = 8.0
+#: Seconds a long conditions line waits before starting its horizontal reveal.
+_REVEAL_DELAY = 1.0
+#: Horizontal scroll speed for over-wide conditions lines (ws3kp uses 75px/s).
+_REVEAL_SPEED = 75.0
+
+
+class WeatherStar3000Scroll(BottomTicker):
+    """The 3000's always-on bottom scroll: date + time over a conditions line.
+
+    Replaces the classic navy ``BottomTicker`` when a theme opts in via its
+    ``bottom_band`` key.  Date (left) and time (right) run in the real "Star3000
+    Small" face at the top of the band; below them the current conditions are
+    shown one at a time (ws3kp scroll.ejs + currentweatherscroll.mjs).  Lines
+    that fit the band sit static for a few seconds then advance; over-wide lines
+    scroll left to reveal their tail before the next one advances.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._message_elapsed = 0.0
+        self._message_index = 0
+        self._reveal_x = float(_BAND_LEFT)
+        self._revealing = False
+
+    def _build_items(self, ctx: Any) -> list[str]:
+        return [str(item).upper() for item in super()._build_items(ctx)]
+
+    def _crawl_font(self, ctx: Any) -> pygame.font.Font:
+        fonts = getattr(ctx, "fonts", None)
+        if isinstance(fonts, dict):
+            for key in ("large", "scroller", "normal"):
+                font = fonts.get(key)
+                if font is not None:
+                    return font
+        return self._font_for(ctx)
+
+    def _clock_font(self, ctx: Any) -> pygame.font.Font:
+        fonts = getattr(ctx, "fonts", None)
+        if isinstance(fonts, dict):
+            for key in ("datetime", "small"):
+                font = fonts.get(key)
+                if font is not None:
+                    return font
+        return self._font_for(ctx)
+
+    def _conditions(self, ctx: Any) -> list[str]:
+        """Rotated conditions lines (uppercased for the all-caps typeface)."""
+        if not self._items:
+            self._items = self._build_items(ctx)
+            self._message_index = 0
+        return self._items or list(_FALLBACK_ITEMS)
+
+    def render(self, surface: pygame.Surface, ctx: AppContext, dt: float) -> None:
+        self._draw_clock(surface, ctx)
+        items = self._conditions(ctx)
+        if not items:
+            return
+
+        font = self._crawl_font(ctx)
+        width = surface.get_width()
+        current = items[self._message_index % len(items)]
+        text_width = font.size(current)[0]
+        max_width = width - 70
+
+        self._message_elapsed += dt
+        x = float(_BAND_LEFT)
+        if text_width > max_width:
+            if not self._revealing:
+                self._message_elapsed = 0.0
+                self._revealing = True
+            elif self._message_elapsed > _REVEAL_DELAY:
+                reveal = (self._message_elapsed - _REVEAL_DELAY) * _REVEAL_SPEED
+                x = _BAND_LEFT - min(reveal, text_width - max_width)
+            hold = _REVEAL_DELAY + (text_width - max_width) / _REVEAL_SPEED + 2.0
+            if self._message_elapsed > max(hold, _MESSAGE_HOLD):
+                self._next(items)
+        elif self._message_elapsed > _MESSAGE_HOLD:
+            self._next(items)
+
+        white = (ctx.colors or {}).get("white", (255, 255, 255))
+        y = _BAND_TOP + self._clock_font(ctx).get_height() + 6
+        blit_text_shadowed(surface, ctx, font, current, white, (int(x), y))
+
+    def _next(self, items: list[str]) -> None:
+        self._message_index = (self._message_index + 1) % len(items)
+        self._message_elapsed = 0.0
+        self._revealing = False
+
+    def _draw_clock(self, surface: pygame.Surface, ctx: AppContext) -> None:
+        font = self._clock_font(ctx)
+        now = datetime.now()
+        white = (ctx.colors or {}).get("white", (255, 255, 255))
+        date_str = now.strftime("%a %b %d").upper()
+        time_str = now.strftime("%I:%M %p").upper().lstrip("0")
+        date_rect = font.render(date_str, True, white).get_rect(topleft=(_BAND_LEFT, _BAND_TOP))
+        time_rect = font.render(time_str, True, white).get_rect(top=_BAND_TOP, right=_BAND_RIGHT)
+        blit_text_shadowed(surface, ctx, font, date_str, white, date_rect)
+        blit_text_shadowed(surface, ctx, font, time_str, white, time_rect)

@@ -107,6 +107,7 @@ class CurrentConditions(BaseModel):
     text_description: str = Field(default="")
     icon_url: str = Field(default="")
     station: str = Field(default="")
+    station_name: str = Field(default="", description="Display name of the station.")
     timestamp: str = Field(default="")
 
     # -- imperial display helpers ------------------------------------------
@@ -201,7 +202,7 @@ class CurrentConditions(BaseModel):
     # -- construction -------------------------------------------------------
 
     @classmethod
-    def from_props(cls, props: dict) -> CurrentConditions:
+    def from_props(cls, props: dict, station_name: str = "") -> CurrentConditions:
         """Build from a NOAA observation ``properties`` dict (defensively)."""
         ceiling_ft: int | None = None
         cloud_layers: list[CloudLayer] = []
@@ -240,6 +241,7 @@ class CurrentConditions(BaseModel):
             text_description=str(props.get("textDescription") or ""),
             icon_url=str(props.get("icon") or ""),
             station=station,
+            station_name=station_name,
             timestamp=str(props.get("timestamp") or ""),
         )
 
@@ -319,6 +321,95 @@ class City(BaseModel):
         return self.city or self.state
 
 
+class RegionalForecast(BaseModel):
+    """One nearby-city row for the regional forecast screen (see module docstring).
+
+    ``location`` is the cleaned display name of a nearby station/city; ``high``
+    / ``low`` come from that place's gridpoint forecast (today's daytime high
+    and the adjacent night low); ``weather`` is the daytime short condition.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    location: str = Field(default="")
+    high: float | None = Field(default=None)
+    low: float | None = Field(default=None)
+    weather: str = Field(default="")
+
+    @property
+    def high_f(self) -> int | None:
+        if self.high is None:
+            return None
+        try:
+            return int(round(self.high))
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def low_f(self) -> int | None:
+        if self.low is None:
+            return None
+        try:
+            return int(round(self.low))
+        except (TypeError, ValueError):
+            return None
+
+
+#: Common trailing tokens stripped from NOAA station display names so regional
+#: tables read as place names ("Orlando Executive Airport" -> "ORLANDO
+#: EXECUTIVE"), longest first so partial suffixes never truncate first.
+_STATION_SUFFIXES = (
+    " international airport",
+    " regional airport",
+    " municipal airport",
+    " executive airport",
+    " downtown airport",
+    " naval air station",
+    " air reserve station",
+    " air force base",
+    " memorial airport",
+    " international",
+    " regional",
+    " municipal",
+    " airport",
+    " airpark",
+    " heliport",
+    " annex",
+)
+
+
+def clean_station_name(name: str) -> str:
+    """Trim a NOAA station name down to a place label for regional tables."""
+    text = " ".join(str(name or "").split())
+    lowered = text.lower()
+    for suffix in _STATION_SUFFIXES:
+        if lowered.endswith(suffix):
+            text = text[: len(text) - len(suffix)]
+            break
+    return text.strip()
+
+
+def _build_regional_row(location: str, periods: list[ForecastPeriod]) -> RegionalForecast | None:
+    """One regional-forecast row from a gridpoint forecast's periods.
+
+    High is the first daytime period's temperature and the low is that period's
+    adjacent night period (mirroring ws3kp's buildForecast).
+    """
+    if not location:
+        return None
+    first_daytime = next((i for i, p in enumerate(periods) if p.is_daytime), None)
+    if first_daytime is None:
+        return None
+    day = periods[first_daytime]
+    night = periods[first_daytime + 1] if first_daytime + 1 < len(periods) else None
+    return RegionalForecast(
+        location=location,
+        high=day.temperature if day.temperature is not None else None,
+        low=night.temperature if night is not None else None,
+        weather=day.short_forecast or "",
+    )
+
+
 @plugin
 class NoaaWeather(Datasource):
     name = "weather"
@@ -345,7 +436,13 @@ class NoaaWeather(Datasource):
             return props
         return None
 
-    def _observation_stations(self, lat: float, lon: float) -> list[str]:
+    def _station_features(self, lat: float, lon: float) -> list[dict[str, str]]:
+        """Nearby observation stations as ``[{"id", "name"}]``, nearest first.
+
+        Prefers 4-letter identifiers that don't start with U/C (kept for
+        compatibility with the historic ``_observation_stations`` order), but
+        also carries each station's display name for the regional tables.
+        """
         point = self.get_point(lat, lon)
         if not point:
             return []
@@ -357,40 +454,71 @@ class NoaaWeather(Datasource):
         if cached is not None:
             return cached
         data = self.http_get_json(stations_url)
-        stations: list[str] = []
+        features: list[dict[str, str]] = []
         if data and "features" in data:
             for feature in data["features"]:
-                station_id = feature.get("properties", {}).get("stationIdentifier")
+                props = feature.get("properties") or {}
+                station_id = props.get("stationIdentifier")
                 if station_id:
-                    stations.append(station_id)
-            # Prefer 4-letter identifiers that don't start with U/C.
-            preferred = [s for s in stations if len(s) == 4 and s[0] not in "UC"]
+                    features.append(
+                        {
+                            "id": station_id,
+                            "name": clean_station_name(props.get("name") or ""),
+                        }
+                    )
+            preferred = [f for f in features if len(f["id"]) == 4 and f["id"][0] not in "UC"]
             if preferred:
-                stations = preferred + [s for s in stations if s not in preferred]
-        self.cache_set(key, stations)
-        return stations
+                features = preferred + [f for f in features if f not in preferred]
+        self.cache_set(key, features)
+        return features
+
+    def _observation_stations(self, lat: float, lon: float) -> list[str]:
+        return [feature["id"] for feature in self._station_features(lat, lon)]
 
     def _station(self, lat: float, lon: float) -> str | None:
-        stations = self._observation_stations(lat, lon)
-        return stations[0] if stations else None
+        features = self._station_features(lat, lon)
+        return features[0]["id"] if features else None
 
     # -- typed fetches ---------------------------------------------------------
 
-    def get_current(self, lat: float, lon: float) -> CurrentConditions | None:
-        station = self._station(lat, lon)
-        if not station:
-            return None
-        key = self._cache_key_for("current", station)
+    def _latest_observation(
+        self, station_id: str, station_name: str = ""
+    ) -> CurrentConditions | None:
+        """Latest observation model for one station (cached by station)."""
+        key = self._cache_key_for("current", station_id)
         cached = self.cache_get(key, 300)
         if cached is not None:
             return cached
-        url = f"{BASE_URL}/stations/{station}/observations/latest"
+        url = f"{BASE_URL}/stations/{station_id}/observations/latest"
         data = self.http_get_json(url)
-        if data and "properties" in data:
-            current = CurrentConditions.from_props(data["properties"])
-            self.cache_set(key, current)
-            return current
-        return None
+        props = data.get("properties") if isinstance(data, dict) else None
+        if not props:
+            return None
+        observation = CurrentConditions.from_props(props, station_name=station_name)
+        self.cache_set(key, observation)
+        return observation
+
+    def get_current(self, lat: float, lon: float) -> CurrentConditions | None:
+        features = self._station_features(lat, lon)
+        if not features:
+            return None
+        return self._latest_observation(features[0]["id"], features[0].get("name", ""))
+
+    def get_observations(self, lat: float, lon: float, limit: int = 7) -> list[CurrentConditions]:
+        """Current conditions for the nearest observation stations.
+
+        Skips stations without a usable temperature; at most ``limit`` rows are
+        returned so the "Latest Hourly Observations" table fits the screen.
+        """
+        rows: list[CurrentConditions] = []
+        for feature in self._station_features(lat, lon):
+            if len(rows) >= limit:
+                break
+            observation = self._latest_observation(feature["id"], feature.get("name", ""))
+            if observation is None or observation.temperature_c is None:
+                continue
+            rows.append(observation)
+        return rows
 
     def _grid(self, lat: float, lon: float) -> tuple[str, int, int] | None:
         point = self.get_point(lat, lon)
@@ -437,6 +565,58 @@ class NoaaWeather(Datasource):
 
     def get_hourly(self, lat: float, lon: float, units: str = "us") -> list[ForecastPeriod]:
         return self._periods(lat, lon, "forecast/hourly", units=units, cache_ttl=1800)
+
+    # -- regional tables ---------------------------------------------------------
+
+    def _station_meta(self, station_id: str) -> dict:
+        """Station metadata ``properties`` (display name, forecast URL)."""
+        key = self._cache_key_for("station_meta", station_id)
+        cached = self.cache_get(key, 3600)
+        if cached is not None:
+            return cached
+        data = self.http_get_json(f"{BASE_URL}/stations/{station_id}")
+        props = data.get("properties") if isinstance(data, dict) else None
+        self.cache_set(key, props or {})
+        return props or {}
+
+    def _gridpoint_periods(self, forecast_url: str) -> list[ForecastPeriod]:
+        """Parse ``periods`` from an explicit gridpoint forecast URL."""
+        key = self._cache_key_for("regional_forecast", forecast_url)
+        cached = self.cache_get(key, 1800)
+        if cached is not None:
+            return cached
+        data = self.http_get_json(forecast_url, params={"units": "us"})
+        periods: list[ForecastPeriod] = []
+        if isinstance(data, dict):
+            props = data.get("properties") or {}
+            for raw in props.get("periods") or []:
+                if isinstance(raw, dict):
+                    periods.append(ForecastPeriod.from_props(raw))
+        self.cache_set(key, periods)
+        return periods
+
+    def get_regional_forecast(
+        self, lat: float, lon: float, limit: int = 7
+    ) -> list[RegionalForecast]:
+        """Today's hi/lo outlook for the nearest stations across the region.
+
+        Each row is built from that station's own gridpoint forecast (the
+        daytime high plus the adjacent night low), so nearby places can differ.
+        At most ``limit`` rows are returned.
+        """
+        rows: list[RegionalForecast] = []
+        for feature in self._station_features(lat, lon):
+            if len(rows) >= limit:
+                break
+            meta = self._station_meta(feature["id"])
+            forecast_url = meta.get("forecast")
+            if not forecast_url:
+                continue
+            periods = self._gridpoint_periods(forecast_url)
+            row = _build_regional_row(feature.get("name", ""), periods)
+            if row is not None:
+                rows.append(row)
+        return rows
 
     # -- location info ---------------------------------------------------------
 

@@ -19,7 +19,12 @@ from weatherstar_4000.datasources.feeds import (
 )
 from weatherstar_4000.datasources.history import PrecipRow, TemperatureRow
 from weatherstar_4000.datasources.news import Headline
-from weatherstar_4000.datasources.noaa import City, CurrentConditions, ForecastPeriod
+from weatherstar_4000.datasources.noaa import (
+    City,
+    CurrentConditions,
+    ForecastPeriod,
+    RegionalForecast,
+)
 from weatherstar_4000.engine import Builder, SequenceRunner, resolve_location
 from weatherstar_4000.sequence import Sequence
 
@@ -30,6 +35,7 @@ ALL_SCREENS = [
     "extended_forecast",
     "hourly_forecast",
     "regional_observations",
+    "regional_forecast",
     "weekend_forecast",
     "travel_cities",
     "almanac",
@@ -170,6 +176,45 @@ def precip_rows(count=12):
     return rows
 
 
+_REGION_STATIONS = [
+    "Melbourne International",
+    "Orlando Executive",
+    "Vero Beach Municipal",
+    "Daytona Beach International",
+    "Kissimmee Gateway",
+    "Sanford International",
+    "Leesburg Municipal",
+]
+
+
+def region_observations():
+    rows = []
+    for i, name in enumerate(_REGION_STATIONS):
+        props = current_payload(
+            station=f"KMLB{i:02d}",
+            temperature=_value(30.0 - i * 0.7),
+            windSpeed=_value(12.0 + i * 3.0),
+            windDirection=_value(190.0 + i * 12.0),
+            textDescription="Partly Cloudy" if i % 2 == 0 else "Mostly Clear",
+        )
+        rows.append(CurrentConditions.from_props(props, station_name=name))
+    return rows
+
+
+def region_forecasts():
+    rows = []
+    for i, name in enumerate(_REGION_STATIONS):
+        rows.append(
+            RegionalForecast(
+                location=name,
+                high=float(94 - i),
+                low=float(74 - i % 3),
+                weather="Partly Cloudy" if i % 2 == 0 else "Mostly Sunny",
+            )
+        )
+    return rows
+
+
 class _Weather:
     def __init__(self, current=None, forecast=None, hourly=None):
         self.current = current or current_payload()
@@ -187,6 +232,12 @@ class _Weather:
 
     def get_city(self, lat, lon):
         return City(city="Melbourne", state="FL")
+
+    def get_observations(self, lat, lon, limit=7):
+        return region_observations()[:limit]
+
+    def get_regional_forecast(self, lat, lon, limit=7):
+        return region_forecasts()[:limit]
 
 
 class _History:
@@ -350,3 +401,48 @@ def test_current_conditions_edge_payloads(all_appcfg, pygame_env):
     for current in variants:
         failures = _validate(all_appcfg, _registry(_Weather(current=current)))
         assert failures == []
+
+
+def test_weekend_periods_capture_sunday_run_by_date():
+    """A feed that starts on a Sunday labels it "Today"; date matching still
+    finds both weekend columns (Sunday = today, Saturday = next weekend)."""
+    from datetime import datetime, timedelta
+
+    from weatherstar_4000.datasources.noaa import ForecastPeriod
+    from weatherstar_4000.screens.weekend_forecast import WeekendForecastScreen
+
+    sunday = datetime.fromisoformat("2026-09-06T00:00:00+00:00")
+    periods = []
+    names = [
+        "Today",
+        "Tonight",
+        "Monday",
+        "Monday Night",
+        "Tuesday",
+        "Tuesday Night",
+        "Wednesday",
+        "Wednesday Night",
+        "Thursday",
+        "Thursday Night",
+        "Friday",
+        "Friday Night",
+        "Saturday",
+        "Saturday Night",
+    ]
+    for i, name in enumerate(names):
+        start = sunday + timedelta(days=i // 2)
+        periods.append(
+            ForecastPeriod(
+                name=name,
+                start_time=start,
+                is_daytime=i % 2 == 0,
+                temperature=90.0 if i % 2 == 0 else 72.0,
+                short_forecast="Sunny" if i % 2 == 0 else "Clear",
+                detailed_forecast="Pleasant weather.",
+            )
+        )
+    saturday, this_sunday = WeekendForecastScreen._weekend_periods(periods)
+    assert len(saturday) == 2
+    assert len(this_sunday) == 2
+    assert saturday[0].name == "Saturday"
+    assert this_sunday[0].name == "Today"  # Sunday labelled by its date

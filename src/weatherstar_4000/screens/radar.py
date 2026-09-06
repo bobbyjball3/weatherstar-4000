@@ -85,13 +85,16 @@ class RadarScreen(Screen):
 
         pygame.draw.rect(surface, yellow, rect, 2)
 
+        # Captions sit inside the frame's lower band (not below y=400) so they
+        # never collide with the always-on bottom ticker/scroll band.
         location = self._location_text(ctx)
-        loc_font = self.font(ctx, "normal")
-        loc_text = loc_font.render(location.upper(), True, yellow)
-        surface.blit(loc_text, loc_text.get_rect(center=(320, 420)))
+        if location:
+            loc_font = self.font(ctx, "normal")
+            loc_text = loc_font.render(location.upper(), True, yellow)
+            surface.blit(loc_text, loc_text.get_rect(center=(320, rect.bottom - 24)))
 
         attr = self.font(ctx, "tiny").render("Radar: NOAA/NWS", True, white)
-        surface.blit(attr, (rect.left, rect.bottom + 5))
+        surface.blit(attr, (rect.left + 6, rect.bottom - 22))
 
     def _draw_legend(self, surface: pygame.Surface, ctx: Any, rect: pygame.Rect) -> None:
         legend_y = rect.top + 10

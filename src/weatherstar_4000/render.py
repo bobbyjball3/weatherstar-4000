@@ -68,6 +68,11 @@ def draw_header(
     color_key = tokens.get("title_color", "yellow")
     show_logo = tokens.get("show_logo", True)
     show_noaa = tokens.get("show_noaa", has_noaa)
+    # A screen's layout may override the header text itself (e.g. the 3000 uses
+    # "The Weatherstar Almanac" where the classic screen says "Weather Almanac").
+    title_top = str(tokens.get("title_text") or title_top)
+    if tokens.get("title_sub") is not None:
+        title_bottom = str(tokens["title_sub"])
 
     title_font = fonts.get(font_name) or fonts.get("title") or fonts.get("large")
 

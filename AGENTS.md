@@ -88,14 +88,16 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 - `cli.py` — `weatherstar4000` (run / `--validate` / `generate-config`).
 - `skeleton.py` — generates the commented config from field descriptions.
 - `logging_setup.py` — structlog with SecretStr/key redaction.
-- `ticker.py` — bottom crawling banner over every screen.
+- `ticker.py` — bottom crawling banner over every slide (the classic navy crawler;
+  themes may swap it for the WeatherStar 3000 scroll band via ``bottom_band``).
 - `themes.py` — `Theme` model, TOML loader/discovery; `builtin_themes/` ships
   the data files (default/base theme is `weatherstar4000`).
 - `plugins/__init__.py` — `load_builtin_plugins()` imports every module in
   `screens`, `components`, `datasources`, `media`, `sequences` so they register.
 
 Kinds and current inventories:
-- **screen (27):** 27 display modules in `screens/`.
+- **screen (28):** 28 display modules in `screens/` (incl. the regional_forecast
+  screen that has no classic WS4000 equivalent but is a WeatherStar 3000 staple).
 - **datasource (8):** `alerts`, `earthquakes`, `history`, `local_news`,
   `radar`, `stocks`, `uv_index`, `weather`.
 - **media (5):** `fonts`, `backgrounds`, `logos`, `icons`, `music`.
@@ -171,10 +173,12 @@ that pattern — `ctx.data.get(name)` may raise `KeyError` (unknown or stubbed),
   modes (interactive wraps forever; non-interactive does one pass). Pause
   comes from config: `[sequences.<name>] pause` global, overridable per slide
   `{ screen = "x", pause = 5.0 }`.
-- `BottomTicker` (in `ticker.py`) is drawn over every slide in the bottom band
-  (banner top ≈ `height - 50`, i.e. y≈430 on 480px). **Screen content must stay
-  above ~y=424** or it will be hidden under the ticker (see the severe-alert
-  layout as the reference solution).
+- A bottom band is drawn over every slide (see `ticker.py`): the classic navy
+  `BottomTicker` crawler by default (banner top ≈ `height - 50`, i.e. y≈430 on
+  480px), or the WeatherStar 3000 date/time + crawl scroll when a theme sets
+  `bottom_band = "3000"` (that band starts at y≈405). **Screen content must stay
+  above ~y=424 (classic) / ~y=400 (3000)** or it will be hidden under the band
+  (see the severe-alert layout as the reference solution).
 - Music is ambient/config-driven, not a screen dependency: `[media.music]
   enabled = true` → engine includes `music` media, shuffles tracks, starts a
   random first song and advances when each ends. `Builder.advance_music()` is

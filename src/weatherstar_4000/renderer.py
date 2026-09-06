@@ -38,6 +38,34 @@ _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
 
 
+def short_condition_text(text: str, max_len: int = 9) -> str:
+    """Abbreviate a wordy NWS condition to fit tight table cells.
+
+    Mirrors ws3kp's ``shortenCurrentConditions`` word swaps, then truncates to
+    ``max_len`` characters (e.g. "Partly Cloudy" -> "P Cloudy", "Thunderstorm"
+    -> "T'storm").
+    """
+    cleaned = " ".join(str(text or "").split())
+    if len(cleaned) <= 15:
+        return cleaned[:max_len]
+    for long, short in (
+        ("Freezing Rain", "Frz Rn"),
+        ("Thunderstorm", "T'storm"),
+        ("Freezing", "Frz"),
+        ("Light", "L"),
+        ("Heavy", "H"),
+        ("Partly", "P"),
+        ("Mostly", "M"),
+        ("Few", "F"),
+        ("Vicinity", ""),
+    ):
+        cleaned = cleaned.replace(long, short)
+    cleaned = cleaned.replace(" in ", " ")
+    cleaned = cleaned.replace(" and ", " ")
+    cleaned = cleaned.replace(" with ", "/")
+    return cleaned[:max_len]
+
+
 def shadow_offsets(offset: int, outline: int) -> tuple[tuple[int, int], ...]:
     """Pixel offsets that draw a glyph's outline ring plus a right/down drop.
 
