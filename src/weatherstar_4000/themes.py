@@ -118,6 +118,14 @@ class Theme:
     ``fonts`` maps the named font slots to ``(file, size)`` overrides used by
     the ``fonts`` media plugin; ``asset_dir`` points at the theme's own
     ``fonts_ttf``/``backgrounds``/``logos``/``icons`` tree.
+
+    Layout is data too: ``text_shadow`` turns on the classic black outline +
+    drop shadow under all rendered text (used by the WeatherStar 3000 look),
+    and ``layout`` carries per-screen rendering tokens (header style,
+    alignment, geometry, toggles) that Screens read back through
+    :meth:`layout_for`.  A screen with no entry falls back to the ``"default"``
+    entry (usually empty) and then to its own in-code constants, so the
+    WeatherStar 4000 baseline needs no layout table.
     """
 
     name: str
@@ -126,10 +134,28 @@ class Theme:
     asset_dir: str = "static_assets"
     colors: dict[str, tuple[int, int, int]] = field(default_factory=dict)
     fonts: dict[str, tuple[str, int]] = field(default_factory=dict)
+    #: Render every text glyph with a black outline + drop shadow.
+    text_shadow: bool = False
+    #: Shadow drop distance in px (the black underlay offset right/down).
+    text_shadow_offset: int = 3
+    #: Outline stroke width in px (black underlay around every glyph edge).
+    text_shadow_outline: int = 2
+    #: Per-screen layout tokens, keyed by screen name (plus a ``"default"``
+    #: entry applied to every screen before the screen-specific one).
+    layout: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def get_color(self, key: str) -> tuple[int, int, int]:
         """Return a color by key, falling back to white when missing."""
         return self.colors.get(key, (255, 255, 255))
+
+    def layout_for(self, screen_name: str | None) -> dict[str, Any]:
+        """Return merged layout tokens for a screen (defaults + screen entry)."""
+        merged: dict[str, Any] = {}
+        for entry in ("default", screen_name):
+            if not entry:
+                continue
+            merged.update(self.layout.get(entry) or {})
+        return merged
 
 
 #: Safety-net theme for unknown names / no discoverable files.  Empty-colored so
@@ -161,6 +187,15 @@ def _theme_from_file(path: Path) -> Theme | None:
         fonts = {
             key: _parse_font_spec(value, key) for key, value in (data.get("fonts") or {}).items()
         }
+        text_shadow = bool(data.get("text_shadow", False))
+        text_shadow_offset = int(data.get("text_shadow_offset", 3))
+        text_shadow_outline = int(data.get("text_shadow_outline", 2))
+        raw_layout = data.get("layout") or {}
+        layout: dict[str, dict[str, Any]] = {}
+        if isinstance(raw_layout, dict):
+            for key, value in raw_layout.items():
+                if isinstance(value, dict):
+                    layout[str(key)] = dict(value)
     except ValueError as exc:
         log.warning("theme_invalid", path=str(path), error=str(exc))
         return None
@@ -172,6 +207,10 @@ def _theme_from_file(path: Path) -> Theme | None:
         asset_dir=asset_dir,
         colors=colors,
         fonts=fonts,
+        text_shadow=text_shadow,
+        text_shadow_offset=text_shadow_offset,
+        text_shadow_outline=text_shadow_outline,
+        layout=layout,
     )
 
 

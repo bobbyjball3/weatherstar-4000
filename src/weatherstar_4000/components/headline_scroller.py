@@ -33,12 +33,13 @@ _LINE_HEIGHT = 28
 _HEADLINE_SPACING = 15
 _WRAP_WIDTH = 470
 _SCROLL_SPEED = 20.0
-_START_SCROLL = 200.0
+#: The list is anchored to the top of its clip band: the first headline starts
+#: at the top edge and rolls upward, looping back to the top when it is done.
+_START_SCROLL = 100.0
 _NUMBER_X = 65
 _TEXT_X = 95
-#: Reset upward once the content has scrolled past this height.
 _RESET_TOP = 100.0
-_RESET_SCROLL = 440.0
+_RESET_SCROLL = 100.0
 _FOOTER_Y = 440
 #: Vertical band in which a headline is worth drawing.
 _HEADLINE_VISIBLE = (-200, 500)

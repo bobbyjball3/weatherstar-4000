@@ -12,6 +12,7 @@ from datetime import datetime
 import pygame
 
 from weatherstar_4000.context import AppContext
+from weatherstar_4000.renderer import blit_text_shadowed
 
 
 def draw_background(surface: pygame.Surface, ctx: AppContext, name: str = "1") -> None:
@@ -36,44 +37,111 @@ def draw_header(
     has_noaa: bool = False,
     include_clock: bool = True,
 ) -> None:
-    """Draw the standard header: corner logo, yellow title, NOAA mark, clock/date.
+    """Draw the screen header: logo, title, NOAA mark, clock/date.
 
+    The layout is theme-driven through per-screen tokens (see ``Theme.layout``):
+
+    - ``title_style``: ``"dual"`` (two lines), ``"tall"`` (one centered line in
+      the title face, the classic 3000 look), ``"single"`` (one line), or
+      ``"hidden"`` (draw nothing - screens with no 3000 header).
+    - ``title_align``: ``"left"`` or ``"center"``.
+    - ``title_font`` / ``title_color``: the font slot and color key for the
+      title text.
+    - ``show_logo`` / ``show_noaa``: whether the corner logo and NOAA mark draw.
+
+    When no ``title_style`` token is present the classic WeatherStar 4000 header
+    (corner logo, yellow two-line title, optional NOAA mark) is reproduced.
     ``include_clock`` lets compositors draw the top-right clock/date separately
     (e.g. via the ``clock`` component) instead of inside the header band.
     """
+    tokens = ctx.layout_for(ctx.active_screen)
+    style = tokens.get("title_style")
     logos = ctx.assets.get("logos") or {}
     colors = ctx.colors
     fonts = ctx.fonts
 
-    if "logo-corner" in logos:
-        surface.blit(logos["logo-corner"], (50, 25))
+    if style == "hidden":
+        return
 
-    title_font = fonts.get("title", fonts.get("large"))
-    if title_bottom:
-        text1 = title_font.render(title_top.upper(), True, colors["yellow"])
-        text2 = title_font.render(title_bottom.upper(), True, colors["yellow"])
-        surface.blit(text1, (170, 27))
-        surface.blit(text2, (170, 53))
+    align = tokens.get("title_align", "left")
+    font_name = tokens.get("title_font", "title")
+    color_key = tokens.get("title_color", "yellow")
+    show_logo = tokens.get("show_logo", True)
+    show_noaa = tokens.get("show_noaa", has_noaa)
+
+    title_font = fonts.get(font_name) or fonts.get("title") or fonts.get("large")
+
+    def blit_line(text: str, dest) -> None:
+        blit_text_shadowed(surface, ctx, title_font, text, colors[color_key], dest)
+
+    if style is None:
+        # Legacy WeatherStar 4000 header, unchanged when the theme specifies
+        # no per-screen title_style token.
+        if show_logo and "logo-corner" in logos:
+            surface.blit(logos["logo-corner"], (50, 25))
+        if title_bottom:
+            blit_line(title_top.upper(), (170, 27))
+            blit_line(title_bottom.upper(), (170, 53))
+        else:
+            blit_line(title_top.upper(), (170, 40))
+        if show_noaa and "noaa" in logos:
+            surface.blit(logos["noaa"], (356, 39))
     else:
-        text = title_font.render(title_top.upper(), True, colors["yellow"])
-        surface.blit(text, (170, 40))
-
-    if has_noaa and "noaa" in logos:
-        surface.blit(logos["noaa"], (356, 39))
+        if show_logo and "logo-corner" in logos:
+            surface.blit(logos["logo-corner"], (50, 25))
+        top = title_top.upper()
+        if style == "tall":
+            text = f"{top} {title_bottom.upper()}".strip() if title_bottom else top
+            if align == "center":
+                blit_line(text, text_center_rect(surface, title_font, text, 60))
+            else:
+                blit_line(text, (35, 40))
+        elif style == "single":
+            text = f"{top} {title_bottom.upper()}".strip() if title_bottom else top
+            if align == "center":
+                blit_line(text, text_center_rect(surface, title_font, text, 60))
+            else:
+                blit_line(text, (35, 40))
+        else:  # dual
+            line1 = top
+            line2 = (title_bottom or getattr(ctx.theme, "title_bottom", "") or "").upper()
+            if align == "center":
+                blit_line(line1, text_center_rect(surface, title_font, line1, 32))
+                if line2:
+                    blit_line(line2, text_center_rect(surface, title_font, line2, 60))
+            else:
+                blit_line(line1, (170, 27))
+                if line2:
+                    blit_line(line2, (170, 53))
+        if show_noaa and "noaa" in logos:
+            surface.blit(logos["noaa"], (356, 39))
 
     if not include_clock:
         return
 
     small = fonts.get("small", title_font)
     time_str = datetime.now().strftime("%I:%M %p").lstrip("0")
-    time_text = small.render(time_str, True, colors["white"])
-    time_rect = time_text.get_rect(right=590, y=34)
-    surface.blit(time_text, time_rect)
+    time_rect = text_center_rect(surface, small, time_str, 34, right=True)
+    blit_text_shadowed(surface, ctx, small, time_str, colors["white"], time_rect)
 
     date_str = datetime.now().strftime("%a %b %d").upper()
-    date_text = small.render(date_str, True, colors["white"])
-    date_rect = date_text.get_rect(right=590, y=54)
-    surface.blit(date_text, date_rect)
+    date_rect = text_center_rect(surface, small, date_str, 54, right=True)
+    blit_text_shadowed(surface, ctx, small, date_str, colors["white"], date_rect)
+
+
+def text_center_rect(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    text: str,
+    y: int,
+    *,
+    right: bool = False,
+) -> pygame.Rect:
+    """Rect for text drawn centered (or right-aligned) at height ``y``."""
+    glyph = font.render(text, True, (255, 255, 255))
+    if right:
+        return glyph.get_rect(right=surface.get_width() - 50, y=y)
+    return glyph.get_rect(center=(surface.get_width() // 2, y))
 
 
 def draw_centered_text(
@@ -86,11 +154,10 @@ def draw_centered_text(
     center_x: int | None = None,
 ) -> pygame.Rect:
     font = ctx.fonts.get(font_name, pygame.font.Font(None, 20))
-    rendered = font.render(text, True, ctx.colors[color_key])
+    color = ctx.colors[color_key]
     width = surface.get_width() if center_x is None else 2 * center_x
-    rect = rendered.get_rect(center=(width // 2, y))
-    surface.blit(rendered, rect)
-    return rect
+    rect = font.render(text, True, color).get_rect(center=(width // 2, y))
+    return blit_text_shadowed(surface, ctx, font, text, color, rect)
 
 
 def draw_text(
@@ -102,6 +169,5 @@ def draw_text(
     color_key: str = "white",
 ) -> pygame.Rect:
     font = ctx.fonts.get(font_name, pygame.font.Font(None, 20))
-    rendered = font.render(text, True, ctx.colors[color_key])
-    surface.blit(rendered, pos)
-    return rendered.get_rect(topleft=pos)
+    color = ctx.colors[color_key]
+    return blit_text_shadowed(surface, ctx, font, text, color, pos)

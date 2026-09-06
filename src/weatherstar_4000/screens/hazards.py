@@ -39,6 +39,9 @@ class HazardsScreen(Screen):
     )
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        if self.variant(ctx) == "3000":
+            self._compose_3000(surface, ctx)
+            return
         white = self.color(ctx, "white", (255, 255, 255))
         yellow = self.color(ctx, "yellow", (255, 255, 0))
         normal = self.font(ctx, "normal")
@@ -90,6 +93,46 @@ class HazardsScreen(Screen):
             for tip in _SAFETY_TIPS:
                 surface.blit(normal.render(tip, True, white), (80, y_pos))
                 y_pos += 25
+
+    # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
+
+    def _compose_3000(self, surface: pygame.Surface, ctx: Any) -> None:
+        """ws3kp Hazards: a full-height dark-red box of uppercase hazard text.
+
+        No header.  Each matching forecast hazard is centered in the box between
+        80px margins (see _hazards.scss), white on ``hazard_bg``.
+        """
+        white = self.color(ctx, "white", (255, 255, 255))
+        hazard_bg = self.color(ctx, "hazard_bg", (112, 35, 35))
+        box = pygame.Rect(0, 0, surface.get_width(), 410)
+        surface.fill(hazard_bg, box)
+
+        font = self.font(ctx, "large")
+        left = 80
+        right = surface.get_width() - 80
+        y_pos = 110
+        row_step = 40
+
+        periods = self._forecast_periods(ctx)
+        drawn = False
+        for period in periods[:3]:
+            forecast_text = period.detailed_forecast.lower()
+            if not any(word in forecast_text for word in _HAZARD_WORDS):
+                continue
+            drawn = True
+            text = f"{period.name}. {period.short_forecast}".upper()
+            for line in self.wrap(font, text, right - left):
+                self.draw_text(surface, ctx, line, (left, y_pos), font_name="large", color=white)
+                y_pos += row_step
+                if y_pos > 380:
+                    break
+            if y_pos > 380:
+                break
+
+        if not drawn:
+            text = "NO ACTIVE WEATHER ALERTS AT THIS TIME".upper()
+            rect = font.render(text, True, white).get_rect(center=(320, 200))
+            self.draw_text(surface, ctx, text, rect, font_name="large", color=white)
 
     def _forecast_periods(self, ctx: Any) -> list[ForecastPeriod]:
         return self.weather_data(ctx, "get_forecast") or []

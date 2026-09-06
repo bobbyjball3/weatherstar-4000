@@ -96,6 +96,7 @@ class LocalForecastScreen(Screen):
             lines = self.wrap(forecast_font, str(detailed), x1 - x0 - 2 * _PAD_X)
 
             content_bottom = bottom - _PAD_BOTTOM
+            line_spacing = int(self.layout_token(ctx, "forecast_line_spacing", _LINE_SPACING))
             for line in lines:
                 if y_cursor + forecast_font.get_height() > content_bottom:
                     break
@@ -104,7 +105,7 @@ class LocalForecastScreen(Screen):
                     line_surf,
                     line_surf.get_rect(center=(center_x, y_cursor + line_surf.get_height() // 2)),
                 )
-                y_cursor += _LINE_SPACING
+                y_cursor += line_spacing
 
     # -- column selection & labels -----------------------------------------
 

@@ -67,6 +67,7 @@ class AppContext:
         data: DataRegistry | None = None,
         icon_manager: Any = None,
         location: Location | None = None,
+        active_screen: str | None = None,
     ):
         self.surface = surface
         self.theme = theme or FALLBACK_THEME
@@ -75,6 +76,7 @@ class AppContext:
         self.data = data or DataRegistry()
         self.icon_manager = icon_manager
         self.location = location
+        self.active_screen = active_screen
 
     # -- conveniences -------------------------------------------------------
 
@@ -92,6 +94,21 @@ class AppContext:
         merged = dict(BASE_COLORS)
         merged.update(self.theme.colors)
         return merged
+
+    def layout_for(self, name: str | None = None) -> dict[str, Any]:
+        """Per-screen layout tokens for ``name`` (or the active screen)."""
+        return self.theme.layout_for(name or self.active_screen)
+
+    def layout(self, key: str, default: Any = None, name: str | None = None) -> Any:
+        """Return one layout token for the active screen, or ``default``."""
+        return self.layout_for(name).get(key, default)
+
+    @property
+    def shadow_colors(self) -> tuple[int, int, int] | None:
+        """Black shadow color when the theme requests text shadows, else None."""
+        if not self.theme.text_shadow:
+            return None
+        return self.theme.colors.get("black", (0, 0, 0))
 
     def font(self, name: str) -> pygame.font.Font:
         try:
@@ -130,4 +147,5 @@ class AppContext:
             data=self.data,
             icon_manager=self.icon_manager,
             location=self.location,
+            active_screen=self.active_screen,
         )

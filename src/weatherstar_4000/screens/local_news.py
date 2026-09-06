@@ -39,8 +39,26 @@ class LocalNewsScreen(Screen):
     )
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        y = self._city_y(ctx)
         city_text = self.text_surface(ctx, self._resolve_city(ctx).upper(), color_key="yellow")
-        surface.blit(city_text, city_text.get_rect(centerx=320, y=65))
+        surface.blit(city_text, city_text.get_rect(centerx=320, y=y))
+
+    @staticmethod
+    def _city_y(ctx: Any) -> int:
+        """Sit the city line below a centered header title (3000 style).
+
+        The classic header is left-aligned (lines end around x=270), so the
+        centered city at y=65 is clear of it; a centered ``tall`` 3000 title
+        spans the full width down to ~y=80, so the city drops below it.
+        """
+        tokens = ctx.layout_for(ctx.active_screen)
+        style = tokens.get("title_style", "dual")
+        align = tokens.get("title_align", "left")
+        if style in ("tall", "single") and align == "center":
+            # Centered title spans the width down to ~y=75; the headline
+            # scroller clip starts at y=100, so the city lives in the gap.
+            return 80
+        return 65
 
     def _resolve_city(self, ctx: Any) -> str:
         lat, lon = self.latlon(ctx)

@@ -124,7 +124,10 @@ class TemperatureGraphScreen(Screen):
             low_text = font_small.render(str(low), True, white)
             surface.blit(low_text, low_text.get_rect(center=(x, low_y + label_offset)))
             label_text = font_small.render(label, True, white)
-            label_rect = label_text.get_rect(center=(x, _GRAPH_TOP + _GRAPH_HEIGHT + 10))
+            # Day labels clear the axis: center them a label-height below the
+            # frame so the top of the glyphs never abut the X axis.
+            label_y = _GRAPH_TOP + _GRAPH_HEIGHT + 8 + text_h // 2
+            label_rect = label_text.get_rect(center=(x, label_y))
             surface.blit(label_text, label_rect)
 
     @staticmethod

@@ -237,6 +237,7 @@ class SequenceRunner:
     def step(self, index: int, dt: float) -> None:
         name = self.sequence.slides[index].screen
         screen = self.by_name[name]
+        self.ctx.active_screen = name
         screen.step(self.ctx, dt)
         screen.draw(self.ctx.surface, self.ctx, dt)
 

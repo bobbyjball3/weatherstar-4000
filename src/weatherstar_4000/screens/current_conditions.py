@@ -54,6 +54,10 @@ class CurrentConditionsScreen(Screen):
             )
             return
 
+        if self.variant(ctx) == "3000":
+            self._compose_3000(surface, ctx, current)
+            return
+
         content_left = 64
         left_col_center = content_left + 127
         white = self.color(ctx, "white")
@@ -136,3 +140,134 @@ class CurrentConditionsScreen(Screen):
             value_surf = self.font(ctx, "normal").render(value, True, white)
             surface.blit(value_surf, value_surf.get_rect(right=value_x, y=y_pos))
             y_pos += 36
+
+    # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
+
+    def _compose_3000(self, surface: pygame.Surface, ctx: Any, current: CurrentConditions) -> None:
+        """ws3kp Current Conditions: a plain 8-line text list, 24pt on 40px rows.
+
+        No header, no icon, no big temperature - just the observation text block
+        mirrored from the ws3kp current-weather template, left aligned from the
+        35px margin at a 40px top margin (see _current-weather.scss).
+        """
+        white = self.color(ctx, "white")
+        left = int(self.layout_token(ctx, "content_left", 35))
+        top = int(self.layout_token(ctx, "content_top", 40))
+        row_height = int(self.layout_token(ctx, "row_height", 40))
+
+        city, state = self._city_state(ctx)
+        if city:
+            location_str = city if not state else f"{city}, {state}"
+        else:
+            location_str = self._city_desc(ctx)
+        location_str = location_str.strip()[:20]
+
+        lines: list[str] = []
+        if location_str:
+            lines.append(f"Conditions at {location_str}")
+
+        condition = self._short_condition(current.text_description)
+        if condition:
+            lines.append(condition)
+
+        degree = "\N{DEGREE SIGN}"
+        temp_f = current.temperature_f
+        if temp_f is not None:
+            lines.append(f"Temperature: {temp_f}{degree}")
+
+        humidity = current.relative_humidity
+        dewpoint_f = current.dewpoint_f
+        if humidity is not None or dewpoint_f is not None:
+            left_part = f"Humidity: {int(humidity)}%" if humidity is not None else "Humidity:"
+            right_part = f"Dewpoint: {dewpoint_f}{degree}" if dewpoint_f is not None else ""
+            lines.append(f"{left_part}    {right_part}".rstrip())
+
+        pressure = current.pressure_inhg
+        if pressure is not None:
+            lines.append(f"Barometric Pressure: {pressure:.2f} {self._trend_letter(ctx, pressure)}")
+
+        wind_mph = current.wind_mph
+        if wind_mph is not None:
+            if wind_mph > 0:
+                direction = self.cardinal(current.wind_direction)
+                wind_str = f"{direction:<3}{int(wind_mph):>3}"
+            else:
+                wind_str = "Calm"
+            lines.append(f"Wind: {wind_str}")
+
+        visibility_miles = current.visibility_miles
+        if visibility_miles is not None:
+            vis = (
+                f"{round(visibility_miles)}"
+                if visibility_miles >= 10
+                else f"{visibility_miles:.1f}"
+            )
+            ceiling = "Unlimited" if not current.ceiling_ft else f"{current.ceiling_ft} ft."
+            lines.append(f"Visib: {vis} mi.  Ceiling: {ceiling}")
+
+        if (
+            current.heat_index_f is not None
+            and current.temperature_c is not None
+            and current.temperature_c > 26
+        ):
+            lines.append(f"Heat Index: {current.heat_index_f}{degree}")
+        elif (
+            current.wind_chill_f is not None
+            and current.temperature_c is not None
+            and current.temperature_c < 10
+        ):
+            lines.append(f"Wind Chill: {current.wind_chill_f}{degree}")
+
+        max_right = surface.get_width() - left - 8
+        y = top
+        for line in lines:
+            slot = "large"
+            if self.font(ctx, slot).size(line)[0] > max_right:
+                slot = "extended"
+            self.draw_text(surface, ctx, line, (left, y), font_name=slot, color=white)
+            y += row_height
+
+    def _trend_letter(self, ctx: Any, pressure_inhg: float) -> str:
+        """ws3kp pressure trend letters: 'R' rising / 'F' falling (~150 Pa).
+
+        The app re-renders from a single snapshot per frame, so trend is read
+        from the same short inHg history the classic layout keeps.
+        """
+        history = self._pressure_history
+        if history is None:
+            history = []
+            self._pressure_history = history
+        history.append(pressure_inhg)
+        if len(history) > 5:
+            history.pop(0)
+        if len(history) < 2:
+            return ""
+        change = history[-1] - history[0]
+        if change > 0.044:
+            return "R"
+        if change < -0.044:
+            return "F"
+        return ""
+
+    @staticmethod
+    def _short_condition(condition: str) -> str:
+        """ws3kp shortConditions(): abbreviate wordy NWS descriptions."""
+        if len(condition) <= 15:
+            return condition
+        text = condition
+        for long, short in (
+            ("Freezing Rain", "Frz Rn"),
+            ("Thunderstorm", "T'storm"),
+            ("Freezing", "Frz"),
+            ("Light", "L"),
+            ("Heavy", "H"),
+            ("Partly", "P"),
+            ("Mostly", "M"),
+            ("Few", "F"),
+            ("Vicinity", ""),
+        ):
+            text = text.replace(long, short)
+        text = text.replace(" in ", " ")
+        text = text.replace(" and ", " ")
+        text = text.replace(" with ", "/")
+        return text

@@ -42,27 +42,30 @@ class HourlyForecastScreen(Screen):
             )
             return
 
-        content_top = 125
-        content_height = 265
+        content_top = 120
+        content_height = 250
         line_height = 25
         total_lines = len(periods[:24])
         total_content_height = total_lines * line_height
 
+        # The list fills its clip region from the top edge and rolls upward;
+        # the band is kept well clear of the bottom ticker/footer (y>=410).
         scroll_time = pygame.time.get_ticks() // 50
-        scroll_offset = scroll_time % (total_content_height + content_height)
+        scroll_offset = scroll_time % total_content_height
 
         header_surf = self.font(ctx, "small").render("TIME  TEMP  CONDITIONS", True, yellow)
         surface.blit(header_surf, (65, content_top))
 
-        clip_rect = pygame.Rect(0, content_top + 30, 640, content_height)
+        clip_top = content_top + 30
+        clip_rect = pygame.Rect(0, clip_top, 640, content_height)
         surface.set_clip(clip_rect)
 
-        base_y = content_top + 30 + content_height - scroll_offset
+        base_y = clip_top - scroll_offset
         for loop in range(2):
             y_offset = loop * total_content_height
             for i, period in enumerate(periods[:24]):
                 y_pos = base_y + y_offset + (i * line_height)
-                if content_top <= y_pos <= content_top + content_height + 50:
+                if clip_top - line_height <= y_pos <= clip_top + content_height:
                     start_time = period.start_time
                     time_display = ""
                     if start_time:

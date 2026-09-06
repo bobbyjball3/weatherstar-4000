@@ -93,6 +93,48 @@ Optional map of the named font slots (`title`, `large`, `extended`, `small`,
 points these at its own TTF files (e.g. the WeatherStar 3000 typeface) uses them
 when present; otherwise the classic filenames are used.
 
+### `text_shadow`
+
+The 1980s WeatherStar 3000 look draws every text glyph with a black outline ring
+plus a right/down drop shadow (the ws3kp `text-shadow` stack). Themes opt in:
+
+```toml
+text_shadow = true
+text_shadow_offset = 3     # drop distance in px (right/down)
+text_shadow_outline = 2    # outline stroke width in px
+```
+
+When `text_shadow` is false (the default) text renders with no underlay, exactly
+as the classic WeatherStar 4000 screens do. The outline color comes from the
+theme's `black` palette key.
+
+### `layout`
+
+Layout is theme-driven data, not code. A `[layout]` table carries per-screen
+tokens that Screens read back at draw time (merged over an optional `default`
+entry applied to every screen):
+
+```toml
+[layout.default]               # applied to every screen first
+show_logo = false              # draw the corner logo?
+show_noaa = false              # draw the NOAA mark?
+show_clock = false             # draw the top-right live clock/date?
+title_style = "tall"           # "dual" | "tall" | "single" | "hidden"
+title_align = "center"         # "left" | "center"
+title_color = "white"          # palette key for the header title
+title_font = "title"           # font slot for the header title
+
+[layout.current_conditions]    # per-screen overrides beat the defaults
+title_style = "hidden"
+variant = "3000"               # opt into a screen's alternate layout branch
+```
+
+Header tokens drive the shared header/clock components; `variant` lets a screen
+that has a genuinely different WeatherStar 3000 layout (e.g. Current Conditions
+as a plain text list) switch branches. Screens never branch on the theme *name* —
+they read tokens, and the classic WeatherStar 4000 baseline is simply the absence
+of tokens (screens fall back to their own constants).
+
 ## Adding your own theme
 
 1. Drop a `<name>.theme.toml` into `~/.config/weatherstar4000/themes/`

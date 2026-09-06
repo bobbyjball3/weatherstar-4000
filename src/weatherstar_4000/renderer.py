@@ -37,6 +37,56 @@ _FONT_SIZES = {
 _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
 
+
+def shadow_offsets(offset: int, outline: int) -> tuple[tuple[int, int], ...]:
+    """Pixel offsets that draw a glyph's outline ring plus a right/down drop.
+
+    Mirrors the classic WeatherStar CSS ``text-shadow`` stack: a drop shadow at
+    ``(offset, offset)`` and an 8-way outline ring ``outline`` px out.  ``offset``
+    of 0 disables the drop (pure outline, e.g. hazard banners).
+    """
+    ring: list[tuple[int, int]] = []
+    radius = max(1, outline)
+    for dx in (-radius, 0, radius):
+        for dy in (-radius, 0, radius):
+            if dx == 0 and dy == 0:
+                continue
+            ring.append((dx, dy))
+    if offset:
+        drop = (offset, offset)
+        if drop not in ring:
+            ring.append(drop)
+    return tuple(ring)
+
+
+def blit_text_shadowed(
+    surface: pygame.Surface,
+    ctx: Any,
+    font: pygame.font.Font,
+    text: str,
+    color: tuple[int, int, int],
+    dest,
+) -> pygame.Rect:
+    """Blit ``text`` in ``color`` with the theme's outline + drop underlay.
+
+    When the active theme disables text shadows this is a plain blit.  ``dest``
+    may be a position or rect; the returned rect is where the glyph landed.
+    """
+    pos = dest.topleft if hasattr(dest, "topleft") else dest
+    glyph = font.render(text, True, color)
+    rect = glyph.get_rect(topleft=pos)
+    theme = getattr(ctx, "theme", None)
+    if theme is None or not theme.text_shadow:
+        surface.blit(glyph, rect)
+        return rect
+    shadow_color = theme.colors.get("black", (0, 0, 0))
+    shadow = font.render(text, True, shadow_color)
+    for dx, dy in shadow_offsets(theme.text_shadow_offset, theme.text_shadow_outline):
+        surface.blit(shadow, rect.move(dx, dy))
+    surface.blit(glyph, rect)
+    return rect
+
+
 #: The sixteen classic compass points, indexed by a heading in degrees.
 _CARDINALS = [
     "N",
@@ -200,6 +250,19 @@ class Renderer:
             return colors.get(key, fallback)
         return fallback
 
+    # -- theme layout tokens -------------------------------------------------
+
+    def layout_token(self, ctx: Any, key: str, default: Any = None) -> Any:
+        """Return one per-screen theme layout token (merged defaults) or default."""
+        tokens = getattr(ctx, "layout_for", None)
+        if tokens is None:
+            return default
+        return tokens().get(key, default)
+
+    def variant(self, ctx: Any, default: str = "classic") -> str:
+        """Which layout variant the active theme requests for this screen."""
+        return str(self.layout_token(ctx, "variant", default))
+
     def text_surface(
         self,
         ctx: Any,
@@ -213,6 +276,21 @@ class Renderer:
         fg = color if color is not None else self.color(ctx, color_key)
         return self.font(ctx, font_name).render(text, True, fg)
 
+    def draw_text(
+        self,
+        surface: pygame.Surface,
+        ctx: Any,
+        text: str,
+        pos,
+        *,
+        font_name: str = "normal",
+        color_key: str = "white",
+        color: tuple[int, int, int] | None = None,
+    ) -> pygame.Rect:
+        """Render ``text`` at ``pos`` honoring theme text-shadow; returns rect."""
+        fg = color if color is not None else self.color(ctx, color_key)
+        return blit_text_shadowed(surface, ctx, self.font(ctx, font_name), text, fg, pos)
+
     def blit_text(
         self,
         surface: pygame.Surface,
@@ -225,10 +303,15 @@ class Renderer:
         color: tuple[int, int, int] | None = None,
     ) -> pygame.Rect:
         """Render ``text`` at ``pos`` (a position or rect) and return its rect."""
-        rendered = self.text_surface(
-            ctx, text, font_name=font_name, color_key=color_key, color=color
+        return self.draw_text(
+            surface,
+            ctx,
+            text,
+            pos,
+            font_name=font_name,
+            color_key=color_key,
+            color=color,
         )
-        return surface.blit(rendered, pos)
 
     # -- context / datasource access -------------------------------------
 
@@ -294,11 +377,13 @@ class Renderer:
         center_x: int | None = None,
     ) -> pygame.Rect:
         """Draw ``text`` centered horizontally at height ``y``; return its rect."""
-        rendered = self.text_surface(ctx, text, font_name=font_name, color_key=color_key)
+        font = self.font(ctx, font_name)
+        fg = self.color(ctx, color_key)
         width = surface.get_width() if center_x is None else 2 * center_x
-        rect = rendered.get_rect(center=(width // 2, y))
-        surface.blit(rendered, rect)
-        return rect
+        # Center on the un-shadowed width; the underlay extends evenly, so
+        # centering the glyph itself keeps the label optically centered.
+        rect = font.render(text, True, fg).get_rect(center=(width // 2, y))
+        return blit_text_shadowed(surface, ctx, font, text, fg, rect)
 
     # -- value conversions ------------------------------------------------
 

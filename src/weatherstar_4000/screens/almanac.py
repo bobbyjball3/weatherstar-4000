@@ -39,10 +39,10 @@ class AlmanacScreen(Screen):
         )
         surface.blit(date_surf, date_surf.get_rect(center=(320, 100)))
 
-        y_pos = 130
+        y_pos = 128
         stats_title = self.font(ctx, "extended").render("CURRENT CONDITIONS", True, yellow)
         surface.blit(stats_title, (60, y_pos))
-        y_pos += 35
+        y_pos += 30
 
         temp_f = current.temperature_f
         if temp_f is not None:
@@ -50,13 +50,13 @@ class AlmanacScreen(Screen):
                 f"Temperature: {temp_f}\N{DEGREE SIGN}F", True, white
             )
             surface.blit(row, (80, y_pos))
-            y_pos += 25
+            y_pos += 24
 
         humidity = current.relative_humidity
         if humidity is not None:
             row = self.font(ctx, "normal").render(f"Humidity: {humidity:.0f}%", True, white)
             surface.blit(row, (80, y_pos))
-            y_pos += 25
+            y_pos += 24
 
         dewpoint_f = current.dewpoint_f
         if dewpoint_f is not None:
@@ -64,13 +64,13 @@ class AlmanacScreen(Screen):
                 f"Dewpoint: {dewpoint_f}\N{DEGREE SIGN}F", True, white
             )
             surface.blit(row, (80, y_pos))
-            y_pos += 25
+            y_pos += 24
 
         pressure_inhg = current.pressure_inhg
         if pressure_inhg is not None:
             row = self.font(ctx, "normal").render(f"Pressure: {pressure_inhg:.2f} in", True, white)
             surface.blit(row, (80, y_pos))
-            y_pos += 25
+            y_pos += 24
 
         visibility_miles = current.visibility_miles
         if visibility_miles is not None:
@@ -78,20 +78,20 @@ class AlmanacScreen(Screen):
                 f"Visibility: {visibility_miles:.1f} miles", True, white
             )
             surface.blit(row, (80, y_pos))
-            y_pos += 35
+            y_pos += 30
 
-        y_pos += 10
+        y_pos += 8
         sun_title = self.font(ctx, "extended").render("SUN & MOON", True, yellow)
         surface.blit(sun_title, (60, y_pos))
-        y_pos += 35
+        y_pos += 30
 
         sunrise_surf = self.font(ctx, "normal").render("Sunrise: 6:45 AM", True, white)
         surface.blit(sunrise_surf, (80, y_pos))
-        y_pos += 25
+        y_pos += 24
 
         sunset_surf = self.font(ctx, "normal").render("Sunset: 7:30 PM", True, white)
         surface.blit(sunset_surf, (80, y_pos))
-        y_pos += 25
+        y_pos += 24
 
         moon_surf = self.font(ctx, "normal").render("Moon Phase: Waxing Gibbous", True, white)
         surface.blit(moon_surf, (80, y_pos))

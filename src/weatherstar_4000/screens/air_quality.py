@@ -82,10 +82,10 @@ class AirQualityScreen(Screen):
                 ctx,
                 f"{range_txt}: {desc}",
                 (left_x, y_pos),
-                font_name="small",
+                font_name="tiny",
                 color=color,
             )
-            y_pos += 22
+            y_pos += 26
 
         pollen_y = 120
         self.blit_text(

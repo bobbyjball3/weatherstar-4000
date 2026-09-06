@@ -31,6 +31,10 @@ class ExtendedForecastScreen(Screen):
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
 
+        if self.variant(ctx) == "3000":
+            self._compose_3000(surface, ctx, periods)
+            return
+
         day_width = 155
         total_width = 640
         num_days = min(3, len(periods) // 2)
@@ -119,6 +123,124 @@ class ExtendedForecastScreen(Screen):
                 surface.blit(hi_surf, hi_surf.get_rect(center=(hi_x_center, 335)))
 
             day_count += 1
+
+    # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
+
+    def _compose_3000(
+        self, surface: pygame.Surface, ctx: Any, periods: list[ForecastPeriod]
+    ) -> None:
+        """ws3kp Extended Forecast: three 155px day boxes, no icons.
+
+        Each box (from _extended-forecast.scss) shows an uppercase weekday, the
+        short condition text, then stacked Lo:/Hi: label+value rows.  Three days
+        fit the 640px canvas.
+        """
+        white = self.color(ctx, "white")
+
+        num_days = min(3, len(periods) // 2)
+        if num_days == 0:
+            render.draw_centered_text(
+                surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
+            )
+            return
+
+        container_left = int(self.layout_token(ctx, "day_container_left", 27))
+        day_margin = int(self.layout_token(ctx, "day_margin", 15))
+        day_width = int(self.layout_token(ctx, "day_width", 155))
+        top = int(self.layout_token(ctx, "day_top", 92))
+        step = day_width + 2 * day_margin
+
+        for i in range(0, min(len(periods), 6), 2):
+            day_period = periods[i]
+            night_period = periods[i + 1] if i + 1 < len(periods) else None
+            col = i // 2
+            x_pos = container_left + day_margin + col * step
+            col_center = x_pos + day_width // 2
+
+            day_name = self._day_label(day_period, night_period)
+            if day_name:
+                rect = (
+                    self.font(ctx, "title")
+                    .render(day_name, True, white)
+                    .get_rect(center=(col_center, top))
+                )
+                self.draw_text(surface, ctx, day_name, rect, font_name="title", color=white)
+
+            condition = self._shorten_extended(self._day_condition(day_period, night_period))
+            cond_lines = self.wrap(self.font(ctx, "title"), condition, day_width - 10)
+            cond_y = top + 42
+            for line in cond_lines[:2]:
+                rect = (
+                    self.font(ctx, "title")
+                    .render(line, True, white)
+                    .get_rect(center=(col_center, cond_y))
+                )
+                self.draw_text(surface, ctx, line, rect, font_name="title", color=white)
+                cond_y += 38
+
+            if day_period.is_daytime:
+                hi_temp = day_period.temperature
+                lo_temp = night_period.temperature if night_period else None
+            else:
+                lo_temp = day_period.temperature
+                hi_temp = (
+                    night_period.temperature if night_period and night_period.is_daytime else None
+                )
+
+            degree = "\N{DEGREE SIGN}"
+            temps_y = top + 155
+            right = x_pos + day_width - 6
+            lo_value = f"{int(lo_temp)}{degree}" if lo_temp is not None else None
+            if lo_value is not None:
+                self.draw_text(
+                    surface, ctx, "Lo:", (x_pos + 4, temps_y), font_name="large", color=white
+                )
+                value = self.font(ctx, "large").render(lo_value, True, white)
+                self.draw_text(
+                    surface,
+                    ctx,
+                    lo_value,
+                    value.get_rect(right=right, y=temps_y),
+                    font_name="large",
+                    color=white,
+                )
+            hi_value = f"{int(hi_temp)}{degree}" if hi_temp is not None else None
+            if hi_value is not None:
+                self.draw_text(
+                    surface, ctx, "Hi:", (x_pos + 4, temps_y + 40), font_name="large", color=white
+                )
+                value = self.font(ctx, "large").render(hi_value, True, white)
+                self.draw_text(
+                    surface,
+                    ctx,
+                    hi_value,
+                    value.get_rect(right=right, y=temps_y + 40),
+                    font_name="large",
+                    color=white,
+                )
+
+    def _day_condition(
+        self, day_period: ForecastPeriod, night_period: ForecastPeriod | None
+    ) -> str:
+        for period in (day_period, night_period):
+            if period and period.is_daytime and period.short_forecast:
+                return period.short_forecast
+        return (day_period or night_period).short_forecast
+
+    @staticmethod
+    def _shorten_extended(condition: str) -> str:
+        """ws3kp shortenExtendedForecastText(): drop adverbs, keep <=2 words."""
+        text = str(condition or "")
+        for word in ("Slight ", "Chance ", "Very ", "Patchy ", "Areas ", "Dense "):
+            text = text.replace(word, "")
+        text = text.replace("Thunderstorm", "T'Storm").replace(" and ", " ")
+        words = text.replace(" then ", " ").split()
+        if not words:
+            return ""
+        pieces = [words[0][:10].rstrip(".")]
+        if len(words) > 1 and pieces[0]:
+            pieces.append(words[1][:10].rstrip("."))
+        return " ".join(pieces).strip()
 
     def _day_label(self, day_period: ForecastPeriod, night_period: ForecastPeriod | None) -> str:
         """Weekday abbreviation for a day/night column (e.g. SAT, SUN, MON)."""
