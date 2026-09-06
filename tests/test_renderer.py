@@ -170,7 +170,9 @@ def test_icon_helpers(screen):
         "Partly-Cloudy"
     )
     assert renderer.icon_name("https://api.weather.gov/icons/land/day/few?size=medium") == "Sunny"
-    assert renderer.icon_name("https://api.weather.gov/icons/land/night/few?size=medium") == "Clear"
+    assert renderer.icon_name("https://api.weather.gov/icons/land/night/few?size=medium") == (
+        "Mostly-Clear"
+    )
     assert renderer.icon_name("https://api.weather.gov/icons/land/day/mystery_condition") is None
 
     icon = pygame.Surface((10, 10))
@@ -181,3 +183,39 @@ def test_icon_helpers(screen):
     assert resolved.get_size() == (20, 20)
     assert renderer.icon_surface(ctx, "Missing") is None
     assert renderer.icon_surface(ctx, None) is None
+
+
+def test_icon_rule_table_covers_noaa_tokens(screen):
+    renderer = _Dummy()
+    cases = [
+        # (day_or_night, token, expected icon or None)
+        ("day", "skc", "Sunny"),
+        ("night", "skc", "Clear"),
+        ("day", "few", "Sunny"),
+        ("night", "few", "Mostly-Clear"),
+        ("night", "fair", "Clear"),
+        ("day", "sct", "Partly-Cloudy"),
+        ("night", "nsct", "Partly-Cloudy"),
+        ("day", "bkn", "Cloudy"),
+        ("day", "ovc", "Cloudy"),
+        ("day", "rain", "Rain"),
+        ("day", "rain_showers", "Shower"),
+        ("day", "tsra", "Thunderstorm"),
+        ("day", "tsra_sct", "Thunderstorm"),
+        ("night", "tsra_hi", "Thunderstorm"),
+        ("day", "fog", "Fog"),
+        ("day", "wind", "Windy"),
+        ("day", "smoke", "Smoke"),
+        ("day", "blizzard", "Heavy-Snow"),
+        ("day", "snow", "Light-Snow"),
+        ("day", "rain_snow", "Snow-to-Rain"),
+        ("day", "snow_showers", "Scattered-Snow-Showers"),
+        ("day", "sleet", "Sleet"),
+        ("day", "mix", "Sleet"),
+        ("day", "fzra", "Freezing-Rain"),
+        ("day", "fzra_snow", "Freezing-Rain-Snow"),
+        ("day", "mystery_condition", None),
+    ]
+    for part, token, expected in cases:
+        url = f"https://api.weather.gov/icons/land/{part}/{token}?size=medium"
+        assert renderer.icon_name(url) == expected, (part, token)

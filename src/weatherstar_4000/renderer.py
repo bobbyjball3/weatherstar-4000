@@ -15,6 +15,7 @@ so constants live at module scope.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -56,11 +57,9 @@ _CARDINALS = [
     "NNW",
 ]
 
-#: NOAA condition token -> weather icon name (classic WeatherStar set).
-#: Exact tokens are tried first; see ``_icon_for_token`` for the fallback
-#: classification of compound tokens (e.g. ``tsra_hi,40``).  Clear-sky tokens
-#: are intentionally absent so the classifier can pick the day "Sunny" vs the
-#: night "Clear" icon from the URL's day/night segment.
+#: Common NOAA condition token -> weather icon name (classic WeatherStar set).
+#: Clear-sky tokens are intentionally absent so the classifier can pick the day
+#: "Sunny" vs the night "Clear" icon from the URL's day/night segment.
 _ICON_NAMES = {
     "sct": "Partly-Cloudy",
     "bkn": "Cloudy",
@@ -74,58 +73,97 @@ _ICON_NAMES = {
 }
 
 
-def _icon_for_token(token: str, night: bool = False) -> str | None:
-    """Classify a NOAA icon token into a named weather icon (or ``None``).
+@dataclass(frozen=True)
+class _IconRule:
+    """One flat weather-icon classification rule (ordered, first match wins).
 
-    NOAA forecast icons carry coverage/intensity suffixes the classic set has
-    no asset for (``tsra_hi,40``, ``tsra_sct,50``, ``nsct`` ...).  Substring
-    classification keeps those pointing at the nearest available icon instead of
-    collapsing every unknown condition onto a single default.
+    A rule matches a lower-cased token when it contains every substring in
+    ``all``, at least one substring in ``any``, no substring in ``none``, and
+    (when ``exact`` is given) the whole token is one of ``exact``.  Provide at
+    least one of ``exact``/``any``/``all``.
     """
+
+    icon: str
+    exact: tuple[str, ...] = ()
+    any: tuple[str, ...] = ()
+    all: tuple[str, ...] = ()
+    none: tuple[str, ...] = ()
+    night_icon: str | None = None
+
+    def matches(self, token: str) -> bool:
+        if not (self.exact or self.any or self.all):
+            return False
+        if self.exact and token not in self.exact:
+            return False
+        if self.any and not any(part in token for part in self.any):
+            return False
+        if self.all and not all(part in token for part in self.all):
+            return False
+        if self.none and any(part in token for part in self.none):
+            return False
+        return True
+
+    def icon_for(self, night: bool) -> str:
+        return self.night_icon if (night and self.night_icon) else self.icon
+
+
+#: NOAA forecast icons carry coverage/intensity suffixes the classic set has no
+#: asset for (``tsra_hi,40``, ``tsra_sct,50``, ``nsct`` ...).  Exact tokens are
+#: checked first, then these ordered substring rules classify compound tokens
+#: onto the nearest available icon.  Order matters (first match wins) and
+#: mirrors the legacy cascade: thunder > winter mixes > sleet > dust/smoke >
+#: wind > fog > rain > clear/sunny > partly > cloudy.
+_ICON_RULES: tuple[_IconRule, ...] = (
+    _IconRule("Thunderstorm", any=("tsra", "thunder", "tstm", "tstorm")),
+    _IconRule("Heavy-Snow", any=("blizzard",)),
+    # Freezing precipitation family (checked before plain snow/sleet).
+    _IconRule("Freezing-Rain-Sleet", any=("fzra", "freezing"), all=("sleet",)),
+    _IconRule("Freezing-Rain-Snow", any=("fzra", "freezing"), all=("snow",), none=("sleet",)),
+    _IconRule("Freezing-Rain", any=("fzra", "freezing"), none=("snow", "sleet")),
+    # Snow family (sub-checks keep the original precedence inside the branch).
+    _IconRule("Snow-to-Rain", any=("snow",), all=("rain",)),
+    _IconRule("Heavy-Snow", any=("snow",), all=("heavy",), none=("rain",)),
+    _IconRule("Snow-Sleet", any=("snow",), all=("sleet",), none=("rain", "heavy")),
+    _IconRule(
+        "Scattered-Snow-Showers",
+        any=("shower", "shra"),
+        all=("snow",),
+        none=("rain", "heavy", "sleet"),
+    ),
+    _IconRule("Light-Snow", any=("snow",), none=("rain", "heavy", "sleet", "shower", "shra")),
+    # Plain sleet / ice-pellet mix.
+    _IconRule("Sleet", any=("sleet",)),
+    _IconRule("Sleet", exact=("ip", "mix")),
+    # Smoke / blowing dust.
+    _IconRule("Smoke", any=("smoke", "dust")),
+    _IconRule("Smoke", exact=("du", "fu")),
+    _IconRule("Windy", any=("wind",)),
+    _IconRule("Fog", any=("fog",)),
+    _IconRule("Fog", exact=("br",)),
+    # Rain family.
+    _IconRule("Shower", any=("shower", "shra")),
+    _IconRule("Rain", any=("rain",)),
+    _IconRule("Rain", exact=("ra",)),
+    # Clear/sunny day vs night and the partly/cloudy fallbacks.
+    _IconRule("Sunny", night_icon="Clear", exact=("skc", "fair")),
+    # NOAA "few" = a few clouds (day "mostly sunny" / night "mostly clear");
+    # the classic night glyph shows a moon behind a wisp of cloud.
+    _IconRule("Sunny", night_icon="Mostly-Clear", exact=("few",)),
+    _IconRule("Sunny", night_icon="Clear", any=("clear", "sunny")),
+    _IconRule("Partly-Cloudy", any=("partly", "sct")),
+    _IconRule("Cloudy", any=("cloudy",)),
+    _IconRule("Cloudy", exact=("bkn", "ovc", "overcast")),
+)
+
+
+def _icon_for_token(token: str, night: bool = False) -> str | None:
+    """Classify a NOAA icon token into a named weather icon (or ``None``)."""
     t = token.lower()
     if t in _ICON_NAMES:
         return _ICON_NAMES[t]
-    if "tsra" in t or "thunder" in t or "tstm" in t or "tstorm" in t:
-        return "Thunderstorm"
-    if "blizzard" in t:
-        return "Heavy-Snow"
-    if "fzra" in t or "freezing" in t:
-        if "sleet" in t:
-            return "Freezing-Rain-Sleet"
-        if "snow" in t:
-            return "Freezing-Rain-Snow"
-        return "Freezing-Rain"
-    if "snow" in t:
-        if "rain" in t:
-            return "Snow-to-Rain"
-        if "heavy" in t:
-            return "Heavy-Snow"
-        if "sleet" in t:
-            return "Snow-Sleet"
-        if "shower" in t or "shra" in t:
-            return "Scattered-Snow-Showers"
-        return "Light-Snow"
-    if "sleet" in t or t in ("ip", "mix"):
-        return "Sleet"
-    if "smoke" in t or "dust" in t or t in ("du", "fu"):
-        return "Smoke"
-    if "wind" in t:
-        return "Windy"
-    if "fog" in t or t == "br":
-        return "Fog"
-    if "rain" in t or "shower" in t or "shra" in t or t == "ra":
-        if "snow" in t or "sleet" in t:
-            return "Rain-Snow"
-        if "shower" in t or "shra" in t:
-            return "Shower"
-        return "Rain"
-    if "clear" in t or "sunny" in t or t in ("skc", "few", "fair"):
-        # Classic set distinguishes the day sun from the night clear sky.
-        return "Clear" if night else "Sunny"
-    if "partly" in t or "sct" in t:
-        return "Partly-Cloudy"
-    if "cloudy" in t or t in ("bkn", "ovc", "overcast"):
-        return "Cloudy"
+    for rule in _ICON_RULES:
+        if rule.matches(t):
+            return rule.icon_for(night)
     return None
 
 
