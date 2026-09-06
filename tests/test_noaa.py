@@ -261,11 +261,11 @@ def test_regional_forecast_ignores_zone_text_forecast_urls(monkeypatch):
             }
         if url == f"{BASE}/stations/KMLB":
             return {
+                "geometry": {"type": "Point", "coordinates": [-80.6, 28.1]},
                 "properties": {
                     # Some stations advertise their *zone* here; it has no periods.
                     "forecast": f"{BASE}/zones/forecast/INZ037",
-                    "geometry": {"type": "Point", "coordinates": [-80.6, 28.1]},
-                }
+                },
             }
         if url == f"{BASE}/points/28.1000,-80.6000":
             return {"properties": {"forecast": f"{BASE}/gridpoints/MLB/45,32/forecast"}}

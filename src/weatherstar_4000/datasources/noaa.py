@@ -569,24 +569,25 @@ class NoaaWeather(Datasource):
     # -- regional tables ---------------------------------------------------------
 
     def _station_meta(self, station_id: str) -> dict:
-        """Station metadata ``properties`` (geometry, names, links)."""
+        """Full station JSON (top-level ``geometry`` + ``properties``)."""
         key = self._cache_key_for("station_meta", station_id)
         cached = self.cache_get(key, 3600)
         if cached is not None:
             return cached
         data = self.http_get_json(f"{BASE_URL}/stations/{station_id}")
-        props = data.get("properties") if isinstance(data, dict) else None
-        self.cache_set(key, props or {})
-        return props or {}
+        payload = data if isinstance(data, dict) else {}
+        self.cache_set(key, payload)
+        return payload
 
     def _station_forecast_url(self, station_id: str) -> str | None:
         """Gridpoint forecast URL for one station, or ``None``.
 
         Station metadata's ``forecast`` link is not always a gridpoint forecast
         (it can point at a zone *text* product that rejects ``units`` and has no
-        day/night periods).  Resolve the station's own coordinates to a point
-        and use that point's gridpoint forecast URL; only trust a metadata link
-        that already looks like a gridpoint forecast.
+        day/night periods).  Resolve the station's own coordinates (root-level
+        GeoJSON ``geometry``) to a point and use that point's gridpoint forecast
+        URL; only trust a metadata link that already looks like a gridpoint
+        forecast.
         """
         meta = self._station_meta(station_id)
         if not meta:
@@ -600,7 +601,7 @@ class NoaaWeather(Datasource):
             forecast = (point or {}).get("forecast")
             if forecast:
                 return forecast
-        forecast = str(meta.get("forecast") or "")
+        forecast = str(((meta.get("properties") or {}).get("forecast")) or "")
         if "/gridpoints/" in forecast:
             return forecast
         return None
