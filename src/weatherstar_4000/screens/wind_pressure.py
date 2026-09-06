@@ -15,6 +15,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
@@ -27,6 +28,10 @@ class WindPressureScreen(Screen):
     media = ("backgrounds",)
     datasources = ("weather",)
 
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "1"}),
         ComponentSpec(
@@ -36,7 +41,7 @@ class WindPressureScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         colors = ctx.colors
         yellow = colors.get("yellow", _YELLOW)
         white = colors.get("white", _WHITE)

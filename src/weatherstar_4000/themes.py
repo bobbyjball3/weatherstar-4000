@@ -13,6 +13,10 @@ Design notes
   so a theme file can be partial.
 - The full authentic WeatherStar 4000 palette is *not* baked into code: it lives
   in ``builtin_themes/weatherstar4000.theme.toml`` like every other theme.
+- :class:`LayoutVariant` is the closed vocabulary of layout families (``"4000"``
+  and ``"3000"``).  Themes *select* a variant for a screen; screens *declare*
+  which variants they implement (see ``screens/base.py``).  A theme is data,
+  but a layout family is code - a new variant needs a new ``compose_*`` method.
 - ``FALLBACK_THEME`` is the safety net returned when a name is unknown or no
   theme files can be found.  It is empty-colored, so it renders as
   ``BASE_COLORS``.
@@ -27,6 +31,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +79,54 @@ BASE_COLORS: dict[str, tuple[int, int, int]] = {
 }
 
 
+class LayoutVariant(str, Enum):
+    """A screen's layout family / product era.
+
+    Screens declare which variants they render (see ``screens/base.py``) and
+    themes request one per screen via ``Theme.variant`` / ``Theme.bottom_band``
+    or the per-screen ``variant`` layout token.  Because members subclass
+    ``str`` they compare equal to their plain string value (``"3000"``), so
+    TOML values and any ``== "3000"`` checks keep working unchanged.
+
+    A layout family is inherently code (each needs a ``compose_*`` method), so
+    the set is closed: adding a variant means adding an enum member *and* the
+    screens that implement it.
+    """
+
+    WS4000 = "4000"  # Classic WeatherStar 4000 look (the default).
+    WS3000 = "3000"  # WeatherStar 3000 look (ws3kp).
+
+
+def coerce_variant(
+    value: Any,
+    fallback: LayoutVariant = LayoutVariant.WS4000,
+    *,
+    what: str = "layout variant",
+) -> LayoutVariant:
+    """Coerce a string/TOML value into a :class:`LayoutVariant`.
+
+    Unknown values are logged with the valid choices and resolve to ``fallback``
+    so a typo in a theme file degrades gracefully instead of raising.
+    """
+    if isinstance(value, LayoutVariant):
+        return value
+    if value is None:
+        return fallback
+    text = str(value).strip()
+    if not text:
+        return fallback
+    try:
+        return LayoutVariant(text)
+    except ValueError:
+        log.warning(
+            "unknown_layout_variant",
+            what=what,
+            value=text,
+            valid=sorted(member.value for member in LayoutVariant),
+        )
+        return fallback
+
+
 def _parse_color(value: Any, key: str) -> tuple[int, int, int]:
     """Parse a TOML color value: ``"#RRGGBB"``/``"RRGGBB"`` or ``[r, g, b]``."""
     if isinstance(value, str):
@@ -119,13 +172,14 @@ class Theme:
     the ``fonts`` media plugin; ``asset_dir`` points at the theme's own
     ``fonts_ttf``/``backgrounds``/``logos``/``icons`` tree.
 
-    Layout is data too: ``text_shadow`` turns on the classic black outline +
-    drop shadow under all rendered text (used by the WeatherStar 3000 look),
-    and ``layout`` carries per-screen rendering tokens (header style,
-    alignment, geometry, toggles) that Screens read back through
-    :meth:`layout_for`.  A screen with no entry falls back to the ``"default"``
-    entry (usually empty) and then to its own in-code constants, so the
-    WeatherStar 4000 baseline needs no layout table.
+    Layout is data too: ``text_shadow`` turns on the black outline + drop
+    shadow under all rendered text (used by the WeatherStar 3000 look),
+    ``variant`` names the default :class:`LayoutVariant`, and ``layout``
+    carries per-screen rendering tokens (header style, alignment, geometry,
+    toggles) that Screens read back through :meth:`layout_for`.  A screen with
+    no entry falls back to the ``"default"`` entry (usually empty) and then to
+    its own in-code constants, so the WeatherStar 4000 baseline needs no layout
+    table.
     """
 
     name: str
@@ -140,10 +194,14 @@ class Theme:
     text_shadow_offset: int = 3
     #: Outline stroke width in px (black underlay around every glyph edge).
     text_shadow_outline: int = 2
-    #: Always-on bottom band style: ``"classic"`` (navy crawler) or ``"3000"``
+    #: The theme's default layout family (what ``variant`` resolves to when a
+    #: screen has no per-screen ``variant`` layout token).  Themes that only
+    #: recolor (``dark``, ``amber``, ...) leave this at the WS4000 default.
+    variant: LayoutVariant = LayoutVariant.WS4000
+    #: Always-on bottom band style: ``"4000"`` (navy crawler) or ``"3000"``
     #: (the WeatherStar 3000 scroll: date + time row over a crawling conditions
     #: line). Screens that reserve the bottom of the canvas opt in here.
-    bottom_band: str = "classic"
+    bottom_band: LayoutVariant = LayoutVariant.WS4000
     #: Per-screen layout tokens, keyed by screen name (plus a ``"default"``
     #: entry applied to every screen before the screen-specific one).
     layout: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -194,7 +252,8 @@ def _theme_from_file(path: Path) -> Theme | None:
         text_shadow = bool(data.get("text_shadow", False))
         text_shadow_offset = int(data.get("text_shadow_offset", 3))
         text_shadow_outline = int(data.get("text_shadow_outline", 2))
-        bottom_band = str(data.get("bottom_band") or "classic")
+        variant = coerce_variant(data.get("variant"), what="theme variant")
+        bottom_band = coerce_variant(data.get("bottom_band"), what="theme bottom_band")
         raw_layout = data.get("layout") or {}
         layout: dict[str, dict[str, Any]] = {}
         if isinstance(raw_layout, dict):
@@ -215,6 +274,7 @@ def _theme_from_file(path: Path) -> Theme | None:
         text_shadow=text_shadow,
         text_shadow_offset=text_shadow_offset,
         text_shadow_outline=text_shadow_outline,
+        variant=variant,
         bottom_band=bottom_band,
         layout=layout,
     )

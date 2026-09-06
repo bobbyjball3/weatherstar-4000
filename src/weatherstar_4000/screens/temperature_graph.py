@@ -16,6 +16,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
@@ -35,6 +36,10 @@ class TemperatureGraphScreen(Screen):
     name = "temperature_graph"
     media = ("backgrounds",)
     datasources = ("weather",)
+
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+    }
 
     @staticmethod
     def _bar_color(avg_temp: float) -> tuple[int, int, int]:
@@ -60,7 +65,7 @@ class TemperatureGraphScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         colors = ctx.colors
         yellow = colors.get("yellow", _YELLOW)
         white = colors.get("white", _WHITE)

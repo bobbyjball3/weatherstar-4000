@@ -19,6 +19,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 #: Vertical rhythm inside each block (px).  Content is inset from the detected
 #: block edges by these amounts.
@@ -44,6 +45,11 @@ class LocalForecastScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
 
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "2"}),
         ComponentSpec(
@@ -55,16 +61,12 @@ class LocalForecastScreen(Screen):
 
     _panel_cache: dict[Any, tuple] = PrivateAttr(default_factory=dict)
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
         if len(periods) < 3:
             render.draw_centered_text(
                 surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
             )
-            return
-
-        if self.variant(ctx) == "3000":
-            self._compose_3000(surface, ctx, periods)
             return
 
         yellow = self.color(ctx, "yellow")
@@ -120,9 +122,7 @@ class LocalForecastScreen(Screen):
 
     # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
 
-    def _compose_3000(
-        self, surface: pygame.Surface, ctx: Any, periods: list[ForecastPeriod]
-    ) -> None:
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         """ws3kp Local Forecast: one tall rolling column of forecast pages.
 
         Each of the first six periods becomes a ``DAYNAME... detailed text``
@@ -132,6 +132,7 @@ class LocalForecastScreen(Screen):
         """
         white = self.color(ctx, "white")
         font = self.font(ctx, "large")
+        periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
 
         lines: list[str] = []
         for period in periods[:6]:

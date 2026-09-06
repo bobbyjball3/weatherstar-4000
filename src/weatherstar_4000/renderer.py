@@ -21,6 +21,8 @@ from typing import Any
 
 import pygame
 
+from weatherstar_4000.themes import LayoutVariant, coerce_variant
+
 #: Fallback font sizes by name (mirrors media/fonts.py), used when the runtime
 #: context has no loaded font for a key.
 _FONT_SIZES = {
@@ -287,9 +289,19 @@ class Renderer:
             return default
         return tokens().get(key, default)
 
-    def variant(self, ctx: Any, default: str = "classic") -> str:
-        """Which layout variant the active theme requests for this screen."""
-        return str(self.layout_token(ctx, "variant", default))
+    def variant(self, ctx: Any, default: LayoutVariant = LayoutVariant.WS4000) -> LayoutVariant:
+        """Which :class:`LayoutVariant` the active theme requests for this screen.
+
+        Resolution order: the per-screen ``variant`` layout token (coerced; an
+        unknown value warns and falls back), then the theme's own ``variant``,
+        then ``default``.
+        """
+        theme = getattr(ctx, "theme", None)
+        theme_variant = getattr(theme, "variant", None) or default
+        token = self.layout_token(ctx, "variant")
+        if token is None:
+            return theme_variant if isinstance(theme_variant, LayoutVariant) else default
+        return coerce_variant(token, fallback=theme_variant, what="variant layout token")
 
     def text_surface(
         self,

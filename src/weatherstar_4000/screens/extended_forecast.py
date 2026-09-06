@@ -11,6 +11,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 
 @plugin
@@ -18,6 +19,11 @@ class ExtendedForecastScreen(Screen):
     name = "extended_forecast"
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
+
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
 
     layout = (
         ComponentSpec(component="background", config={"background_name": "3"}),
@@ -28,12 +34,8 @@ class ExtendedForecastScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
-
-        if self.variant(ctx) == "3000":
-            self._compose_3000(surface, ctx, periods)
-            return
 
         day_width = 155
         total_width = 640
@@ -126,9 +128,7 @@ class ExtendedForecastScreen(Screen):
 
     # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
 
-    def _compose_3000(
-        self, surface: pygame.Surface, ctx: Any, periods: list[ForecastPeriod]
-    ) -> None:
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         """ws3kp Extended Forecast: three 155px day boxes, no icons.
 
         Each box (from _extended-forecast.scss) shows an uppercase weekday, the
@@ -136,6 +136,7 @@ class ExtendedForecastScreen(Screen):
         fit the 640px canvas.
         """
         white = self.color(ctx, "white")
+        periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
 
         num_days = min(3, len(periods) // 2)
         if num_days == 0:

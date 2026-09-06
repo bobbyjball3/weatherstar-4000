@@ -10,6 +10,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 
 @plugin
@@ -17,6 +18,10 @@ class WeekendForecastScreen(Screen):
     name = "weekend_forecast"
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
+
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+    }
 
     def _draw_day_column(
         self,
@@ -79,7 +84,7 @@ class WeekendForecastScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
 
         left_col_x = 60

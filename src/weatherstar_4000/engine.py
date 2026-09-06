@@ -20,15 +20,17 @@ from typing import Any
 
 from weatherstar_4000.config_file import AppConfig
 from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.errors import ConfigError
+from weatherstar_4000.errors import ConfigError, InvalidConfiguration, ThemeNotSupported
 from weatherstar_4000.logging_setup import get_logger
 from weatherstar_4000.registry import discover, registry
 from weatherstar_4000.sequence import Sequence
-from weatherstar_4000.themes import DEFAULT_THEME_NAME, ENV_THEME
+from weatherstar_4000.themes import DEFAULT_THEME_NAME, ENV_THEME, LayoutVariant, coerce_variant
 
 DEFAULT_PAUSE = 15.0
 #: Media plugins auto-loaded into every context when they are registered.
 _BASE_MEDIA = ("fonts",)
+
+_log = get_logger("weatherstar4000.engine")
 
 
 def resolve_location(
@@ -66,6 +68,46 @@ def select_theme_name(appcfg: AppConfig, cli_theme: str | None = None) -> str:
 def music_enabled(appcfg: AppConfig) -> bool:
     """Whether ambient background music is requested via ``[media.music]``."""
     return bool(appcfg.scope("media", "music").get("enabled"))
+
+
+def requested_variant(ctx: AppContext, screen_name: str) -> LayoutVariant:
+    """The variant the active theme requests for a named screen.
+
+    Mirrors ``Renderer.variant`` but resolves for a screen that is not
+    necessarily the one currently being drawn (per-screen ``variant`` layout
+    token, else ``Theme.variant``).
+    """
+    token = ctx.theme.layout_for(screen_name).get("variant")
+    if token is not None:
+        return coerce_variant(token, fallback=ctx.theme.variant, what="variant layout token")
+    return ctx.theme.variant
+
+
+def validate_screen_variants(screens: Iterable[Any], ctx: AppContext) -> None:
+    """Fail fast on a screen whose declared variant method is missing, and warn
+    when the active theme requests a variant the screen has not declared (which
+    will raise ``ThemeNotSupported`` when that screen draws)."""
+    for screen in screens:
+        cls = type(screen)
+        declared = cls.variants or {}
+        for variant, method_name in declared.items():
+            method = getattr(cls, method_name, None)
+            if not callable(method):
+                raise InvalidConfiguration(
+                    f"{cls.__name__} declares variant {variant.value!r} via "
+                    f"`variants = {{...: {method_name!r}}}`, but has no "
+                    f"`{method_name}` method. Add it or fix the mapping."
+                )
+        if not declared:
+            continue
+        requested = requested_variant(ctx, cls.name)
+        if requested not in declared:
+            _log.warning(
+                "screen_variant_unimplemented",
+                screen=cls.name,
+                requested=str(requested.value),
+                declared=[str(item.value) for item in declared],
+            )
 
 
 class Builder:
@@ -200,6 +242,7 @@ class Builder:
         self.bind_components(screens, ctx)
         for screen in screens:
             screen.prepare(ctx)
+        validate_screen_variants(screens, ctx)
         return ctx, screens
 
     def start_music(self, ctx: AppContext) -> bool:
@@ -277,7 +320,10 @@ def run_sequence(
     from weatherstar_4000.ticker import BottomTicker, WeatherStar3000Scroll
 
     runner = SequenceRunner(ctx, screens, sequence)
-    if getattr(getattr(ctx, "theme", None), "bottom_band", "classic") == "3000":
+    if (
+        getattr(getattr(ctx, "theme", None), "bottom_band", LayoutVariant.WS4000)
+        == LayoutVariant.WS3000
+    ):
         ticker: Any = WeatherStar3000Scroll()
     else:
         ticker = BottomTicker()
@@ -335,7 +381,22 @@ def run_sequence(
             running = False
             break
 
-        runner.step(slide_index, dt)
+        try:
+            runner.step(slide_index, dt)
+        except ThemeNotSupported as exc:
+            # A screen without the active theme's layout variant degrades to a
+            # friendly placeholder instead of a blank slide / traceback.
+            from weatherstar_4000 import render
+
+            _log.warning("screen_theme_not_supported", screen=exc.screen_name)
+            render.draw_centered_text(
+                ctx.surface,
+                ctx,
+                "SCREEN DOES NOT SUPPORT THIS THEME",
+                240,
+                font_name="large",
+                color_key="yellow",
+            )
         ticker.render(ctx.surface, ctx, dt)
         if music_controller is not None:
             advance = getattr(music_controller, "advance_music", None)

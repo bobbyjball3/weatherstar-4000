@@ -18,6 +18,7 @@ from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.renderer import short_condition_text
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 #: WeatherStar 3000 table geometry (ws3kp _latest-observations.scss columns).
 _TABLE_LEFT = 40
@@ -36,6 +37,11 @@ class RegionalObservationsScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
 
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "5"}),
         ComponentSpec(
@@ -45,11 +51,7 @@ class RegionalObservationsScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        if self.variant(ctx) == "3000":
-            self._compose_3000(surface, ctx)
-            return
-
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         current: CurrentConditions | None = self.weather_data(ctx, "get_current")
         if current is None:
             render.draw_centered_text(
@@ -92,7 +94,7 @@ class RegionalObservationsScreen(Screen):
 
     # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
 
-    def _compose_3000(self, surface: pygame.Surface, ctx: Any) -> None:
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         """ws3kp Latest Hourly Observations: one row per nearby station.
 
         Column headers run in the small face (Location / °F / Weather / Wind),

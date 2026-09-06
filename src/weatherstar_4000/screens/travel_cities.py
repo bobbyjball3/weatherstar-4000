@@ -9,6 +9,7 @@ import pygame
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 
 @plugin
@@ -16,6 +17,10 @@ class TravelCitiesScreen(Screen):
     name = "travel_cities"
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ()
+
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+    }
 
     layout = (
         ComponentSpec(component="background", config={"background_name": "5"}),
@@ -26,7 +31,7 @@ class TravelCitiesScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         cities = [
             ("NEW YORK", 72, "Partly Cloudy"),
             ("LOS ANGELES", 78, "Sunny"),

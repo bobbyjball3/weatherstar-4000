@@ -10,6 +10,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 #: Keywords that flag a forecast period as hazardous (legacy scan set).
 _HAZARD_WORDS = ("storm", "severe", "warning", "watch", "advisory")
@@ -29,6 +30,11 @@ class HazardsScreen(Screen):
     media = ("backgrounds", "fonts", "logos")
     datasources = ("weather",)
 
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "3"}),
         ComponentSpec(
@@ -38,10 +44,7 @@ class HazardsScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        if self.variant(ctx) == "3000":
-            self._compose_3000(surface, ctx)
-            return
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         white = self.color(ctx, "white", (255, 255, 255))
         yellow = self.color(ctx, "yellow", (255, 255, 0))
         normal = self.font(ctx, "normal")
@@ -99,7 +102,7 @@ class HazardsScreen(Screen):
 
     # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
 
-    def _compose_3000(self, surface: pygame.Surface, ctx: Any) -> None:
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         """ws3kp Hazards: a full-height dark-red box of uppercase hazard text.
 
         No header.  Each matching forecast hazard is centered in the box between

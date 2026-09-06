@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
 
 class WeatherStarError(Exception):
@@ -57,3 +58,31 @@ class PluginNotFound(WeatherStarError):
 
 class SequenceError(WeatherStarError):
     """Raised when a sequence is malformed or references unknown screens."""
+
+
+class ThemeNotSupported(NotImplementedError, WeatherStarError):
+    """Raised when a screen does not implement the active theme's layout variant.
+
+    A screen declares the variants it renders via its ``variants`` ClassVar
+    (see ``screens/base.py``); when the active theme requests a variant the
+    screen has not declared, dispatch raises this so the engine can degrade
+    gracefully (placeholder at runtime, per-slide failure under ``--validate``).
+    """
+
+    def __init__(
+        self,
+        screen_name: str,
+        variant: Any,
+        declared: Iterable[Any] = (),
+    ):
+        self.screen_name = screen_name
+        self.variant = variant
+        self.declared = tuple(declared)
+        variant_text = getattr(variant, "value", variant)
+        available = ", ".join(sorted(str(getattr(item, "value", item)) for item in self.declared))
+        super().__init__(
+            f"{screen_name} does not support layout variant {variant_text!r} "
+            f"(declared: {available or '(none)'}). Add a compose_{variant_text} "
+            "method and declare it in the screen's ``variants`` map, or use a "
+            "theme that requests a supported variant."
+        )

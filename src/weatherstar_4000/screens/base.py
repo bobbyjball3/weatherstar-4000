@@ -3,8 +3,31 @@
 A Screen corresponds to one of the original WeatherStar displays.  It declares
 which Component/Media/Datasource plugins it needs and arranges an ordered
 ``layout`` of :class:`ComponentSpec`; the base :meth:`Screen.draw` renders those
-components in order and then hands off to the :meth:`Screen.compose` hook for
-any placement/animation that is not (yet) componentized.
+components in order and then hands off to the screen's ``compose_<variant>``
+renderers.
+
+Theming contract
+----------------
+A screen declares which layout families (:class:`LayoutVariant`) it renders and
+the method that draws each via the ``variants`` ClassVar::
+
+    class CurrentConditionsScreen(Screen):
+        variants = {
+            LayoutVariant.WS4000: "compose_4000",
+            LayoutVariant.WS3000: "compose_3000",
+        }
+
+        def compose_4000(self, surface, ctx, dt): ...
+        def compose_3000(self, surface, ctx, dt): ...
+
+The base :meth:`Screen.compose` resolves the active theme's variant (see
+:meth:`Renderer.variant`) and dispatches to the mapped method.  When the active
+theme requests a variant the screen has not declared, it raises
+:class:`ThemeNotSupported` so the engine can degrade gracefully (a centered
+placeholder at runtime, a per-slide failure under ``--validate``).
+
+A screen that draws only through its ``layout`` components declares nothing and
+inherits an empty ``variants`` map - ``compose`` then draws nothing extra.
 """
 
 from __future__ import annotations
@@ -15,8 +38,10 @@ import pygame
 from pydantic import PrivateAttr
 
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.errors import ThemeNotSupported
 from weatherstar_4000.plugin import Plugin
 from weatherstar_4000.renderer import Renderer
+from weatherstar_4000.themes import LayoutVariant
 
 if TYPE_CHECKING:
     from weatherstar_4000.context import AppContext
@@ -33,6 +58,9 @@ class Screen(Renderer, Plugin):
     datasources: ClassVar[tuple[str, ...]] = ()
     #: Names of Media plugins this screen decorates itself with.
     media: ClassVar[tuple[str, ...]] = ()
+    #: Layout variant -> renderer method name.  Screens that render entirely
+    #: through ``layout`` components leave this empty (inherited default).
+    variants: ClassVar[dict[LayoutVariant, str]] = {}
 
     #: Component instances built by the engine from ``layout`` (runtime state).
     _components: list[Any] = PrivateAttr(default_factory=list)
@@ -45,10 +73,26 @@ class Screen(Renderer, Plugin):
         self.compose(surface, ctx, dt)
 
     def compose(self, surface: pygame.Surface, ctx: AppContext, dt: float) -> None:
-        """Hook for screen-specific drawing not covered by layout components.
+        """Dispatch to the ``compose_<variant>`` method the active theme requests.
 
-        Subclasses override; the default draws nothing extra.
+        The variant comes from the theme (per-screen ``variant`` layout token,
+        else ``Theme.variant``).  When no method is mapped for it the screen
+        raises :class:`ThemeNotSupported`; component-only screens (empty
+        ``variants``) draw nothing extra here.
         """
+        variant = self.variant(ctx)
+        method_name = type(self).variants.get(variant)
+        if method_name is not None:
+            getattr(self, method_name)(surface, ctx, dt)
+            return
+        if type(self).variants:
+            screen_name = getattr(self, "name", None) or type(self).__name__
+            raise ThemeNotSupported(screen_name, variant, tuple(type(self).variants))
+
+    @classmethod
+    def supported_variants(cls) -> tuple[LayoutVariant, ...]:
+        """The layout variants this screen declares, sorted by value."""
+        return tuple(sorted(cls.variants, key=lambda item: item.value))
 
     def bind_components(self, components: list[Any]) -> None:
         """Attach engine-built component instances (from ``layout``)."""

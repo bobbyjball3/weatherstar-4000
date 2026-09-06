@@ -14,6 +14,7 @@ import pygame
 from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 
 @plugin
@@ -21,6 +22,10 @@ class LocalNewsScreen(Screen):
     name = "local_news"
     media = ("backgrounds", "logos")
     datasources = ("local_news", "weather")
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "1"}),
         ComponentSpec(component="header", config={"title_top": "Local News", "title_bottom": ""}),
@@ -38,7 +43,7 @@ class LocalNewsScreen(Screen):
         ),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         y = self._city_y(ctx)
         city_text = self.text_surface(ctx, self._resolve_city(ctx).upper(), color_key="yellow")
         surface.blit(city_text, city_text.get_rect(centerx=320, y=y))

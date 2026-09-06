@@ -134,6 +134,20 @@ These are load-bearing — violating them raises at class definition or runtime:
 7. **Keep values descriptive** — datasource config scopes are matched by
    `kind.name` (`[datasource.stocks]`), so a plugin `name` must be unique within
    its kind.
+8. **Theme layout variants are declared, not branched.** A screen with alternate
+   layout families declares them as a `variants: ClassVar[dict[LayoutVariant,
+   str]]` mapping, e.g.
+   `{LayoutVariant.WS4000: "compose_4000", LayoutVariant.WS3000: "compose_3000"}`,
+   and implements one `compose_<variant>` method per entry. Every `compose_*`
+   shares the `(surface, ctx, dt)` signature and fetches its own data (no
+   pre-fetched arguments from `compose`). `Screen.compose` dispatches on the
+   active theme's requested variant (per-screen `variant` layout token >
+   `Theme.variant` > `"4000"`) and raises `ThemeNotSupported` when the variant
+   is not declared; the engine degrades to a friendly placeholder at runtime
+   and records it as a failure under `--validate`. Component-only screens (no
+   `compose` code) leave `variants` empty. Layout-family names come from the
+   closed `LayoutVariant` enum (`"4000"`/`"3000"`), never open strings; the same
+   enum types `Theme.variant` and `Theme.bottom_band`.
 
 ## Data contracts (fabStub targets)
 

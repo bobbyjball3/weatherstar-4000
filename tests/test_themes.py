@@ -6,8 +6,10 @@ from weatherstar_4000.themes import (
     DEFAULT_THEME_NAME,
     ENV_THEME,
     FALLBACK_THEME,
+    LayoutVariant,
     available_themes,
     builtin_themes_dir,
+    coerce_variant,
     get_theme,
 )
 
@@ -50,6 +52,34 @@ def test_title_bottom_defaults_blank(tmp_path):
     theme = get_theme("minimal", dirs=[tmp_path])
     assert theme.title_bottom == ""
     assert theme.asset_dir == "static_assets"
+    # Layout-family fields default to the WeatherStar 4000 variant.
+    assert theme.variant is LayoutVariant.WS4000
+    assert theme.bottom_band is LayoutVariant.WS4000
+
+
+def test_parses_variant_and_bottom_band(tmp_path):
+    body = 'title = "3k"\nvariant = "3000"\nbottom_band = "3000"\n'
+    _write_theme(tmp_path, "threek", body)
+    theme = get_theme("threek", dirs=[tmp_path])
+    assert theme.variant is LayoutVariant.WS3000
+    assert theme.bottom_band is LayoutVariant.WS3000
+
+
+def test_unknown_variant_falls_back_to_4000(tmp_path):
+    _write_theme(tmp_path, "bogus", 'title = "Bogus"\nvariant = "300"\n')
+    theme = get_theme("bogus", dirs=[tmp_path])
+    assert theme.variant is LayoutVariant.WS4000
+    assert theme.bottom_band is LayoutVariant.WS4000
+
+
+def test_coerce_variant_handles_members_none_and_unknown():
+    assert coerce_variant(LayoutVariant.WS3000) is LayoutVariant.WS3000
+    assert coerce_variant("3000") is LayoutVariant.WS3000
+    # Missing/blank values fall back silently (no warn); unknown values too.
+    assert coerce_variant(None) is LayoutVariant.WS4000
+    assert coerce_variant("") is LayoutVariant.WS4000
+    assert coerce_variant("future") is LayoutVariant.WS4000
+    assert coerce_variant("3000", fallback=LayoutVariant.WS3000) is LayoutVariant.WS3000
 
 
 def test_invalid_file_is_skipped(tmp_path):

@@ -12,6 +12,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 
 @plugin
@@ -20,6 +21,11 @@ class CurrentConditionsScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
     _pressure_history: list | None = PrivateAttr(default=None)
+
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
 
     layout = (
         ComponentSpec(component="background", config={"background_name": "1"}),
@@ -46,16 +52,12 @@ class CurrentConditionsScreen(Screen):
             return ""
         return (getattr(loc, "description", "") or "") if loc is not None else ""
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         current: CurrentConditions | None = self.weather_data(ctx, "get_current")
         if current is None:
             render.draw_centered_text(
                 surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
             )
-            return
-
-        if self.variant(ctx) == "3000":
-            self._compose_3000(surface, ctx, current)
             return
 
         content_left = 64
@@ -141,15 +143,22 @@ class CurrentConditionsScreen(Screen):
             surface.blit(value_surf, value_surf.get_rect(right=value_x, y=y_pos))
             y_pos += 36
 
-    # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
+    # -- WeatherStar 3000 (ws3kp) variant --------------------------------
 
-    def _compose_3000(self, surface: pygame.Surface, ctx: Any, current: CurrentConditions) -> None:
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         """ws3kp Current Conditions: a plain 8-line text list, 24pt on 40px rows.
 
         No header, no icon, no big temperature - just the observation text block
         mirrored from the ws3kp current-weather template, left aligned from the
         35px margin at a 40px top margin (see _current-weather.scss).
         """
+        current: CurrentConditions | None = self.weather_data(ctx, "get_current")
+        if current is None:
+            render.draw_centered_text(
+                surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
+            )
+            return
+
         white = self.color(ctx, "white")
         left = int(self.layout_token(ctx, "content_left", 35))
         top = int(self.layout_token(ctx, "content_top", 40))

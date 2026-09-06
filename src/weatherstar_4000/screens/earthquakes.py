@@ -10,6 +10,7 @@ from weatherstar_4000.components.base import ComponentSpec
 from weatherstar_4000.datasources.feeds import Earthquake
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 _MAX_ROWS = 8
 
@@ -22,6 +23,10 @@ class EarthquakesScreen(Screen):
     name = "earthquakes"
     media = ("backgrounds", "fonts", "logos")
     datasources = ("earthquakes",)
+
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+    }
 
     @staticmethod
     def _mag_color(magnitude: float) -> tuple[int, int, int]:
@@ -48,7 +53,7 @@ class EarthquakesScreen(Screen):
             return ""
         return quake.time.strftime("%m/%d %H:%M")
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         lat, lon = self.latlon(ctx)
         quakes: list[Earthquake] = []
         ds = self.datasource(ctx, "earthquakes")

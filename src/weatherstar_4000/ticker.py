@@ -222,8 +222,9 @@ _REVEAL_SPEED = 75.0
 class WeatherStar3000Scroll(BottomTicker):
     """The 3000's always-on bottom scroll: date + time over a conditions line.
 
-    Replaces the classic navy ``BottomTicker`` when a theme opts in via its
-    ``bottom_band`` key.  Date (left) and time (right) run in the real "Star3000
+    Replaces the navy ``BottomTicker`` when a theme opts in via its
+    ``bottom_band`` key set to the ``"3000"`` variant.  Date (left) and time
+    (right) run in the real "Star3000
     Small" face at the top of the band; below them the current conditions are
     shown one at a time (ws3kp scroll.ejs + currentweatherscroll.mjs).  Lines
     that fit the band sit static for a few seconds then advance; over-wide lines

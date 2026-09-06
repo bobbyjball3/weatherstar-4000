@@ -12,6 +12,7 @@ from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.ephemeris import next_moon_phases, sun_clock_minutes
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 #: WeatherStar 3000 almanac geometry: a right-aligned three-column sun table
 #: (label | today | tomorrow) over a centered moon-phases list.
@@ -32,6 +33,11 @@ class AlmanacScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
 
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "4"}),
         ComponentSpec(
@@ -41,10 +47,7 @@ class AlmanacScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        if self.variant(ctx) == "3000":
-            self._compose_3000(surface, ctx)
-            return
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         current: CurrentConditions = self.weather_data(ctx, "get_current") or CurrentConditions()
         white = self.color(ctx, "white")
         yellow = self.color(ctx, "yellow")
@@ -114,7 +117,7 @@ class AlmanacScreen(Screen):
 
     # -- WeatherStar 3000 (ws3kp) variant ------------------------------------
 
-    def _compose_3000(self, surface: pygame.Surface, ctx: Any) -> None:
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         """ws3kp Almanac: sunrise/sunset for today & tomorrow, then moon phases.
 
         Three right-aligned columns carry (label | today | tomorrow) for the

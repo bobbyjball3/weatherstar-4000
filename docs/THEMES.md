@@ -104,7 +104,7 @@ datetime = ["Star3000 Small.ttf", 24]
 
 ### `bottom_band`
 
-Which always-on bottom band overlays every slide. Defaults to `"classic"` — the
+Which always-on bottom band overlays every slide. Defaults to `"4000"` — the
 navy WeatherStar 4000 crawler. A theme that reserves the bottom of the canvas
 for a different band opts in with a value:
 
@@ -115,6 +115,9 @@ bottom_band = "3000"   # WeatherStar 3000 scroll: date + time over a crawling li
 `"3000"` draws the real 3000 foot-of-canvas scroll (a small date/time row above a
 rotating current-conditions line, all over the shared background art). Screens
 must keep content above ~y=405 under that band.
+
+Like `variant`, `bottom_band` is drawn from the closed `LayoutVariant` enum
+(`"4000"` / `"3000"`); an unknown value falls back to `"4000"` with a warning.
 
 ### `text_shadow`
 
@@ -149,14 +152,38 @@ title_font = "title"           # font slot for the header title
 
 [layout.current_conditions]    # per-screen overrides beat the defaults
 title_style = "hidden"
-variant = "3000"               # opt into a screen's alternate layout branch
+variant = "3000"               # request this screen's WeatherStar 3000 layout
 ```
 
-Header tokens drive the shared header/clock components; `variant` lets a screen
-that has a genuinely different WeatherStar 3000 layout (e.g. Current Conditions
-as a plain text list) switch branches. Screens never branch on the theme *name* —
-they read tokens, and the classic WeatherStar 4000 baseline is simply the absence
-of tokens (screens fall back to their own constants).
+Header tokens drive the shared header/clock components. A screen with a
+genuinely different WeatherStar 3000 layout (e.g. Current Conditions as a plain
+text list) is *requested* through the `variant` token — but which variants a
+screen actually implements is declared in code, never branched in the theme.
+
+Screens declare their layout families and renderers:
+
+```python
+class CurrentConditionsScreen(Screen):
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",  # classic WS4000 layout
+        LayoutVariant.WS3000: "compose_3000",  # ws3kp text-list layout
+    }
+
+    def compose_4000(self, surface, ctx, dt): ...
+    def compose_3000(self, surface, ctx, dt): ...
+```
+
+`Screen.compose` resolves the active theme's request (per-screen `variant` token
+> the theme's top-level `variant` > `"4000"`) and dispatches to the matching
+`compose_<variant>` method. All `compose_*` methods share the `(surface, ctx,
+dt)` signature and fetch their own data. A screen that has no alternate layout
+declares nothing (empty inherited `variants`) and renders purely through its
+`layout` components.
+
+The theme *name* is never the dispatch key — that keeps recolor-only themes
+(`dark`, `amber`, …) on the `"4000"` layout with zero code. Layout families are
+the closed `LayoutVariant` enum (`"4000"` / `"3000"`), shared by `Theme.variant`
+and `Theme.bottom_band`.
 
 Two more header tokens deserve mention:
 
@@ -171,9 +198,9 @@ Two more header tokens deserve mention:
 - `show_headline_footer` (default `true`) hides the news screens' "Updated …"
   line, which the 3000 bottom band replaces.
 
-Screens may read any token for their own geometry (matching how `variant`
-switches whole layout branches). For example the 3000 theme tightens the Weather
-Records list so its last line clears the taller bottom band:
+Screens may read any token for their own geometry. For example the 3000 theme
+tightens the Weather Records list so its last line clears the taller bottom
+band:
 
 ```toml
 [layout.weather_records]
@@ -184,6 +211,16 @@ heading_gap = 30
 
 Tokens are optional and default to each screen's in-code constants, so a theme
 that sets none of them reproduces the classic layout exactly.
+
+#### Missing variant renderers degrade gracefully
+
+When a theme requests a `variant` a screen has not declared (say `variant =
+"3000"` on a screen with no `compose_3000`), drawing that screen raises
+`ThemeNotSupported`. The engine catches it: interactive runs draw a centered
+`SCREEN DOES NOT SUPPORT THIS THEME` placeholder and log a warning, while
+`--validate` records it as a per-slide failure. The builder also fails fast at
+startup when a screen's `variants` map names a method that does not exist (a
+typo in the mapping).
 
 ## Adding your own theme
 

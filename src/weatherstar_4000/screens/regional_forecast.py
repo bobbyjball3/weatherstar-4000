@@ -19,6 +19,7 @@ from weatherstar_4000.datasources.noaa import RegionalForecast
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.renderer import short_condition_text
 from weatherstar_4000.screens.base import Screen
+from weatherstar_4000.themes import LayoutVariant
 
 #: Table geometry shared by both looks (ws3kp columns: weather x280, low right
 #: 70, high right 0 relative to the content box whose left sits at ``_LEFT``).
@@ -39,6 +40,11 @@ class RegionalForecastScreen(Screen):
     media = ("fonts", "backgrounds", "logos", "icons")
     datasources = ("weather",)
 
+    variants = {
+        LayoutVariant.WS4000: "compose_4000",
+        LayoutVariant.WS3000: "compose_3000",
+    }
+
     layout = (
         ComponentSpec(component="background", config={"background_name": "5"}),
         ComponentSpec(
@@ -48,7 +54,13 @@ class RegionalForecastScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+    def compose_4000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        self._compose_table(surface, ctx, "normal")
+
+    def compose_3000(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
+        self._compose_table(surface, ctx, "extended")
+
+    def _compose_table(self, surface: pygame.Surface, ctx: Any, row_font_name: str) -> None:
         rows: list[RegionalForecast] = self.weather_data(ctx, "get_regional_forecast") or []
         if not rows:
             render.draw_centered_text(
@@ -57,7 +69,6 @@ class RegionalForecastScreen(Screen):
             return
 
         header_color = self.color(ctx, "yellow")
-        row_font_name = "extended" if self.variant(ctx) == "3000" else "normal"
         self._draw_table(surface, ctx, rows, row_font_name, header_color)
 
     # -- shared table --------------------------------------------------------
