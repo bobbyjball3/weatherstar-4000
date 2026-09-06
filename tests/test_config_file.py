@@ -120,12 +120,39 @@ def test_select_sequence_raises_when_unset(tmp_path, monkeypatch):
         cfg.select_sequence(None)
 
 
-def test_logging_options_merge_defaults(tmp_path):
+def test_typed_logging_section_parses(tmp_path):
     cfg = AppConfig.from_file(_write(tmp_path, SAMPLE))
-    opts = cfg.logging_options()
-    assert opts["level"] == "DEBUG"
-    assert opts["console"] is False
-    assert opts["log_file"] is None
+    assert cfg.logging.level == "DEBUG"
+    assert cfg.logging.console is False
+    assert cfg.logging.file is None
     plain = AppConfig({"logging": {}})
-    assert plain.logging_options()["level"] == "INFO"
-    assert plain.logging_options()["console"] is True
+    assert plain.logging.level == "INFO"
+    assert plain.logging.console is True
+    assert plain.logging.file is None
+
+
+def test_typed_location_section_parses():
+    cfg = AppConfig({"location": {"lat": 28.5383, "lon": -81.3792}})
+    assert cfg.location.lat == 28.5383
+    assert cfg.location.lon == -81.3792
+    assert cfg.location.description == ""
+    missing = AppConfig({})
+    assert missing.location.lat is None
+    assert missing.location.lon is None
+
+
+def test_typed_video_section_defaults_and_overrides():
+    plain = AppConfig({})
+    assert (plain.video.width, plain.video.height, plain.video.fps) == (640, 480, 30)
+    cfg = AppConfig({"video": {"width": 800, "height": 600, "fps": 60}})
+    assert (cfg.video.width, cfg.video.height, cfg.video.fps) == (800, 600, 60)
+
+
+def test_location_extra_key_rejected():
+    with pytest.raises(ConfigError):
+        AppConfig({"location": {"lat": 28.0, "lon": -81.0, "auto_detect": True}}).location
+
+
+def test_invalid_typed_section_value_rejected():
+    with pytest.raises(ConfigError):
+        AppConfig({"video": {"fps": "sixty"}}).video

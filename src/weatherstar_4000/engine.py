@@ -37,12 +37,12 @@ def resolve_location(
     """
     if lat is not None and lon is not None:
         return Location(lat=lat, lon=lon)
-    loc = appcfg.location_options()
-    if loc["lat"] is not None and loc["lon"] is not None:
+    loc = appcfg.location
+    if loc.lat is not None and loc.lon is not None:
         return Location(
-            lat=float(loc["lat"]),
-            lon=float(loc["lon"]),
-            description=loc["description"] or "",
+            lat=loc.lat,
+            lon=loc.lon,
+            description=loc.description or "",
         )
     raise ConfigError(
         "No location configured. Pass --lat/--lon or add a [location] section "

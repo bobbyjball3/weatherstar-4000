@@ -12,45 +12,26 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from pydantic import BaseModel
+
 from weatherstar_4000 import registry
-from weatherstar_4000.config_file import ENV_SEQUENCE
+from weatherstar_4000.config_file import (
+    ENV_SEQUENCE,
+    LocationConfig,
+    LoggingConfig,
+    VideoConfig,
+)
 
 KIND_ORDER = ("datasource", "media", "component", "screen")
 
-#: Description comments for top-level (non-plugin) sections.
-_LOCATION_COMMENTS = {
-    "lat": "Latitude used to center weather data (e.g. 28.5383).",
-    "lon": "Longitude used to center weather data (e.g. -81.3792).",
-    "description": "Human-readable location label shown on screen (optional).",
-    "auto_detect": "Attempt automatic location detection when no lat/lon given.",
-}
-_VIDEO_COMMENTS = {
-    "width": "Window width in pixels.",
-    "height": "Window height in pixels.",
-    "fps": "Target frames per second.",
-}
-_LOGGING_COMMENTS = {
-    "level": "Minimum log level: DEBUG, INFO, WARNING, ERROR or CRITICAL.",
-    "console": "Write logs to the console (colorized).",
-    "file": "Optional JSON-lines log file path (comment out to disable).",
-}
-
-#: Location lat/lon are shown as commented examples: supply them here or pass
-#: ``--lat`` / ``--lon`` on the command line.
-_LOCATION_DEFAULTS = {
-    "lat": 28.5383,
-    "lon": -81.3792,
-    "description": "",
-    "auto_detect": True,
-}
-_LOCATION_COMMENTED = ("lat", "lon")
-_VIDEO_DEFAULTS = {"width": 640, "height": 480, "fps": 30}
-_LOGGING_DEFAULTS = {
-    "level": "INFO",
-    "console": True,
-    "file": "logs/weatherstar.jsonl",
-}
-_LOGGING_COMMENTED = ("file",)
+#: Top-level (non-plugin) sections rendered straight from the config models in
+#: ``config_file.py``.  The dict value maps a key to an example shown commented
+#: out (a "fill me in" value like coordinates or an optional log file path).
+_TOP_LEVEL_SECTIONS: tuple[tuple[str, type[BaseModel], dict[str, Any]], ...] = (
+    ("location", LocationConfig, {"lat": 28.5383, "lon": -81.3792}),
+    ("video", VideoConfig, {}),
+    ("logging", LoggingConfig, {"file": "logs/weatherstar.jsonl"}),
+)
 
 
 def _toml_repr(value: Any) -> str:
@@ -76,23 +57,20 @@ def _comment_lines(description: str | None) -> list[str]:
     return [f"# {line}" for line in description.strip().splitlines() if line.strip()]
 
 
-def _render_section(
+def _render_model_section(
     parts: list[str],
     section: str,
-    *,
-    defaults: dict[str, Any],
-    comments: dict[str, str] | None = None,
-    commented: Iterable[str] = (),
+    model_cls: type[BaseModel],
+    examples: dict[str, Any],
 ) -> None:
-    """Render ``[section]``; keys in ``commented`` become commented examples."""
+    """Render ``[section]`` from a config model; ``examples`` keys are commented."""
     parts.append(f"[{section}]")
-    comments = comments or {}
-    for key, value in defaults.items():
-        parts.extend(_comment_lines(comments.get(key)))
-        if key in commented:
-            parts.append(f"# {key} = {_toml_repr(value)}")
+    for key, field in model_cls.model_fields.items():
+        parts.extend(_comment_lines(field.description))
+        if key in examples:
+            parts.append(f"# {key} = {_toml_repr(examples[key])}")
         else:
-            parts.append(f"{key} = {_toml_repr(value)}")
+            parts.append(f"{key} = {_toml_repr(field.default)}")
     parts.append("")
 
 
@@ -128,20 +106,9 @@ def render_skeleton(
         "",
     ]
 
-    # Top-level, non-plugin sections.
-    _render_section(
-        parts,
-        "location",
-        defaults=_LOCATION_DEFAULTS,
-        comments=_LOCATION_COMMENTS,
-        commented=_LOCATION_COMMENTED,
-    )
-    _render_section(
-        parts,
-        "video",
-        defaults=_VIDEO_DEFAULTS,
-        comments=_VIDEO_COMMENTS,
-    )
+    # Top-level, non-plugin sections (rendered from the config models).
+    for section, model_cls, examples in _TOP_LEVEL_SECTIONS[:2]:
+        _render_model_section(parts, section, model_cls, examples)
 
     # Screen-specific generated skeleton: start from every registered screen.
     screens: list[str] = []
@@ -164,12 +131,7 @@ def render_skeleton(
             cls = registry.registry.get(kind, name)
             parts.extend(_render_plugin_scope_lines(kind, name, cls))
 
-    _render_section(
-        parts,
-        "logging",
-        defaults=_LOGGING_DEFAULTS,
-        comments=_LOGGING_COMMENTS,
-        commented=_LOGGING_COMMENTED,
-    )
+    section, model_cls, examples = _TOP_LEVEL_SECTIONS[2]
+    _render_model_section(parts, section, model_cls, examples)
 
     return "\n".join(parts)

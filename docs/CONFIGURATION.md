@@ -57,8 +57,6 @@ sequence = "main"
 # lon = -81.3792
 # Human-readable location label shown on screen (optional).
 description = "Orlando, FL"
-# Attempt automatic location detection when no lat/lon given.
-auto_detect = true
 
 [video]
 # Window width in pixels.
@@ -298,6 +296,6 @@ empty_text = "No headlines are available right now"
 level = "INFO"
 # Write logs to the console (colorized).
 console = true
-# Optional JSON-lines log file path (comment out to disable).
+# Optional JSON-lines log file path; omit to disable file logging.
 # file = "logs/weatherstar.jsonl"
 ```

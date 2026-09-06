@@ -25,6 +25,8 @@ from weatherstar_4000 import engine
 from weatherstar_4000.config_file import (
     ENV_SEQUENCE,
     AppConfig,
+    LoggingConfig,
+    VideoConfig,
     discover_config_path,
 )
 from weatherstar_4000.errors import ConfigError, WeatherStarError
@@ -112,14 +114,10 @@ def _run(args: argparse.Namespace) -> int:
     from weatherstar_4000.sequence import Sequence
 
     appcfg = _resolve_app_config(args)
-
-    if appcfg is not None:
-        log_opts = appcfg.logging_options()
-    else:
-        log_opts = {}
-    level_name = (args.log_level or log_opts.get("level") or "INFO").upper()
-    console = not (args.no_console or log_opts.get("console") is False)
-    log_file = args.log_file or log_opts.get("log_file")
+    log_cfg = appcfg.logging if appcfg is not None else LoggingConfig()
+    level_name = (args.log_level or log_cfg.level or "INFO").upper()
+    console = not (args.no_console or log_cfg.console is False)
+    log_file = args.log_file or log_cfg.file
 
     setup_logging(_LOG_LEVELS.get(level_name, logging.INFO), console=console, log_file=log_file)
 
@@ -139,13 +137,13 @@ def _run(args: argparse.Namespace) -> int:
 
     builder = engine.Builder(appcfg)
     location = engine.resolve_location(appcfg, args.lat, args.lon)
-    video = appcfg.video_options()
+    video = appcfg.video
 
     if args.validate:
         return _validate(builder, sequence, location, video)
 
     pygame.init()
-    surface = pygame.display.set_mode((video["width"], video["height"]))
+    surface = pygame.display.set_mode((video.width, video.height))
     pygame.display.set_caption("WeatherStar 4000")
     ctx, screens = builder.build_runtime(sequence, surface, location)
     builder.start_music(ctx)
@@ -154,7 +152,7 @@ def _run(args: argparse.Namespace) -> int:
             ctx,
             screens,
             sequence,
-            fps=video["fps"],
+            fps=video.fps,
             interactive=True,
             max_frames=args.frames,
             music_controller=builder,
@@ -165,11 +163,11 @@ def _run(args: argparse.Namespace) -> int:
     return 0
 
 
-def _validate(builder: engine.Builder, sequence, location, video: dict) -> int:
+def _validate(builder: engine.Builder, sequence, location, video: VideoConfig) -> int:
     import pygame
 
     pygame.init()
-    surface = pygame.Surface((video["width"], video["height"]))
+    surface = pygame.Surface((video.width, video.height))
     ctx, screens = builder.build_runtime(sequence, surface, location)
     failures = engine.SequenceRunner(ctx, screens, sequence).validate()
     pygame.quit()

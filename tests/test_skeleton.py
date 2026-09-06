@@ -101,6 +101,8 @@ def test_skeleton_emits_field_descriptions_and_top_level_sections():
         # TOML remains parseable with all comments stripped by the parser.
         data = tomllib.loads(text)
         assert data["video"] == {"width": 640, "height": 480, "fps": 30}
-        assert data["location"]["auto_detect"] is True
+        # lat/lon are commented examples; description carries an empty default.
+        assert data["location"] == {"description": ""}
+        assert "auto_detect" not in text
     finally:
         registry._plugins.get("screen", {}).pop("doc_screen", None)

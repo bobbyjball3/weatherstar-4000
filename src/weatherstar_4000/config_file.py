@@ -13,18 +13,71 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 try:  # Python >= 3.11
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 backport
     import tomli as tomllib
 
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
 from weatherstar_4000.errors import ConfigError, SequenceError
 
 ENV_CONFIG = "WEATHERSTAR_CONFIG"
 ENV_SEQUENCE = "WEATHERSTAR_SEQUENCE"
 DEFAULT_FILE = Path.home() / ".config" / "weatherstar4000" / "config.toml"
+
+
+#: Non-plugin, top-level TOML sections that carry real options.  Each is a
+#: Pydantic model so the typed defaults/descriptions (used by ``skeleton.py``
+#: and ``generate-config``) live in exactly one place.
+class LocationConfig(BaseModel):
+    """The ``[location]`` section: where to center weather data."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    lat: float | None = Field(
+        default=None,
+        description="Latitude used to center weather data (e.g. 28.5383).",
+    )
+    lon: float | None = Field(
+        default=None,
+        description="Longitude used to center weather data (e.g. -81.3792).",
+    )
+    description: str = Field(
+        default="",
+        description="Human-readable location label shown on screen (optional).",
+    )
+
+
+class VideoConfig(BaseModel):
+    """The ``[video]`` section: window dimensions and frame rate."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    width: int = Field(default=640, description="Window width in pixels.")
+    height: int = Field(default=480, description="Window height in pixels.")
+    fps: int = Field(default=30, description="Target frames per second.")
+
+
+class LoggingConfig(BaseModel):
+    """The ``[logging]`` section: log level and sinks."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    level: str = Field(
+        default="INFO",
+        description="Minimum log level: DEBUG, INFO, WARNING, ERROR or CRITICAL.",
+    )
+    console: bool = Field(
+        default=True,
+        description="Write logs to the console (colorized).",
+    )
+    file: Path | None = Field(
+        default=None,
+        description="Optional JSON-lines log file path; omit to disable file logging.",
+    )
 
 
 def xdg_config_file() -> Path:
@@ -99,36 +152,34 @@ class AppConfig:
             )
         return name, self.get_sequence(name)
 
-    # -- logging options -----------------------------------------------------
+    # -- top-level option sections -------------------------------------------
 
-    def logging_options(self) -> dict[str, Any]:
-        raw = self.data.get("logging") or {}
-        return {
-            "level": raw.get("level", "INFO"),
-            "console": raw.get("console", True),
-            "log_file": raw.get("file"),
-        }
+    def _section(self, name: str, model: type[BaseModel]) -> BaseModel:
+        cache = self.__dict__.setdefault("_typed_sections", {})
+        if name not in cache:
+            raw = self.data.get(name) or {}
+            try:
+                cache[name] = model.model_validate(raw)
+            except ValidationError as exc:
+                details = "; ".join(
+                    f"{'.'.join(str(part) for part in error.get('loc') or ())}: "
+                    f"{error.get('msg', 'invalid value')}"
+                    for error in exc.errors()
+                )
+                raise ConfigError(f"Invalid [{name}] section in config: {details}") from exc
+        return cast(BaseModel, cache[name])
 
-    # -- video options ---------------------------------------------------------
+    @property
+    def location(self) -> LocationConfig:
+        return cast(LocationConfig, self._section("location", LocationConfig))
 
-    def video_options(self) -> dict[str, Any]:
-        raw = self.data.get("video") or {}
-        return {
-            "width": int(raw.get("width", 640)),
-            "height": int(raw.get("height", 480)),
-            "fps": int(raw.get("fps", 30)),
-        }
+    @property
+    def video(self) -> VideoConfig:
+        return cast(VideoConfig, self._section("video", VideoConfig))
 
-    # -- location options ------------------------------------------------------
-
-    def location_options(self) -> dict[str, Any]:
-        raw = self.data.get("location") or {}
-        return {
-            "lat": raw.get("lat"),
-            "lon": raw.get("lon"),
-            "auto_detect": bool(raw.get("auto_detect", True)),
-            "description": raw.get("description"),
-        }
+    @property
+    def logging(self) -> LoggingConfig:
+        return cast(LoggingConfig, self._section("logging", LoggingConfig))
 
     # -- module-level conveniences ------------------------------------------
 
