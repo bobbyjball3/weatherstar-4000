@@ -410,6 +410,10 @@ def _build_regional_row(location: str, periods: list[ForecastPeriod]) -> Regiona
     )
 
 
+#: How many nearby stations ``get_current`` scans for a usable observation.
+_CURRENT_STATION_SCAN = 8
+
+
 @plugin
 class NoaaWeather(Datasource):
     name = "weather"
@@ -499,10 +503,28 @@ class NoaaWeather(Datasource):
         return observation
 
     def get_current(self, lat: float, lon: float) -> CurrentConditions | None:
-        features = self._station_features(lat, lon)
+        """Latest observation for the nearest *usable* station.
+
+        Some nearby automated stations report only a partial observation (e.g. a
+        temperature but no ``textDescription`` or ``icon``), which would leave
+        the Current Conditions screen with a temperature and nothing else.
+        Scan the nearest stations in preference order and return the first
+        observation with both a temperature and a usable text/icon; fall back to
+        the nearest observation with a temperature, then to ``None``.
+        """
+        features = self._station_features(lat, lon)[:_CURRENT_STATION_SCAN]
         if not features:
             return None
-        return self._latest_observation(features[0]["id"], features[0].get("name", ""))
+        first_with_temp: CurrentConditions | None = None
+        for feature in features:
+            observation = self._latest_observation(feature["id"], feature.get("name", ""))
+            if observation is None or observation.temperature_c is None:
+                continue
+            if first_with_temp is None:
+                first_with_temp = observation
+            if observation.text_description or observation.icon_url:
+                return observation
+        return first_with_temp
 
     def get_observations(self, lat: float, lon: float, limit: int = 7) -> list[CurrentConditions]:
         """Current conditions for the nearest observation stations.

@@ -111,6 +111,61 @@ def test_get_current_none_when_station_missing(monkeypatch):
     assert ds.get_current(28.5383, -81.3792) is None
 
 
+def _two_station_router(first_props, second_props):
+    """Router with two stations (KMLB nearest, KXMR next) of given observations."""
+    calls = []
+
+    def fake(url, params=None, timeout=None):
+        calls.append(url)
+        if url == POINT_URL:
+            return _point()
+        if url == STATIONS_URL:
+            return {
+                "features": [
+                    {
+                        "properties": {
+                            "stationIdentifier": "KMLB",
+                            "name": "Melbourne International Airport",
+                        }
+                    },
+                    {
+                        "properties": {
+                            "stationIdentifier": "KXMR",
+                            "name": "Patrick Space Force Base",
+                        }
+                    },
+                ]
+            }
+        if url == f"{BASE}/stations/KMLB/observations/latest":
+            return {"properties": first_props}
+        if url == f"{BASE}/stations/KXMR/observations/latest":
+            return {"properties": second_props}
+        return None
+
+    fake.calls = calls
+    return fake
+
+
+def test_get_current_skips_sparse_station_for_fuller_one(monkeypatch):
+    # The nearest station reports only a temperature (no text/icon) - the kind
+    # of partial ASOS observation that leaves the screen without an icon.  The
+    # scan should fall through to the next station with a full observation.
+    sparse = {"temperature": {"value": 24.0}}
+    ds = _ds(monkeypatch, _two_station_router(sparse, _props()))
+    current = ds.get_current(28.5383, -81.3792)
+    assert current.station_name == "Patrick Space Force Base"
+    assert current.text_description == "Fair"
+
+
+def test_get_current_keeps_nearest_when_all_stations_sparse(monkeypatch):
+    sparse_near = {"temperature": {"value": 24.0}}
+    sparse_far = {"temperature": {"value": 22.0}}
+    ds = _ds(monkeypatch, _two_station_router(sparse_near, sparse_far))
+    current = ds.get_current(28.5383, -81.3792)
+    assert current.station_name == "Melbourne"
+    assert current.temperature_c == 24.0
+
+
 def test_get_forecast_success_and_caches(monkeypatch):
     periods = {"periods": [{"name": "Today", "temperature": 90}]}
     fake = _router(forecast=periods)
