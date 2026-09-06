@@ -236,3 +236,58 @@ def test_get_regional_forecast_rows(monkeypatch):
     assert rows[0].high == 92.0
     assert rows[0].low == 72.0
     assert rows[0].weather == "Sunny"
+
+
+def test_regional_forecast_ignores_zone_text_forecast_urls(monkeypatch):
+    """Station metadata can link to a zone *text* product (no periods, rejects
+    units). The datasource must resolve the station's gridpoint forecast instead
+    of fetching that zone URL (which 400s and spams warnings)."""
+    calls = []
+
+    def fake(url, params=None, timeout=None):
+        calls.append(url)
+        if url == POINT_URL:
+            return _point()
+        if url == STATIONS_URL:
+            return {
+                "features": [
+                    {
+                        "properties": {
+                            "stationIdentifier": "KMLB",
+                            "name": "Melbourne International Airport",
+                        }
+                    }
+                ]
+            }
+        if url == f"{BASE}/stations/KMLB":
+            return {
+                "properties": {
+                    # Some stations advertise their *zone* here; it has no periods.
+                    "forecast": f"{BASE}/zones/forecast/INZ037",
+                    "geometry": {"type": "Point", "coordinates": [-80.6, 28.1]},
+                }
+            }
+        if url == f"{BASE}/points/28.1000,-80.6000":
+            return {"properties": {"forecast": f"{BASE}/gridpoints/MLB/45,32/forecast"}}
+        if "gridpoints" in url:
+            return {
+                "properties": {
+                    "periods": [
+                        {
+                            "name": "Today",
+                            "isDaytime": True,
+                            "temperature": 90,
+                            "shortForecast": "Sunny",
+                        },
+                        {"name": "Tonight", "isDaytime": False, "temperature": 70},
+                    ]
+                }
+            }
+        return None
+
+    ds = _ds(monkeypatch, fake)
+    rows = ds.get_regional_forecast(28.5383, -81.3792)
+    assert len(rows) == 1
+    assert rows[0].high == 90.0
+    # The zone text endpoint is never fetched.
+    assert not any("zones/" in url for url in calls)

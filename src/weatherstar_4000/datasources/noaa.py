@@ -569,7 +569,7 @@ class NoaaWeather(Datasource):
     # -- regional tables ---------------------------------------------------------
 
     def _station_meta(self, station_id: str) -> dict:
-        """Station metadata ``properties`` (display name, forecast URL)."""
+        """Station metadata ``properties`` (geometry, names, links)."""
         key = self._cache_key_for("station_meta", station_id)
         cached = self.cache_get(key, 3600)
         if cached is not None:
@@ -578,6 +578,32 @@ class NoaaWeather(Datasource):
         props = data.get("properties") if isinstance(data, dict) else None
         self.cache_set(key, props or {})
         return props or {}
+
+    def _station_forecast_url(self, station_id: str) -> str | None:
+        """Gridpoint forecast URL for one station, or ``None``.
+
+        Station metadata's ``forecast`` link is not always a gridpoint forecast
+        (it can point at a zone *text* product that rejects ``units`` and has no
+        day/night periods).  Resolve the station's own coordinates to a point
+        and use that point's gridpoint forecast URL; only trust a metadata link
+        that already looks like a gridpoint forecast.
+        """
+        meta = self._station_meta(station_id)
+        if not meta:
+            return None
+        coords = ((meta.get("geometry") or {}).get("coordinates")) or []
+        if len(coords) >= 2:
+            try:
+                point = self.get_point(float(coords[1]), float(coords[0]))
+            except (TypeError, ValueError):
+                point = None
+            forecast = (point or {}).get("forecast")
+            if forecast:
+                return forecast
+        forecast = str(meta.get("forecast") or "")
+        if "/gridpoints/" in forecast:
+            return forecast
+        return None
 
     def _gridpoint_periods(self, forecast_url: str) -> list[ForecastPeriod]:
         """Parse ``periods`` from an explicit gridpoint forecast URL."""
@@ -608,8 +634,7 @@ class NoaaWeather(Datasource):
         for feature in self._station_features(lat, lon):
             if len(rows) >= limit:
                 break
-            meta = self._station_meta(feature["id"])
-            forecast_url = meta.get("forecast")
+            forecast_url = self._station_forecast_url(feature["id"])
             if not forecast_url:
                 continue
             periods = self._gridpoint_periods(forecast_url)
