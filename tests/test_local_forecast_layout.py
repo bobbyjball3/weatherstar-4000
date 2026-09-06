@@ -7,7 +7,6 @@ import pygame
 
 from weatherstar_4000.context import AppContext
 from weatherstar_4000.datasources.noaa import ForecastPeriod
-from weatherstar_4000.themes import CLASSIC_THEME
 
 
 def _period(name, is_daytime, when):
@@ -30,7 +29,7 @@ def test_local_forecast_default_panels_when_no_background():
     from weatherstar_4000.screens.local_forecast import LocalForecastScreen
 
     screen = LocalForecastScreen.model_validate({})
-    ctx = AppContext(theme=CLASSIC_THEME)
+    ctx = AppContext()
     panels = screen._panels(ctx)
     assert len(panels) == 3
     x0, x1, top, bottom = panels[1]

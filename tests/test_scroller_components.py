@@ -4,13 +4,11 @@ import pytest
 from pydantic import ValidationError
 
 from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.themes import CLASSIC_THEME
 
 
 def _ctx(screen, fonts, *, data=None, location=None):
     return AppContext(
         surface=screen,
-        theme=CLASSIC_THEME,
         fonts=fonts,
         data=data or DataRegistry(),
         location=location or Location(lat=28.0, lon=-81.0),

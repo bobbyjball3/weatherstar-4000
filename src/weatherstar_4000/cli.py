@@ -51,6 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--config", help="Path to config TOML (overrides env/default)")
     parser.add_argument("--sequence", help=f"Sequence name (overrides {ENV_SEQUENCE}/config)")
+    parser.add_argument("--theme", help="Theme name (overrides WEATHERSTAR_THEME/config `theme`)")
+    parser.add_argument("--themes-dir", help="Directory containing *.theme.toml theme files")
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lon", type=float)
     parser.add_argument("--log-level", default=None, choices=list(_LOG_LEVELS))
@@ -135,7 +137,7 @@ def _run(args: argparse.Namespace) -> int:
     seq_name, seq_data = appcfg.select_sequence(args.sequence)
     sequence = Sequence.from_config(seq_name, seq_data)
 
-    builder = engine.Builder(appcfg)
+    builder = engine.Builder(appcfg, cli_theme=args.theme, themes_dir=args.themes_dir)
     location = engine.resolve_location(appcfg, args.lat, args.lon)
     video = appcfg.video
 

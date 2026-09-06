@@ -12,7 +12,7 @@ from typing import Any
 
 import pygame
 
-from weatherstar_4000.themes import CLASSIC_THEME, ColorTheme
+from weatherstar_4000.themes import BASE_COLORS, FALLBACK_THEME, Theme
 
 
 @dataclass
@@ -61,7 +61,7 @@ class AppContext:
         self,
         surface: pygame.Surface | None = None,
         *,
-        theme: ColorTheme | None = None,
+        theme: Theme | None = None,
         fonts: dict[str, pygame.font.Font] | None = None,
         assets: dict[str, Any] | None = None,
         data: DataRegistry | None = None,
@@ -69,7 +69,7 @@ class AppContext:
         location: Location | None = None,
     ):
         self.surface = surface
-        self.theme = theme or CLASSIC_THEME
+        self.theme = theme or FALLBACK_THEME
         self.fonts: dict[str, pygame.font.Font] = fonts or {}
         self.assets: dict[str, Any] = assets or {}
         self.data = data or DataRegistry()
@@ -79,16 +79,17 @@ class AppContext:
     # -- conveniences -------------------------------------------------------
 
     def get_color(self, key: str) -> tuple[int, int, int]:
-        return self.theme.get_color(key)
+        return self.colors.get(key, (255, 255, 255))
 
     @property
     def colors(self) -> dict[str, tuple[int, int, int]]:
-        """Theme colors merged over the authentic classic palette.
+        """Theme colors merged over the minimal base palette.
 
-        Guarantees stable values for legacy keys (gray, orange, ...) that only
-        exist in the classic theme while letting configured themes override.
+        Guarantees stable values for the keys renderers read directly
+        (``BASE_COLORS``) while letting the configured theme override or add to
+        them, so a partial theme palette never KeyErrors at render time.
         """
-        merged = dict(CLASSIC_THEME.colors)
+        merged = dict(BASE_COLORS)
         merged.update(self.theme.colors)
         return merged
 

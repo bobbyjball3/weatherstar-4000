@@ -32,6 +32,9 @@ def make_default_background(width: int, height: int) -> pygame.Surface:
 class Backgrounds(AssetMedia):
     name = "backgrounds"
     asset_key = "backgrounds"
+    #: Subdirectory of ``asset_dir`` scanned by :meth:`load_asset` (drives
+    #: whether a theme supplies its own backgrounds).
+    asset_subdirs = ("backgrounds",)
 
     def load_asset(self, ctx: Any) -> dict[str, pygame.Surface]:
         directory = Path(self.asset_dir) / "backgrounds"

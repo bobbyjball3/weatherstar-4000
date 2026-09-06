@@ -18,6 +18,7 @@ Runtime + docs entry points:
 - `docs/DEVELOPMENT.md` — tooling, tasks, CI, repo layout, current status.
 - `docs/ARCHITECTURE.md` — internal architecture and design decisions.
 - `docs/CONFIGURATION.md` — config guide + full commented example.
+- `docs/THEMES.md` — theme files: format, discovery, active-theme selection.
 
 ## Toolchain & commands
 
@@ -88,7 +89,8 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 - `skeleton.py` — generates the commented config from field descriptions.
 - `logging_setup.py` — structlog with SecretStr/key redaction.
 - `ticker.py` — bottom crawling banner over every screen.
-- `themes.py` — `ColorTheme` + named palettes (classic default).
+- `themes.py` — `Theme` model, TOML loader/discovery; `builtin_themes/` ships
+  the data files (default/base theme is `weatherstar4000`).
 - `plugins/__init__.py` — `load_builtin_plugins()` imports every module in
   `screens`, `components`, `datasources`, `media`, `sequences` so they register.
 

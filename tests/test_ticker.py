@@ -5,7 +5,6 @@ import time
 import pygame
 
 from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.themes import CLASSIC_THEME
 from weatherstar_4000.ticker import SCROLL_SPEED, BottomTicker
 
 
@@ -13,7 +12,6 @@ def _ctx(surface, description="Orlando"):
     fonts = {"scroller": pygame.font.Font(None, 24), "normal": pygame.font.Font(None, 20)}
     return AppContext(
         surface=surface,
-        theme=CLASSIC_THEME,
         fonts=fonts,
         assets={},
         data=DataRegistry(),

@@ -6,7 +6,6 @@ import pygame
 
 from weatherstar_4000.context import AppContext, DataRegistry
 from weatherstar_4000.datasources.noaa import ForecastPeriod
-from weatherstar_4000.themes import CLASSIC_THEME
 
 
 def _period(**kw):
@@ -55,6 +54,6 @@ def test_extended_forecast_renders(fonts):
 
     data = DataRegistry()
     data.register("weather", _Weather())
-    ctx = AppContext(theme=CLASSIC_THEME, fonts=fonts, data=data)
+    ctx = AppContext(fonts=fonts, data=data)
     # Without data the screen draws its "NO DATA" message without raising.
     screen.draw(surface, ctx, 1 / 30)

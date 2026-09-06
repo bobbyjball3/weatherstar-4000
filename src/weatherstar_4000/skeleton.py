@@ -106,6 +106,15 @@ def render_skeleton(
         "",
     ]
 
+    # Active theme.  The theme body lives in its own *.theme.toml file (see
+    # docs/THEMES.md); this key only names which one to use.
+    from weatherstar_4000.themes import available_themes
+
+    parts.append("# Active visual theme (override with --theme or WEATHERSTAR_THEME).")
+    parts.append("# Available: " + ", ".join(available_themes()))
+    parts.append('theme = "weatherstar4000"')
+    parts.append("")
+
     # Top-level, non-plugin sections (rendered from the config models).
     for section, model_cls, examples in _TOP_LEVEL_SECTIONS[:2]:
         _render_model_section(parts, section, model_cls, examples)

@@ -28,6 +28,11 @@ class Media(Plugin):
         description="Directory containing this media's assets (project-relative or absolute).",
     )
 
+    #: Subdirectories of ``asset_dir`` scanned to load this media's assets.
+    #: Empty means the media is not themeable by asset tree (e.g. music).  The
+    #: engine uses this to decide whether a theme supplies its own media.
+    asset_subdirs: ClassVar[tuple[str, ...]] = ()
+
     def load(self, ctx: AppContext) -> Any:
         """Load this media into ``ctx`` (fonts/assets) and return the resource.
 

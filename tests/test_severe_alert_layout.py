@@ -7,7 +7,6 @@ the engine's bottom ticker banner (which starts at y=430).
 
 from weatherstar_4000.context import AppContext, DataRegistry, Location
 from weatherstar_4000.datasources.feeds import Alert
-from weatherstar_4000.themes import CLASSIC_THEME
 
 _TICKER_TOP = 430
 
@@ -35,7 +34,6 @@ _ALERT = {
 def _ctx(screen):
     return AppContext(
         surface=screen,
-        theme=CLASSIC_THEME,
         assets={},
         data=DataRegistry(),
         location=Location(lat=28.54, lon=-81.38, description="Orlando, FL"),

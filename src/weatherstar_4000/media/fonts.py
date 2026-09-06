@@ -43,19 +43,43 @@ def _fallback_font_path(bold: bool = False) -> str | None:
 @plugin
 class Fonts(FontSet):
     name = "fonts"
+    #: Subdirectories of ``asset_dir`` tried for the font files (drives whether
+    #: a theme supplies its own typeface).
+    asset_subdirs = ("fonts_ttf", "fonts")
+
+    def _resolved_specs(self, ctx: Any, fonts_dir: Path) -> dict[str, tuple[str, int]]:
+        """Font slots, with the active theme's ``[fonts]`` mapping applied.
+
+        A theme can point the named slots at its own typeface files (e.g. a
+        ``ws3000.ttf`` set). A mapping is only adopted when that file actually
+        exists in ``fonts_dir``; otherwise the slot keeps the classic filename,
+        so a theme whose font files are absent degrades to the classic set
+        instead of losing fonts entirely.
+        """
+        specs = dict(_FONT_SPECS)
+        theme = getattr(ctx, "theme", None)
+        overrides = getattr(theme, "fonts", None) or {}
+        for key, value in overrides.items():
+            if not (isinstance(value, (list, tuple)) and len(value) == 2):
+                continue
+            file_name, size = str(value[0]), int(value[1])
+            if (fonts_dir / file_name).exists():
+                specs[key] = (file_name, size)
+        return specs
 
     def load(self, ctx: Any) -> Any:
         fonts_dir = Path(self.asset_dir) / "fonts_ttf"
         if not fonts_dir.exists():  # pragma: no cover - depends on assets present
             fonts_dir = Path(self.asset_dir) / "fonts"
+        specs = self._resolved_specs(ctx, fonts_dir)
         loaded: dict[str, pygame.font.Font] = {}
-        for key, (file_name, size) in _FONT_SPECS.items():
+        for key, (file_name, size) in specs.items():
             font = self._load_one(fonts_dir, file_name, size)
             if font is not None:
                 loaded[key] = font
         if not loaded:
             log.warning("no_star4000_fonts; falling back to system/default")
-            for key, (_file_name, size) in _FONT_SPECS.items():
+            for key, (_file_name, size) in specs.items():
                 loaded[key] = self._make_system_font(key, size)
         self.provide_fonts(ctx, loaded)
         return loaded

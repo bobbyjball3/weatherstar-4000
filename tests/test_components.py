@@ -6,7 +6,6 @@ from weatherstar_4000.components.background import Background
 from weatherstar_4000.components.clock import Clock
 from weatherstar_4000.components.header import Header
 from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.themes import CLASSIC_THEME
 
 
 def _ctx(surface, *, assets=None):
@@ -16,7 +15,6 @@ def _ctx(surface, *, assets=None):
     }
     return AppContext(
         surface=surface,
-        theme=CLASSIC_THEME,
         fonts=fonts,
         assets=assets or {},
         data=DataRegistry(),

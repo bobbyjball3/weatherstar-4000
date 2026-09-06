@@ -4,7 +4,6 @@ import pygame
 
 from weatherstar_4000.context import AppContext, DataRegistry, Location
 from weatherstar_4000.renderer import Renderer
-from weatherstar_4000.themes import CLASSIC_THEME
 
 
 class _Dummy(Renderer):
@@ -14,7 +13,6 @@ class _Dummy(Renderer):
 def _ctx(surface, *, fonts=None, assets=None, data=None, location=None):
     return AppContext(
         surface=surface,
-        theme=CLASSIC_THEME,
         fonts=fonts or {},
         assets=assets or {},
         data=data or DataRegistry(),

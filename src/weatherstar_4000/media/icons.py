@@ -49,54 +49,14 @@ class IconManager:
         return surface
 
 
-def _lighten_glyph(surface: pygame.Surface) -> pygame.Surface:
-    """Recolor icon artwork so it reads crisply on dark graphics bands.
-
-    The classic icon GIFs are line art on a white canvas that pygame loads with
-    the white colorkeyed out.  Blitted over the app's dark navy bands, near-black
-    line art is invisible and its gray anti-aliased fringe looks washed out, so
-    convert every desaturated/dark artwork pixel to clean white while preserving
-    saturated color accents (sun yellow, rain blue) for an authentic look.
-    Returns an RGBA surface whose colorkey (background) pixels stay transparent.
-    """
-    key = surface.get_colorkey()
-    key_rgb = key[:3] if key is not None else None
-    out = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-    surface.lock()
-    out.lock()
-    try:
-        for y in range(surface.get_height()):
-            for x in range(surface.get_width()):
-                pixel = surface.get_at((x, y))
-                rgb = (pixel[0], pixel[1], pixel[2])
-                if key_rgb is not None and rgb == key_rgb:
-                    continue  # transparent background
-                if _is_colorful(rgb):
-                    out.set_at((x, y), (rgb[0], rgb[1], rgb[2], 255))
-                else:
-                    out.set_at((x, y), (255, 255, 255, 255))
-    finally:
-        surface.unlock()
-        out.unlock()
-    return out
-
-
-def _is_colorful(rgb: tuple[int, int, int]) -> bool:
-    """Whether a pixel carries a saturated accent worth keeping.
-
-    Gray/black glyph pixels (including anti-aliased fringes, which are desaturated
-    blends with the white canvas) become white; only clearly saturated, bright
-    colors (yellow suns, blue rain) are preserved so icons keep their accents.
-    """
-    r, g, b = rgb
-    highest = max(r, g, b)
-    lowest = min(r, g, b)
-    if highest < 120:  # too dark to read on the navy band -> flatten to white
-        return False
-    return highest - lowest >= 45
-
-
 def _load_icons(directory: Path) -> dict[str, pygame.Surface]:
+    """Load icon artwork exactly as shipped (no recolor/alteration).
+
+    The classic icon GIFs are line art on a transparent white canvas; pygame
+    preserves their white colorkey, so blitting them (or a scaled copy) keeps
+    the canvas transparent and the original colors — including dark outlines —
+    intact.  Icons therefore render authentically, as authored.
+    """
     result: dict[str, pygame.Surface] = {}
     if not directory.exists():
         return result
@@ -105,8 +65,7 @@ def _load_icons(directory: Path) -> dict[str, pygame.Surface]:
             if file_path.stem in result:
                 continue
             try:
-                surface = pygame.image.load(str(file_path))
-                result[file_path.stem] = _lighten_glyph(surface)
+                result[file_path.stem] = pygame.image.load(str(file_path))
             except pygame.error:  # pragma: no cover - corrupt asset
                 continue
     return result
@@ -116,6 +75,9 @@ def _load_icons(directory: Path) -> dict[str, pygame.Surface]:
 class Icons(AssetMedia):
     name = "icons"
     asset_key = "icons"
+    #: Subdirectory of ``asset_dir`` scanned by :meth:`load_asset` (drives
+    #: whether a theme supplies its own icon set).
+    asset_subdirs = ("icons",)
 
     def load_asset(self, ctx: Any) -> dict[str, pygame.Surface]:
         directory = Path(self.asset_dir) / "icons"

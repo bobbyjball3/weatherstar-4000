@@ -13,7 +13,9 @@ methods that need it.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 from weatherstar_4000.config_file import AppConfig
@@ -22,6 +24,7 @@ from weatherstar_4000.errors import ConfigError
 from weatherstar_4000.logging_setup import get_logger
 from weatherstar_4000.registry import discover, registry
 from weatherstar_4000.sequence import Sequence
+from weatherstar_4000.themes import DEFAULT_THEME_NAME, ENV_THEME
 
 DEFAULT_PAUSE = 15.0
 #: Media plugins auto-loaded into every context when they are registered.
@@ -50,8 +53,14 @@ def resolve_location(
     )
 
 
-def select_theme_name(appcfg: AppConfig) -> str:
-    return str(appcfg.data.get("theme", "classic"))
+def select_theme_name(appcfg: AppConfig, cli_theme: str | None = None) -> str:
+    """Resolve the active theme name: CLI > env > config ``theme`` key."""
+    if cli_theme:
+        return cli_theme
+    env_theme = os.environ.get(ENV_THEME)
+    if env_theme:
+        return env_theme
+    return str(appcfg.data.get("theme", DEFAULT_THEME_NAME))
 
 
 def music_enabled(appcfg: AppConfig) -> bool:
@@ -62,8 +71,16 @@ def music_enabled(appcfg: AppConfig) -> bool:
 class Builder:
     """Constructs datasources/media/components/screens for a sequence."""
 
-    def __init__(self, appcfg: AppConfig):
+    def __init__(
+        self,
+        appcfg: AppConfig,
+        *,
+        cli_theme: str | None = None,
+        themes_dir: str | None = None,
+    ):
         self.appcfg = appcfg
+        self._cli_theme = cli_theme
+        self._themes_dir = themes_dir
         self.log = get_logger("weatherstar4000.engine")
         self._music_player = None
         discover()
@@ -80,9 +97,36 @@ class Builder:
             data.register(name, self.make("datasource", name))
         return data
 
+    def make_media(self, name: str, theme_asset_dir: str | None = None) -> Any:
+        """Build one media plugin, defaulting ``asset_dir`` to the active theme's.
+
+        Only media kinds the theme actually provides follow the theme's asset
+        directory: a theme supplies fonts/backgrounds/logos/icons by shipping the
+        matching subdirectory (see each plugin's ``asset_subdirs``). If the theme
+        has no such subdirectory, or the media scope sets a custom ``asset_dir``,
+        the configured/default directory is used so icons and fonts never vanish
+        under a theme that only recolors. Music is ambient, not visual, and is
+        never themed.
+        """
+        cls = registry.get("media", name)
+        scope = self.appcfg.scope("media", name)
+        subdirs = tuple(getattr(cls, "asset_subdirs", ()))
+        if (
+            theme_asset_dir
+            and subdirs
+            and any((Path(theme_asset_dir) / sub).is_dir() for sub in subdirs)
+        ):
+            configured = scope.get("asset_dir")
+            default_asset_dir = cls.model_fields.get("asset_dir", None)
+            builtin = default_asset_dir.default if default_asset_dir is not None else None
+            if not configured or configured == builtin:
+                scope = {**scope, "asset_dir": theme_asset_dir}
+        return cls.from_config(scope)
+
     def build_media(self, names: Iterable[str], ctx: AppContext) -> None:
+        theme_asset_dir = getattr(getattr(ctx, "theme", None), "asset_dir", None)
         for name in sorted(names):
-            media = self.make("media", name)
+            media = self.make_media(name, theme_asset_dir)
             media.load(ctx)
 
     def make_component(self, spec: Any) -> Any:
@@ -129,11 +173,15 @@ class Builder:
         deps: dict[str, set[str]] | None = None,
     ) -> AppContext:
         """Build a fully-populated AppContext for a set of plugin dependencies."""
-        from weatherstar_4000.themes import get_theme
+        from weatherstar_4000.themes import get_theme, theme_search_dirs
 
+        theme = get_theme(
+            select_theme_name(self.appcfg, self._cli_theme),
+            dirs=theme_search_dirs(self._themes_dir),
+        )
         ctx = AppContext(
             surface=surface,
-            theme=get_theme(select_theme_name(self.appcfg)),
+            theme=theme,
             location=location,
         )
         media_names = set(deps["media"]) if deps else set()

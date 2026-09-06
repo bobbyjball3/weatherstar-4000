@@ -86,20 +86,54 @@ def test_icon_manager_empty_directory(pygame_env, tmp_path):
     assert manager.get_icon("anything") is None
 
 
-def test_icon_glyph_is_lightened_against_dark_bands(pygame_env):
-    from weatherstar_4000.media.icons import _lighten_glyph
+def test_icons_are_loaded_authentically(pygame_env, tmp_path):
+    """Icon artwork must render exactly as shipped, with no recolor/alteration.
 
-    surface = pygame.Surface((4, 4))
-    surface.fill((255, 255, 255))
-    surface.set_colorkey((255, 255, 255))
-    pygame.draw.rect(surface, (0, 0, 0), pygame.Rect(1, 1, 2, 2))
-    surface.set_at((0, 3), (73, 102, 161))  # saturated blue accent
+    Regression: a legibility pass used to flatten monochrome artwork to white,
+    which erased the gray shading of Cloudy / Mostly-Clear.  Icons are now
+    loaded unmodified so original colors (including dark outlines) are kept.
+    """
+    stamp = pygame.Surface((4, 4))
+    stamp.fill((255, 255, 255))
+    stamp.set_at((0, 0), (0, 0, 0))  # dark outline
+    stamp.set_at((1, 1), (175, 175, 175))  # gray cloud fill
+    stamp.set_at((2, 2), (73, 102, 161))  # saturated accent
 
-    lightened = _lighten_glyph(surface)
-    # The white canvas stays fully transparent.
-    assert lightened.get_at((0, 0))[3] == 0
-    # The formerly-black glyph is now light so it reads on the navy band.
-    pixel = lightened.get_at((2, 2))
-    assert pixel[0] > 200 and pixel[1] > 200 and pixel[2] > 200
-    # Saturated color accents (blue rain, yellow sun) are preserved.
-    assert lightened.get_at((0, 3))[:3] == (73, 102, 161)
+    icon_dir = tmp_path / "icons"
+    icon_dir.mkdir()
+    pygame.image.save(stamp, str(icon_dir / "stamp.png"))
+
+    manager = IconManager(icon_dir)
+    icon = manager.get_icon("stamp")
+    assert icon is not None
+    assert icon.get_at((0, 0))[:3] == (0, 0, 0)
+    assert icon.get_at((1, 1))[:3] == (175, 175, 175)
+    assert icon.get_at((2, 2))[:3] == (73, 102, 161)
+    # Scaling keeps the artwork intact too.
+    scaled = manager.get_icon("stamp", width=40, height=40)
+    assert scaled is not None and scaled.get_size() == (40, 40)
+
+
+def test_icon_gif_colorkey_survives_loading_and_scaling(pygame_env):
+    """A GIF's transparent white canvas stays transparent after scaling.
+
+    This is what lets authentic icons (raw artwork) composite onto the navy
+    bands without a recolor pass turning the canvas into an opaque box.
+    """
+    from pathlib import Path
+
+    import pytest
+
+    source = Path("static_assets/icons/Cloudy.gif")
+    if not source.exists():
+        pytest.skip("icon assets not present")
+
+    manager = IconManager(source.parent)
+    icon = manager.get_icon("Cloudy", width=86, height=75)
+    assert icon is not None
+
+    navy = pygame.Surface((100, 100))
+    navy.fill((0, 0, 80))
+    navy.blit(icon, (5, 5))
+    # Where the artwork's white canvas was (icon corner), the navy shows through.
+    assert navy.get_at((5, 5))[:3] == (0, 0, 80)

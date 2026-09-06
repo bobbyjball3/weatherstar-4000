@@ -27,7 +27,13 @@ class Header(Component):
     name = "header"
 
     title_top: str = Field(default="WeatherStar", description="Top line of the screen header.")
-    title_bottom: str = Field(default="4000", description="Bottom line of the screen header.")
+    title_bottom: str = Field(
+        default="",
+        description=(
+            "Bottom line of the screen header. When blank, the active theme's "
+            "product line (e.g. '3000') is shown instead."
+        ),
+    )
     has_noaa: bool = Field(
         default=False, description="Show the NOAA mark to the right of the header title."
     )
@@ -35,11 +41,14 @@ class Header(Component):
     def render(self, surface: pygame.Surface, ctx: AppContext) -> None:
         from weatherstar_4000 import render
 
+        bottom = self.title_bottom
+        if not bottom:
+            bottom = getattr(ctx.theme, "title_bottom", "") or None
         render.draw_header(
             surface,
             ctx,
             self.title_top,
-            self.title_bottom or None,
+            bottom,
             has_noaa=self.has_noaa,
             include_clock=False,
         )

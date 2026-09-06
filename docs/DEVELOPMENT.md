@@ -142,6 +142,7 @@ Taskfile.yml              task runner commands
 .github/workflows/ci.yml  Quality + Testing CI pipeline
 .github/actions/setup     reusable CI step: uv + task + dependency sync
 src/weatherstar_4000/     the plugin-driven engine (see docs/ARCHITECTURE.md)
+  builtin_themes/         shipped *.theme.toml files (see docs/THEMES.md)
 tests/
   conftest.py             headless SDL dummy drivers + pygame fixtures
   test_*.py               unit + integration tests for the engine
@@ -158,12 +159,17 @@ README.old.md             original project README (features, packaging)
   legacy monolithic implementation was removed). Plugins are Pydantic models
   whose typed fields drive a TOML config, auto-discovery and a generated
   commented config skeleton.
+- **Themes are data**: a `Theme` is loaded from a `*.theme.toml` file
+  (`themes.py` parses/loads them; `builtin_themes/` ships the defaults — see
+  `docs/THEMES.md`). A theme changes colors, the media `asset_dir` (fonts/
+  backgrounds/logos/icons) and the header product line; screens never branch on
+  the theme name.
 - The test suite runs headless via dummy SDL drivers (`tests/conftest.py`) with
   external APIs mocked. Screens are exercised both with empty stubs (the
   no-data path) and with populated-data stubs (`tests/test_screens_rich.py`)
   that drive the real rendering branches. `task coverage` enforces
-  `--cov-fail-under` (see pyproject; currently 80 — ratchet up as coverage
-  grows); package-wide coverage is ~85%.
+  `fail_under` in `[tool.coverage.report]` (currently 85 — ratchet up as
+  coverage grows); package-wide coverage is ~90%.
 - Useful smoke checks:
   ```sh
   uv run weatherstar4000 generate-config --sequence main   # commented TOML

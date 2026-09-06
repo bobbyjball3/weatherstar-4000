@@ -116,8 +116,10 @@ Pydantic:
 - `AppConfig.scope(kind, name)` returns the `[<kind>.<name>]` section, which
   `Plugin.from_config(...)` feeds to `model_validate`. Missing required fields
   raise `InvalidConfiguration` with the offending scope and a TOML example.
-- Non-plugin sections (`sequence`, `[location]`, `[video]`, `[logging]`,
-  `[sequences.*]`) are read by small typed accessors on `AppConfig`.
+- Non-plugin sections (`sequence`, `theme`, `[location]`, `[video]`,
+  `[logging]`, `[sequences.*]`) are read by small typed accessors on
+  `AppConfig`. Theme *bodies* are separate `*.theme.toml` files (see
+  `docs/THEMES.md`); the `theme` key only names which to activate.
 
 Because plugins are Pydantic models with `Field(description=...)` annotations,
 `skeleton.py` can generate a fully commented example config
@@ -136,9 +138,14 @@ placeholders. See `docs/CONFIGURATION.md`.
   `location`, and conveniences (`colors`, `font`, `asset`, `size`). It replaces
   the old monolithic `ws` object; screens never reach into a god object.
 
-Themes live in `themes.py` (a `ColorTheme` + a set of named palettes).
-`AppContext.colors` merges the selected theme over the classic palette so a
-missing key still has a sensible value.
+Themes live in `themes.py` plus one TOML file per theme (`builtin_themes/`
+ships the defaults; users add their own next to XDG config). A `Theme` carries a
+name/title, a (partial) color palette, an optional `asset_dir`, and optional
+font overrides. `AppContext.colors` merges the selected theme over a small
+in-code `BASE_COLORS` (the keys screens read directly), so a partial palette
+never KeyErrors. When a theme's `asset_dir` is set, the engine builds the media
+plugins against it, so themed fonts/backgrounds/logos/icons load automatically.
+See `docs/THEMES.md` for the file format and discovery rules.
 
 ## Engine
 
@@ -211,3 +218,7 @@ integration test swaps the real `DataRegistry` for benign stubs.
   and plugin discovery via importlib entry points — no framework needed.
 - **Rendering is defensive.** Every datasource read is wrapped; missing data
   renders a "NO DATA" message rather than crashing the loop.
+- **Themes are data, not code.** A `Theme` is a value object parsed from a
+  `*.theme.toml` file; screens/components never branch on the theme name. The
+  theme only changes what the shared context resolves (colors, media `asset_dir`,
+  fonts) plus the header's product line, so the same screen code renders any look.

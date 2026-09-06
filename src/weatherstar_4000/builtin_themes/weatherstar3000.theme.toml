@@ -1,0 +1,35 @@
+# WeatherStar 3000 look: the blue-and-white 1980s TWC aesthetic.
+# Palette/type references drawn from the ws3kp project (netbymatt/ws3kp) and the
+# TWCClassics font/icon sets. Drop the WS3000 assets under the asset_dir below
+# (fonts_ttf/, backgrounds/, logos/, icons/) to use them; without them the app
+# degrades gracefully to system fonts and generated backgrounds.
+title = "WeatherStar 3000"
+title_bottom = "3000"
+asset_dir = "static_assets_ws3000"
+
+[colors]
+# WS3000 text is white on deep blue; the signature "yellow" title accents of
+# the 4000 become white here.
+yellow = "#FFFFFF"
+white = "#FFFFFF"
+black = "#000000"
+purple_header = "#33047B"      # The 3000's purple-blue header box
+blue_gradient_1 = "#09246F"    # Deep loading-blue gradient start
+blue_gradient_2 = "#364AC0"    # Loading-blue gradient end
+light_blue = "#8FFDFA"         # Pale cyan highlight
+blue = "#4F99F9"               # Readable medium blue
+cyan = "#8FFDFA"
+red = "#FF4D4D"
+up = "#00E05A"
+down = "#FF4D4D"
+
+[fonts]
+# Rename to whatever WS3000 font files you drop in (sizes mirror the 4000 set).
+title = ["ws3000.ttf", 32]
+large = ["ws3000.ttf", 32]
+extended = ["ws3000_extended.ttf", 32]
+small = ["ws3000_small.ttf", 28]
+normal = ["ws3000.ttf", 20]
+forecast = ["ws3000_small.ttf", 24]
+tiny = ["ws3000.ttf", 16]
+scroller = ["ws3000_extended.ttf", 24]

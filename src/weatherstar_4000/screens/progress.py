@@ -17,14 +17,13 @@ class ProgressScreen(Screen):
     media = ("backgrounds",)
     layout = (
         ComponentSpec(component="background", config={"background_name": "1"}),
-        ComponentSpec(
-            component="header", config={"title_top": "WeatherStar", "title_bottom": "4000"}
-        ),
+        ComponentSpec(component="header", config={"title_top": "WeatherStar", "title_bottom": ""}),
         ComponentSpec(component="clock"),
     )
 
-    status: ClassVar[str] = "Loading WeatherStar 4000..."
+    status: ClassVar[str] = ""
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        self.centered(surface, ctx, self.status, 240, font_name="large")
+        status = self.status or f"Loading {ctx.theme.title}..."
+        self.centered(surface, ctx, status, 240, font_name="large")
         self.centered(surface, ctx, "Retrieving current conditions and forecasts...", 300)

@@ -32,15 +32,25 @@ Fill in any `# REQUIRED` keys and uncomment the values you want to change.
 * **Sequence**: `--sequence` > `WEATHERSTAR_SEQUENCE` > the top-level
   `sequence` key.
 * **Location**: `--lat`/`--lon` > the `[location]` section.
+* **Theme**: `--theme` > `WEATHERSTAR_THEME` > the top-level `theme` key >
+  `weatherstar4000`.
 * **Plugin scopes** (`[datasource.*]`, `[media.*]`, `[component.*]`,
   `[screen.*]`) are matched by plugin `kind.name`; each overrides that plugin's
   declared defaults.
+
+## Themes
+
+The `theme` key only *names* the active theme; the theme body lives in its own
+`*.theme.toml` file (see `docs/THEMES.md`). Theme files are discovered from a
+`--themes-dir`/`WEATHERSTAR_THEMES_DIR` directory, then
+`~/.config/weatherstar4000/themes/`, then the built-ins shipped with the app.
+A theme's `asset_dir` supplies its own fonts/backgrounds/logos/icons and is used
+by the media plugins unless a `[media.*] asset_dir` is set explicitly.
 
 ## Example
 
 Below is the output of `weatherstar4000 generate-config --sequence main`
 with the location filled in for Orlando, FL. Every value is documented inline.
-
 ```toml
 # WeatherStar 4000 configuration skeleton.
 # Generated per-plugin from declared typed config fields.
@@ -49,6 +59,10 @@ with the location filled in for Orlando, FL. Every value is documented inline.
 
 # Sequence to execute (override with --sequence or WEATHERSTAR_SEQUENCE).
 sequence = "main"
+
+# Active visual theme (override with --theme or WEATHERSTAR_THEME).
+# Available: amber, dark, high_contrast, retro_green, weatherstar3000, weatherstar4000
+theme = "weatherstar4000"
 
 [location]
 # Latitude used to center weather data (e.g. 28.5383).
@@ -218,8 +232,8 @@ empty_text = "Data unavailable"
 [component.header]
 # Top line of the screen header.
 title_top = "WeatherStar"
-# Bottom line of the screen header.
-title_bottom = "4000"
+# Bottom line of the screen header. When blank, the active theme's product line (e.g. '3000') is shown instead.
+title_bottom = ""
 # Show the NOAA mark to the right of the header title.
 has_noaa = false
 

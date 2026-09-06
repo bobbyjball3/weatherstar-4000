@@ -19,6 +19,9 @@ from weatherstar_4000.registry import plugin
 class Logos(AssetMedia):
     name = "logos"
     asset_key = "logos"
+    #: Subdirectory of ``asset_dir`` scanned by :meth:`load_asset` (drives
+    #: whether a theme supplies its own logos).
+    asset_subdirs = ("logos",)
 
     def load_asset(self, ctx: Any) -> dict[str, pygame.Surface]:
         directory = Path(self.asset_dir) / "logos"

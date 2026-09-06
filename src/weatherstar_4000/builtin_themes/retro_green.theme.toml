@@ -1,0 +1,18 @@
+# Retro green monochrome (old terminal style).
+title = "WeatherStar 4000"
+title_bottom = "4000"
+asset_dir = "static_assets"
+
+[colors]
+yellow = "#64FF64"        # Bright green
+white = "#00FF00"         # Pure green
+black = "#001400"         # Dark green background
+purple_header = "#00C800"  # Medium green
+blue_gradient_1 = "#006400"  # Dark green
+blue_gradient_2 = "#003200"  # Darker green
+light_blue = "#96FF96"    # Light green
+blue = "#96FF96"          # Alias
+cyan = "#64FF64"          # Bright green
+red = "#C8FFC8"           # Very light green (for alerts)
+up = "#00FF00"            # Positive table cells
+down = "#C8FFC8"          # Negative table cells
