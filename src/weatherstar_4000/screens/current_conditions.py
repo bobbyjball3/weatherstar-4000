@@ -80,7 +80,7 @@ class CurrentConditionsScreen(Screen):
         wind_mph = current.wind_mph
         if wind_mph is not None and wind_mph > 0:
             direction = self.cardinal(current.wind_direction)
-            wind_str = f"{direction.ljust(3)}{str(wind_mph).rjust(3)}"
+            wind_str = f"{direction} {int(round(wind_mph))}".strip()
         elif wind_mph is not None and wind_mph == 0:
             wind_str = "Calm"
         else:
@@ -91,7 +91,9 @@ class CurrentConditionsScreen(Screen):
 
         wind_gust_mph = current.wind_gust_mph
         if wind_gust_mph is not None:
-            gust_text = self.font(ctx, "normal").render(f"Gusts to {wind_gust_mph}", True, white)
+            gust_text = self.font(ctx, "normal").render(
+                f"Gusts to {int(round(wind_gust_mph))}", True, white
+            )
             surface.blit(gust_text, gust_text.get_rect(right=content_left + 245, y=wind_y + 35))
 
         right_col_x = content_left + 257

@@ -84,3 +84,19 @@ def test_icon_manager_returns_scaled_and_named(pygame_env, tmp_path):
 def test_icon_manager_empty_directory(pygame_env, tmp_path):
     manager = IconManager(tmp_path)
     assert manager.get_icon("anything") is None
+
+
+def test_icon_glyph_is_lightened_against_dark_bands(pygame_env):
+    from weatherstar_4000.media.icons import _lighten_glyph
+
+    surface = pygame.Surface((4, 4))
+    surface.fill((255, 255, 255))
+    surface.set_colorkey((255, 255, 255))
+    pygame.draw.rect(surface, (0, 0, 0), pygame.Rect(1, 1, 2, 2))
+
+    lightened = _lighten_glyph(surface)
+    # The white canvas stays fully transparent.
+    assert lightened.get_at((0, 0))[3] == 0
+    # The formerly-black glyph is now light so it reads on the navy band.
+    pixel = lightened.get_at((2, 2))
+    assert pixel[0] > 200 and pixel[1] > 200 and pixel[2] > 200
