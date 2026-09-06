@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from weatherstar_4000.datasources.feeds import (
+    Alert,
     EarthquakesDatasource,
     NoaaAlertsDatasource,
     StockMarketDatasource,
@@ -39,8 +40,11 @@ def test_stock_quote_parses_and_caches(monkeypatch):
     }
     monkeypatch.setattr(ds, "http_get_json", lambda *a, **k: payload)
     quotes = ds.quotes()
-    assert quotes[0]["symbol"] == "DIA"
-    assert quotes[0]["price"] == "300.00"
+    assert quotes[0].symbol == "DIA"
+    assert quotes[0].price == 300.0
+    assert quotes[0].change == 1.5
+    assert quotes[0].change_percent == 0.5
+    assert quotes[0].direction == "up"
 
 
 def test_stock_api_key_injected_as_query_param():
@@ -75,15 +79,15 @@ def test_alerts_parse_filters_severity():
     }
     alerts = _parse_alerts(data)
     assert len(alerts) == 1
-    assert alerts[0]["event"] == "Flood"
-    assert alerts[0]["severity"] == "Extreme"
+    assert alerts[0].event == "Flood"
+    assert alerts[0].severity == "Extreme"
 
 
 def test_alerts_critical():
     ds = NoaaAlertsDatasource()
-    assert ds.is_critical([{"severity": "Extreme"}]) is True
-    assert ds.is_critical([{"severity": "Severe", "urgency": "Immediate"}]) is True
-    assert ds.is_critical([{"severity": "Severe", "urgency": "Expected"}]) is False
+    assert ds.is_critical([Alert(severity="Extreme")]) is True
+    assert ds.is_critical([Alert(severity="Severe", urgency="Immediate")]) is True
+    assert ds.is_critical([Alert(severity="Severe", urgency="Expected")]) is False
 
 
 def test_uv_daily_parsing_and_protection(monkeypatch):
@@ -100,8 +104,10 @@ def test_uv_daily_parsing_and_protection(monkeypatch):
     monkeypatch.setattr(ds, "http_get_json", fake)
     daily = ds.daily(10.0, 20.0)
     assert len(daily) == 2
-    assert ds.protection_level(daily[0]["uv_index"]) == "Moderate"
-    assert ds.protection_level(daily[1]["uv_index"]) == "Very High"
+    assert daily[0].date == "2026-01-01"
+    assert daily[0].uv_index == 3.5
+    assert ds.protection_level(daily[0].uv_index) == "Moderate"
+    assert ds.protection_level(daily[1].uv_index) == "Very High"
     assert ds.protection_level(11) == "Extreme"
 
 
@@ -125,4 +131,7 @@ def test_earthquakes_recent_parse(monkeypatch):
     monkeypatch.setattr(ds, "http_get_json", fake)
     events = ds.recent(0.0, 0.0)
     assert len(events) == 2
-    assert events[0]["magnitude"] == 4.2
+    assert events[0].magnitude == 4.2
+    assert events[0].place == "10 km NW of X"
+    assert events[0].time is not None
+    assert events[1].magnitude == 0.0

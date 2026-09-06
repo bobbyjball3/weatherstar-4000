@@ -1,20 +1,283 @@
 """NOAA weather datasource.
 
-Replicates the data contract of the legacy NOAA client (grid point -> stations
--> observations/forecast/hourly) so ported screens receive the same shapes.
-All HTTP goes through the base Datasource helpers with TTL caching.
+Self-contained replacement for the legacy NOAA client.  All HTTP goes through
+the base Datasource helpers with TTL caching.
+
+Public data contract (owned by this datasource, not the upstream API): every
+fetch method returns typed Pydantic models so consumers never touch raw NOAA
+``{"value": ...}`` observation dicts:
+
+- :meth:`NoaaWeather.get_current` -> ``CurrentConditions | None`` (``None`` when
+  no observation is available).
+- :meth:`NoaaWeather.get_forecast` / :meth:`get_hourly` -> ``list[ForecastPeriod]``
+  (empty when nothing is available).
+
+The upstream API's wrapped ``{"value": <float>, "unitCode": ...}`` quantities
+are unwrapped and converted into app-useful metric fields; imperial display
+helpers are provided as model properties.
 """
 
 from __future__ import annotations
 
+import calendar
+from datetime import date, datetime
 from typing import Any, ClassVar
 
-from pydantic import PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
 
 BASE_URL = "https://api.weather.gov"
+
+# Unit conversions used to build imperial display helpers from metric fields.
+_KMH_TO_MPH = 0.621371
+_M_TO_MILES = 0.000621371
+_M_TO_FT = 3.28084
+_PA_TO_INHG = 0.0002953
+
+
+def _c_to_f_int(celsius: float) -> int:
+    return round(celsius * 9 / 5 + 32)
+
+
+def _parse_float(value: Any) -> float | None:
+    """Coerce an arbitrary value to float; returns None when unusable."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _noaa_number(props: Any, key: str) -> float | None:
+    """Read a NOAA observation quantity (``{"value": ...}`` or bare scalar)."""
+    if not isinstance(props, dict):
+        return None
+    raw = props.get(key)
+    if isinstance(raw, dict):
+        raw = raw.get("value")
+    return _parse_float(raw)
+
+
+def _parse_time(value: Any) -> datetime | None:
+    """Parse an ISO timestamp (``Z`` or numeric offset) to an aware datetime."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
+class CloudLayer(BaseModel):
+    """One NOAA cloud-layer entry with a metric base height."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    amount: str = Field(default="", description="Coverage code (BKN, OVC, SCT, ...).")
+    base_m: float | None = Field(default=None, description="Cloud base height in meters.")
+
+
+class CurrentConditions(BaseModel):
+    """Typed snapshot of the current observation (see module docstring).
+
+    All numeric quantities are metric (from the upstream API); imperial display
+    helpers are provided as ``..._f`` / ``..._mph`` / etc. properties so screens
+    never do unit math themselves.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    temperature_c: float | None = Field(default=None)
+    dewpoint_c: float | None = Field(default=None)
+    heat_index_c: float | None = Field(default=None)
+    wind_chill_c: float | None = Field(default=None)
+    relative_humidity: float | None = Field(default=None, description="Percent.")
+    wind_speed_kmh: float | None = Field(default=None)
+    wind_gust_kmh: float | None = Field(default=None)
+    wind_direction: float | None = Field(default=None, description="Degrees.")
+    barometric_pressure_pa: float | None = Field(default=None)
+    visibility_m: float | None = Field(default=None)
+    cloud_layers: list[CloudLayer] = Field(default_factory=list)
+    ceiling_ft: int | None = Field(
+        default=None, description="Lowest BKN/OVC layer base in feet, if any."
+    )
+    text_description: str = Field(default="")
+    icon_url: str = Field(default="")
+    station: str = Field(default="")
+    timestamp: str = Field(default="")
+
+    # -- imperial display helpers ------------------------------------------
+
+    @property
+    def temperature_f(self) -> int | None:
+        if self.temperature_c is None:
+            return None
+        return _c_to_f_int(self.temperature_c)
+
+    @property
+    def dewpoint_f(self) -> int | None:
+        if self.dewpoint_c is None:
+            return None
+        return _c_to_f_int(self.dewpoint_c)
+
+    @property
+    def heat_index_f(self) -> int | None:
+        if self.heat_index_c is None:
+            return None
+        return _c_to_f_int(self.heat_index_c)
+
+    @property
+    def wind_chill_f(self) -> int | None:
+        if self.wind_chill_c is None:
+            return None
+        return _c_to_f_int(self.wind_chill_c)
+
+    @property
+    def wind_mph(self) -> int | None:
+        if self.wind_speed_kmh is None:
+            return None
+        return int(self.wind_speed_kmh * _KMH_TO_MPH)
+
+    @property
+    def wind_gust_mph(self) -> int | None:
+        if self.wind_gust_kmh is None:
+            return None
+        return int(self.wind_gust_kmh * _KMH_TO_MPH)
+
+    @property
+    def pressure_inhg(self) -> float | None:
+        if self.barometric_pressure_pa is None:
+            return None
+        return self.barometric_pressure_pa * _PA_TO_INHG
+
+    @property
+    def visibility_miles(self) -> float | None:
+        if self.visibility_m is None:
+            return None
+        return self.visibility_m * _M_TO_MILES
+
+    # -- construction -------------------------------------------------------
+
+    @classmethod
+    def from_props(cls, props: dict) -> CurrentConditions:
+        """Build from a NOAA observation ``properties`` dict (defensively)."""
+        ceiling_ft: int | None = None
+        cloud_layers: list[CloudLayer] = []
+        raw_layers = props.get("cloudLayers") or []
+        if isinstance(raw_layers, list):
+            for raw in raw_layers:
+                if not isinstance(raw, dict):
+                    continue
+                amount = str(raw.get("amount") or "")
+                base_m = _noaa_number(raw, "base")
+                cloud_layers.append(CloudLayer(amount=amount, base_m=base_m))
+                if ceiling_ft is None and amount in ("BKN", "OVC") and base_m is not None:
+                    ceiling_ft = int(base_m * _M_TO_FT)
+
+        pressure = _noaa_number(props, "barometricPressure")
+        if pressure is None:
+            pressure = _noaa_number(props, "pressure")
+
+        station = str(props.get("station") or "")
+        if "/stations/" in station:
+            station = station.split("/stations/", 1)[1].rstrip("/").split("/")[-1]
+
+        return cls(
+            temperature_c=_noaa_number(props, "temperature"),
+            dewpoint_c=_noaa_number(props, "dewpoint"),
+            heat_index_c=_noaa_number(props, "heatIndex"),
+            wind_chill_c=_noaa_number(props, "windChill"),
+            relative_humidity=_noaa_number(props, "relativeHumidity"),
+            wind_speed_kmh=_noaa_number(props, "windSpeed"),
+            wind_gust_kmh=_noaa_number(props, "windGust"),
+            wind_direction=_noaa_number(props, "windDirection"),
+            barometric_pressure_pa=pressure,
+            visibility_m=_noaa_number(props, "visibility"),
+            cloud_layers=cloud_layers,
+            ceiling_ft=ceiling_ft,
+            text_description=str(props.get("textDescription") or ""),
+            icon_url=str(props.get("icon") or ""),
+            station=station,
+            timestamp=str(props.get("timestamp") or ""),
+        )
+
+
+class ForecastPeriod(BaseModel):
+    """One NOAA forecast/day or hourly period (see module docstring).
+
+    ``temperature`` is the value NOAA reports for the requested units (the app
+    renders the default ``us`` forecast, so this is °F).  ``start_time`` is an
+    aware datetime parsed from the ISO ``startTime``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(default="")
+    start_time: datetime | None = Field(default=None)
+    is_daytime: bool = Field(default=False)
+    temperature: float | None = Field(default=None)
+    short_forecast: str = Field(default="")
+    detailed_forecast: str = Field(default="")
+    icon: str = Field(default="")
+
+    # -- calendar helpers ---------------------------------------------------
+
+    def start_date(self) -> date | None:
+        """Local calendar date this period starts on (``None`` when unknown)."""
+        if self.start_time is None:
+            return None
+        return self.start_time.date()
+
+    def weekday_abbrev(self, fallback: date | None = None) -> str:
+        """Abbreviated weekday (``SAT``) for this period.
+
+        Derives from ``start_time`` when present (the reliable source), then from
+        a weekday name embedded in ``name`` (NOAA drops the weekday for labels
+        like "Tonight"/"Labor Day"), then ``fallback`` or today.
+        """
+        start = self.start_date()
+        if start is not None:
+            return calendar.day_abbr[start.weekday()].upper()
+        name = self.name.lower()
+        for index, day in enumerate(calendar.day_name):
+            if day.lower() in name:
+                return calendar.day_abbr[index].upper()
+        chosen = fallback or date.today()
+        return calendar.day_abbr[chosen.weekday()].upper()
+
+    # -- construction -------------------------------------------------------
+
+    @classmethod
+    def from_props(cls, props: dict) -> ForecastPeriod:
+        """Build from a NOAA forecast period dict (defensively)."""
+        return cls(
+            name=str(props.get("name") or ""),
+            start_time=_parse_time(props.get("startTime")),
+            is_daytime=bool(props.get("isDaytime")),
+            temperature=_parse_float(props.get("temperature")),
+            short_forecast=str(props.get("shortForecast") or ""),
+            detailed_forecast=str(props.get("detailedForecast") or ""),
+            icon=str(props.get("icon") or ""),
+        )
+
+
+class City(BaseModel):
+    """Resolved city/state label for a coordinate (empty strings when unknown)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    city: str = Field(default="")
+    state: str = Field(default="")
+
+    @property
+    def label(self) -> str:
+        """``"City, ST"`` when both known, else whichever part is present."""
+        if self.city and self.state:
+            return f"{self.city}, {self.state}"
+        return self.city or self.state
 
 
 @plugin
@@ -74,7 +337,7 @@ class NoaaWeather(Datasource):
 
     # -- typed fetches ---------------------------------------------------------
 
-    def get_current(self, lat: float, lon: float) -> dict | None:
+    def get_current(self, lat: float, lon: float) -> CurrentConditions | None:
         station = self._station(lat, lon)
         if not station:
             return None
@@ -85,9 +348,9 @@ class NoaaWeather(Datasource):
         url = f"{BASE_URL}/stations/{station}/observations/latest"
         data = self.http_get_json(url)
         if data and "properties" in data:
-            props = data["properties"]
-            self.cache_set(key, props)
-            return props
+            current = CurrentConditions.from_props(data["properties"])
+            self.cache_set(key, current)
+            return current
         return None
 
     def _grid(self, lat: float, lon: float) -> tuple[str, int, int] | None:
@@ -101,49 +364,51 @@ class NoaaWeather(Datasource):
             return None
         return office, int(grid_x), int(grid_y)
 
-    def get_forecast(self, lat: float, lon: float, units: str = "us") -> dict | None:
+    def _periods(
+        self,
+        lat: float,
+        lon: float,
+        path: str,
+        *,
+        units: str,
+        cache_ttl: int,
+    ) -> list[ForecastPeriod]:
+        """Fetch ``path`` forecast props and parse into period models."""
         grid = self._grid(lat, lon)
         if not grid:
-            return None
+            return []
         office, grid_x, grid_y = grid
-        key = self._cache_key_for("forecast", office, grid_x, grid_y, units)
-        cached = self.cache_get(key, 1800)
+        key = self._cache_key_for(path, office, grid_x, grid_y, units)
+        cached = self.cache_get(key, cache_ttl)
         if cached is not None:
             return cached
-        url = f"{BASE_URL}/gridpoints/{office}/{grid_x},{grid_y}/forecast"
+        url = f"{BASE_URL}/gridpoints/{office}/{grid_x},{grid_y}/{path}"
         data = self.http_get_json(url, params={"units": units})
-        if data and "properties" in data:
-            props = data["properties"]
-            self.cache_set(key, props)
-            return props
-        return None
+        periods: list[ForecastPeriod] = []
+        if data:
+            props = data.get("properties") or {}
+            for raw in props.get("periods") or []:
+                if isinstance(raw, dict):
+                    periods.append(ForecastPeriod.from_props(raw))
+        self.cache_set(key, periods)
+        return periods
 
-    def get_hourly(self, lat: float, lon: float, units: str = "us") -> dict | None:
-        grid = self._grid(lat, lon)
-        if not grid:
-            return None
-        office, grid_x, grid_y = grid
-        key = self._cache_key_for("hourly", office, grid_x, grid_y, units)
-        cached = self.cache_get(key, 1800)
-        if cached is not None:
-            return cached
-        url = f"{BASE_URL}/gridpoints/{office}/{grid_x},{grid_y}/forecast/hourly"
-        data = self.http_get_json(url, params={"units": units})
-        if data and "properties" in data:
-            props = data["properties"]
-            self.cache_set(key, props)
-            return props
-        return None
+    def get_forecast(self, lat: float, lon: float, units: str = "us") -> list[ForecastPeriod]:
+        return self._periods(lat, lon, "forecast", units=units, cache_ttl=1800)
+
+    def get_hourly(self, lat: float, lon: float, units: str = "us") -> list[ForecastPeriod]:
+        return self._periods(lat, lon, "forecast/hourly", units=units, cache_ttl=1800)
 
     # -- location info ---------------------------------------------------------
 
-    def get_city(self, lat: float, lon: float) -> tuple[str, str]:
-        """Return (city, state) resolved from the NOAA grid point, or ("", "")."""
+    def get_city(self, lat: float, lon: float) -> City:
+        """Return the city/state for a point, or an empty ``City`` when unknown."""
         point = self.get_point(lat, lon)
         if not point:
-            return "", ""
-        rel = point.get("relativeLocation", {}).get("properties", {})
-        return rel.get("city", ""), rel.get("state", "")
+            return City()
+        rel = point.get("relativeLocation") or {}
+        props = rel.get("properties") or {}
+        return City(city=str(props.get("city") or ""), state=str(props.get("state") or ""))
 
     def get_radar_station(self, lat: float, lon: float) -> str | None:
         point = self.get_point(lat, lon)

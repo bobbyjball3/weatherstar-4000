@@ -59,13 +59,22 @@ def test_text_surface_and_blit_text(screen):
 
 
 def test_datasource_lookup(screen):
+    import pytest
+
     ds = object()
     data = DataRegistry()
     data.register("weather", ds)
     ctx = _ctx(screen, data=data)
-    assert _Dummy().datasource(ctx, "weather") is ds
-    assert _Dummy().datasource(ctx, "missing") is None
-    assert _Dummy().datasource(_ctx(screen), "weather") is None
+    renderer = _Dummy()
+    assert renderer.datasource(ctx, "weather") is ds
+    # Strict access: an undeclared datasource is a programming error -> raise.
+    with pytest.raises(KeyError):
+        renderer.datasource(ctx, "missing")
+    with pytest.raises(KeyError):
+        renderer.datasource(_ctx(screen), "weather")
+    # Optional access stays forgiving.
+    assert renderer.optional_datasource(ctx, "missing") is None
+    assert renderer.optional_datasource(_ctx(screen), "weather") is None
 
 
 def test_latlon(screen):
@@ -115,42 +124,32 @@ def test_format_date(screen):
     assert renderer.format_date("not-a-date") == "not-a-date"
 
 
-def test_num_and_measure(screen):
-    renderer = _Dummy()
-    props = {"temperature": {"value": 30.5}, "missing": None}
-    assert renderer.num(props, "temperature") == 30.5
-    assert renderer.num(props, "missing") is None
-    assert renderer.measure(props, "pressure", "barometricPressure") is None
-    assert renderer.measure({"pressure": 101500}, "pressure", "barometricPressure") == 101500.0
-    assert renderer.measure({"pressure": {"value": 12}}, "pressure") == 12.0
-    assert renderer.measure({"pressure": "bad"}, "pressure") is None
-    assert renderer.num(None, "temperature") is None
-
-
-def test_text_field(screen):
-    renderer = _Dummy()
-    assert renderer.text({"textDescription": "Partly Cloudy"}, "textDescription") == "Partly Cloudy"
-    assert renderer.text({"parts": ["a", "b"]}, "parts") == "a b"
-    assert renderer.text({"textDescription": "Partly Cloudy"}, "textDescription", 6) == "Partly"
-    assert renderer.text(None, "anything") == ""
-    assert renderer.text({"n": 7}, "n") == "7"
-
-
 def test_weather_data(screen):
+    from types import SimpleNamespace
+
+    import pytest
+
     class _Weather:
         def get_current(self, lat, lon):
-            return {"lat": lat, "lon": lon}
+            return SimpleNamespace(lat=lat, lon=lon)
 
         def get_city(self, lat, lon):
-            return ("Melbourne", "FL")
+            from weatherstar_4000.datasources.noaa import City
+
+            return City(city="Melbourne", state="FL")
 
     data = DataRegistry()
     data.register("weather", _Weather())
     ctx = _ctx(screen, data=data, location=Location(lat=28.5, lon=-81.3))
     renderer = _Dummy()
     result = renderer.weather_data(ctx, "get_current")
-    assert result == {"lat": 28.5, "lon": -81.3}
-    assert renderer.weather_data(_ctx(screen), "get_current") is None
+    assert result.lat == 28.5 and result.lon == -81.3
+    # No location configured -> no weather_data.
+    assert renderer.weather_data(_ctx(screen, data=data), "get_current") is None
+    # No weather datasource at all -> strict access raises.
+    with pytest.raises(KeyError):
+        renderer.weather_data(_ctx(screen), "get_current")
+    # Unknown method -> None.
     assert renderer.weather_data(ctx, "missing_method") is None
 
 

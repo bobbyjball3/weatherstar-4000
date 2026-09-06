@@ -43,7 +43,7 @@ class RadarScreen(Screen):
         if location is None:
             return []
         try:
-            radar = ctx.data.get("radar")
+            radar = self.datasource(ctx, "radar")
             return radar.frames(location.lat, location.lon) or []
         except Exception:
             return []
@@ -112,16 +112,12 @@ class RadarScreen(Screen):
         description = getattr(location, "description", "") or ""
         if description:
             return description
-        weather = None
-        try:
-            weather = ctx.data.get("weather")
-        except Exception:
-            pass
+        weather = self.optional_datasource(ctx, "weather")
         if weather is not None:
             try:
-                city, state = weather.get_city(location.lat, location.lon)
-                if city and state:
-                    return f"{city}, {state}"
+                city = weather.get_city(location.lat, location.lon)
+                if city.city and city.state:
+                    return f"{city.city}, {city.state}"
             except Exception:
                 pass
         return ""

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
 
@@ -31,6 +33,15 @@ _SIMULATED_HEADLINES: list[tuple[str, str]] = [
 ]
 
 
+class Headline(BaseModel):
+    """A single headline with its source URL."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(default="", description="Headline text.")
+    url: str = Field(default="", description="Source link.")
+
+
 @plugin
 class LocalNewsDatasource(Datasource):
     name = "local_news"
@@ -41,11 +52,12 @@ class LocalNewsDatasource(Datasource):
         """Return a city label; empty lets the screen fall back to weather data."""
         return ""
 
-    def headlines(self, lat: float, lon: float) -> list[tuple[str, str]]:
-        """Return a list of ``(title, url)`` local headlines."""
+    def headlines(self, lat: float, lon: float) -> list[Headline]:
+        """Return the local headlines (most recent first)."""
         key = self._cache_key("headlines", round(lat, 2), round(lon, 2))
         cached = self.cache_get(key, 3600)
         if cached is not None:
             return cached
-        self.cache_set(key, list(_SIMULATED_HEADLINES))
-        return list(_SIMULATED_HEADLINES)
+        result = [Headline(title=title, url=url) for title, url in _SIMULATED_HEADLINES]
+        self.cache_set(key, result)
+        return result

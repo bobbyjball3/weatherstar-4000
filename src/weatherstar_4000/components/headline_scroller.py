@@ -21,6 +21,7 @@ import pygame
 from pydantic import Field, PrivateAttr
 
 from weatherstar_4000.components.base import Component
+from weatherstar_4000.datasources.news import Headline
 from weatherstar_4000.registry import plugin
 
 if TYPE_CHECKING:
@@ -80,6 +81,15 @@ class HeadlineScroller(Component):
         """Push static content (used by screens without a datasource)."""
         self._content = list(headlines or [])
 
+    @staticmethod
+    def _headline_text(headline: Any) -> str:
+        """Extract the display text from a Headline model, tuple or string."""
+        if isinstance(headline, Headline):
+            return headline.title
+        if isinstance(headline, (tuple, list)):
+            return headline[0] if headline else ""
+        return str(headline)
+
     def step(self, ctx: AppContext, dt: float) -> None:
         if self._content is None and not self.datasource_name:
             return
@@ -100,8 +110,8 @@ class HeadlineScroller(Component):
         surface.set_clip(_CLIP_RECT)
         y_pos = self._scroll
         for i, headline in enumerate(content, 1):
-            text = headline[0] if isinstance(headline, (tuple, list)) else headline
-            lines = self.wrap(news_font, str(text), _WRAP_WIDTH)
+            text = self._headline_text(headline)
+            lines = self.wrap(news_font, text, _WRAP_WIDTH)
 
             if _HEADLINE_VISIBLE[0] < y_pos < _HEADLINE_VISIBLE[1]:
                 if self.numbered:

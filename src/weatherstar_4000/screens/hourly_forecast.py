@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 import pygame
 
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -29,17 +29,9 @@ class HourlyForecastScreen(Screen):
     )
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        hourly = self.weather_data(ctx, "get_hourly") or {}
-        try:
-            periods = hourly.get("periods") or []
-        except Exception:
-            periods = []
+        periods: list[ForecastPeriod] = self.weather_data(ctx, "get_hourly") or []
         if not periods:
-            forecast = self.weather_data(ctx, "get_forecast") or {}
-            try:
-                periods = forecast.get("periods") or []
-            except Exception:
-                periods = []
+            periods = self.weather_data(ctx, "get_forecast") or []
 
         yellow = self.color(ctx, "yellow")
         white = self.color(ctx, "white")
@@ -71,25 +63,19 @@ class HourlyForecastScreen(Screen):
             for i, period in enumerate(periods[:24]):
                 y_pos = base_y + y_offset + (i * line_height)
                 if content_top <= y_pos <= content_top + content_height + 50:
-                    start_time = period.get("startTime")
+                    start_time = period.start_time
                     time_display = ""
                     if start_time:
-                        try:
-                            hour_time = datetime.fromisoformat(
-                                str(start_time).replace("Z", "+00:00")
-                            )
-                            time_display = hour_time.strftime("%I %p").lstrip("0").rjust(7)
-                        except (ValueError, TypeError):
-                            time_display = ""
+                        time_display = start_time.strftime("%I %p").lstrip("0").rjust(7)
                     if not time_display:
-                        time_display = str(period.get("name", ""))[:7].rjust(7)
+                        time_display = period.name[:7].rjust(7)
 
-                    temp = period.get("temperature")
+                    temp = period.temperature
                     if temp is None:
                         temp = 0
                     temp_display = f"{int(temp):3}\N{DEGREE SIGN}"
 
-                    short = str(period.get("shortForecast", ""))[:35]
+                    short = period.short_forecast[:35]
                     text = f"{time_display:6}{temp_display:5}{short}"
                     period_surf = self.font(ctx, "normal").render(text, True, white)
                     surface.blit(period_surf, (65, y_pos))

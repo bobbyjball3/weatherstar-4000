@@ -13,6 +13,7 @@ import pygame
 
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -140,24 +141,19 @@ class TemperatureGraphScreen(Screen):
         plot_bottom = _GRAPH_TOP + _GRAPH_HEIGHT - inset
         return plot_top, plot_bottom, text_h // 2 + _LABEL_GAP
 
-    def _column_label(self, day_period: Any, night_period: Any, fallback: date) -> str:
+    @staticmethod
+    def _column_label(
+        day_period: ForecastPeriod, night_period: ForecastPeriod | None, fallback: date
+    ) -> str:
         """Weekday abbreviation (e.g. ``SAT``) for one day/night column."""
         for period in (day_period, night_period):
-            if period and period.get("isDaytime"):
-                return self.weekday_label(period, fallback=fallback)
-        return self.weekday_label(day_period, fallback=fallback)
+            if period and period.is_daytime:
+                return period.weekday_abbrev(fallback=fallback)
+        return day_period.weekday_abbrev(fallback=fallback)
 
     def _collect_periods(self, ctx: Any) -> tuple[list[tuple[int, int]], list[str]]:
         """Return (high, low) pairs + day labels from up to 7 forecast days."""
-        try:
-            weather = ctx.data.get("weather")
-            location = ctx.location
-            if weather is None or location is None:
-                return [], []
-            forecast = weather.get_forecast(location.lat, location.lon)
-            periods = (forecast or {}).get("periods") or []
-        except Exception:
-            return [], []
+        periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
 
         temps: list[tuple[int, int]] = []
         labels: list[str] = []
@@ -168,16 +164,16 @@ class TemperatureGraphScreen(Screen):
             day_period = periods[i]
             night_period = periods[i + 1] if i + 1 < len(periods) else None
 
-            if day_period.get("isDaytime"):
-                high = day_period.get("temperature")
-                low = night_period.get("temperature") if night_period else None
+            if day_period.is_daytime:
+                high = day_period.temperature
+                low = night_period.temperature if night_period else None
                 if high is None:
                     continue
                 if low is None:
                     low = high - 10
             else:
-                low = day_period.get("temperature")
-                high = night_period.get("temperature") if night_period else None
+                low = day_period.temperature
+                high = night_period.temperature if night_period else None
                 if low is None:
                     continue
                 if high is None:

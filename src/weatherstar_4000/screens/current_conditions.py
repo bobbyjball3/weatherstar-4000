@@ -9,6 +9,7 @@ from pydantic import PrivateAttr
 
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -31,24 +32,23 @@ class CurrentConditionsScreen(Screen):
 
     def _city_state(self, ctx: Any) -> tuple[str, str]:
         loc = getattr(ctx, "location", None)
-        desc = getattr(loc, "description", "") if loc is not None else ""
-        ds = self.datasource(ctx, "weather")
-        if ds is not None and hasattr(ds, "get_city") and loc is not None:
-            try:
-                lat, lon = self.latlon(ctx)
-                city, state = ds.get_city(lat, lon)
-                return (city or ""), (state or "")
-            except Exception:
-                pass
-        return desc, ""
+        if loc is None:
+            return "", ""
+        try:
+            city = self.datasource(ctx, "weather").get_city(loc.lat, loc.lon)
+        except Exception:  # noqa: BLE001 - fall back to the configured label
+            return "", ""
+        return city.city or "", city.state or ""
 
     def _city_desc(self, ctx: Any) -> str:
         loc = getattr(ctx, "location", None)
+        if loc is None:
+            return ""
         return (getattr(loc, "description", "") or "") if loc is not None else ""
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        current = self.weather_data(ctx, "get_current") or {}
-        if not current:
+        current: CurrentConditions | None = self.weather_data(ctx, "get_current")
+        if current is None:
             render.draw_centered_text(
                 surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
             )
@@ -59,31 +59,29 @@ class CurrentConditionsScreen(Screen):
         white = self.color(ctx, "white")
         yellow = self.color(ctx, "yellow")
 
-        temp_f = self.fahrenheit(self.num(current, "temperature"))
+        temp_f = current.temperature_f
         if temp_f is not None:
             temp_surf = self.font(ctx, "large").render(f"{temp_f}\N{DEGREE SIGN}", True, white)
             surface.blit(temp_surf, temp_surf.get_rect(center=(left_col_center, 140)))
 
-        description = self.text(current, "textDescription", 15)
+        description = current.text_description[:15]
         if description:
             desc_surf = self.font(ctx, "extended").render(description, True, white)
             surface.blit(desc_surf, desc_surf.get_rect(center=(left_col_center, 190)))
 
-        icon = self.icon_surface(ctx, self.icon_name(self.text(current, "icon")), 86, 75)
+        icon = self.icon_surface(ctx, self.icon_name(current.icon_url), 86, 75)
         if icon is not None:
             surface.blit(icon, icon.get_rect(center=(left_col_center, 260)))
 
         wind_y = 320
-        wind_speed = self.num(current, "windSpeed")
-        wind_dir = self.num(current, "windDirection")
         wind_label = self.font(ctx, "extended").render("Wind:", True, white)
         surface.blit(wind_label, (content_left + 10, wind_y))
 
-        if wind_speed is not None and wind_speed > 0:
-            wind_mph = int(wind_speed * 0.621371)
-            direction = self.cardinal(wind_dir)
+        wind_mph = current.wind_mph
+        if wind_mph is not None and wind_mph > 0:
+            direction = self.cardinal(current.wind_direction)
             wind_str = f"{direction.ljust(3)}{str(wind_mph).rjust(3)}"
-        elif wind_speed is not None and wind_speed == 0:
+        elif wind_mph is not None and wind_mph == 0:
             wind_str = "Calm"
         else:
             wind_str = "N/A"
@@ -91,10 +89,9 @@ class CurrentConditionsScreen(Screen):
         wind_text = self.font(ctx, "extended").render(wind_str, True, white)
         surface.blit(wind_text, wind_text.get_rect(right=content_left + 245, y=wind_y))
 
-        wind_gust = self.num(current, "windGust")
-        if wind_gust is not None:
-            gust_mph = int(wind_gust * 0.621371)
-            gust_text = self.font(ctx, "normal").render(f"Gusts to {gust_mph}", True, white)
+        wind_gust_mph = current.wind_gust_mph
+        if wind_gust_mph is not None:
+            gust_text = self.font(ctx, "normal").render(f"Gusts to {wind_gust_mph}", True, white)
             surface.blit(gust_text, gust_text.get_rect(right=content_left + 245, y=wind_y + 35))
 
         right_col_x = content_left + 257
@@ -115,49 +112,32 @@ class CurrentConditionsScreen(Screen):
 
         row_data = []
 
-        humidity = self.num(current, "relativeHumidity")
+        humidity = current.relative_humidity
         if humidity is not None:
             row_data.append(("Humidity:", f"{int(humidity)}%"))
 
-        dewpoint_f = self.fahrenheit(self.num(current, "dewpoint"))
+        dewpoint_f = current.dewpoint_f
         if dewpoint_f is not None:
             row_data.append(("Dewpoint:", f"{dewpoint_f}\N{DEGREE SIGN}"))
 
-        cloud_layers = (current or {}).get("cloudLayers") or []
-        if not isinstance(cloud_layers, list):
-            cloud_layers = []
-        ceiling = None
-        for layer in cloud_layers:
-            try:
-                amount = layer.get("amount")
-            except Exception:
-                amount = None
-            if amount in ("BKN", "OVC"):
-                base = self.num(layer, "base")
-                if base is not None:
-                    ceiling = int(base * 3.28084)
-                    break
-        if ceiling is None or ceiling == 0:
+        ceiling_ft = current.ceiling_ft
+        if ceiling_ft is None or ceiling_ft == 0:
             ceiling_str = "Unlimited"
         else:
-            ceiling_str = f"{ceiling} ft"
+            ceiling_str = f"{ceiling_ft} ft"
         row_data.append(("Ceiling:", ceiling_str))
 
-        visibility = self.num(current, "visibility")
-        if visibility is not None:
-            vis_miles = visibility * 0.000621371
-            if vis_miles >= 10:
+        visibility_miles = current.visibility_miles
+        if visibility_miles is not None:
+            if visibility_miles >= 10:
                 vis_str = "10 mi"
             else:
-                vis_str = f"{vis_miles:.1f} mi"
+                vis_str = f"{visibility_miles:.1f} mi"
             row_data.append(("Visibility:", vis_str))
 
-        pressure_value = self.num(current, "barometricPressure")
-        if pressure_value is None:
-            pressure_value = self.num(current, "pressure")
-        if pressure_value is not None:
-            pressure_inhg = pressure_value * 0.0002953
-            history = getattr(self, "_pressure_history", None)
+        pressure_inhg = current.pressure_inhg
+        if pressure_inhg is not None:
+            history = self._pressure_history
             if history is None:
                 history = []
                 self._pressure_history = history
@@ -175,17 +155,13 @@ class CurrentConditionsScreen(Screen):
                     trend = "\u2192"
             row_data.append(("Pressure:", f'{pressure_inhg:.2f}" {trend}'.strip()))
 
-        temp_c = self.num(current, "temperature")
-        heat_index = self.num(current, "heatIndex")
-        wind_chill = self.num(current, "windChill")
-        if heat_index is not None and temp_c is not None and temp_c > 26:
-            heat_f = self.fahrenheit(heat_index)
-            if heat_f is not None:
-                row_data.append(("Heat Index:", f"{heat_f}\N{DEGREE SIGN}"))
-        elif wind_chill is not None and temp_c is not None and temp_c < 10:
-            chill_f = self.fahrenheit(wind_chill)
-            if chill_f is not None:
-                row_data.append(("Wind Chill:", f"{chill_f}\N{DEGREE SIGN}"))
+        temp_c = current.temperature_c
+        heat_index_f = current.heat_index_f
+        wind_chill_f = current.wind_chill_f
+        if heat_index_f is not None and temp_c is not None and temp_c > 26:
+            row_data.append(("Heat Index:", f"{heat_index_f}\N{DEGREE SIGN}"))
+        elif wind_chill_f is not None and temp_c is not None and temp_c < 10:
+            row_data.append(("Wind Chill:", f"{wind_chill_f}\N{DEGREE SIGN}"))
 
         for label, value in row_data:
             label_surf = self.font(ctx, "normal").render(label, True, white)

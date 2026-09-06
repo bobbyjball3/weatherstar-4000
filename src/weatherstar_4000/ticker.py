@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
+from weatherstar_4000.datasources.noaa import CurrentConditions, ForecastPeriod
+
 if TYPE_CHECKING:
     from weatherstar_4000.context import AppContext
 
@@ -35,28 +37,15 @@ class BottomTicker:
 
     # -- content -----------------------------------------------------------
 
-    def _ds(self, ctx: Any, name: str) -> Any:
-        try:
-            return ctx.data.get(name)
-        except Exception:
-            return None
-
     @staticmethod
-    def _num(props: Any, key: str) -> float | None:
-        try:
-            return (props or {}).get(key, {}).get("value")
-        except Exception:
+    def _ds(ctx: Any, name: str) -> Any:
+        data = getattr(ctx, "data", None)
+        if data is None:
             return None
-
-    @staticmethod
-    def _text(props: Any, key: str) -> str:
         try:
-            value = (props or {}).get(key, "")
-            if isinstance(value, list):
-                value = " ".join(str(part) for part in value)
-            return str(value)
-        except Exception:
-            return ""
+            return data.get(name)
+        except KeyError:
+            return None
 
     @staticmethod
     def _cardinal(degrees: float | None) -> str:
@@ -100,9 +89,9 @@ class BottomTicker:
         city_state = ""
         if weather is not None and lat is not None and lon is not None:
             try:
-                city, state = weather.get_city(lat, lon)
-                if city and state:
-                    city_state = f"{city.upper()}, {state.upper()}"
+                city = weather.get_city(lat, lon)
+                if city.city and city.state:
+                    city_state = f"{city.city.upper()}, {city.state.upper()}"
             except Exception:
                 pass
         label = city_state or description.upper()
@@ -110,55 +99,43 @@ class BottomTicker:
             items.append(f" +++ {label} +++ ")
 
         # Current conditions.
-        current = None
+        current: CurrentConditions | None = None
         if weather is not None and lat is not None and lon is not None:
             try:
-                current = weather.get_current(lat, lon) or {}
+                current = weather.get_current(lat, lon)
             except Exception:
-                current = {}
-        if current:
-            temp_c = self._num(current, "temperature")
-            if temp_c is not None:
-                temp_f = round(temp_c * 9 / 5 + 32)
-                line = (
-                    f"CURRENTLY: {temp_f}\N{DEGREE SIGN}F, {self._text(current, 'textDescription')}"
-                )
-                humidity = self._num(current, "relativeHumidity")
+                current = None
+        if current is not None:
+            temp_f = current.temperature_f
+            if temp_f is not None:
+                line = f"CURRENTLY: {temp_f}\N{DEGREE SIGN}F, {current.text_description}"
+                humidity = current.relative_humidity
                 if humidity is not None:
                     line += f" ... HUMIDITY: {round(humidity)}%"
-                wind_speed = self._num(current, "windSpeed")
-                if wind_speed is not None:
-                    wind_mph = round(wind_speed * 2.237)
-                    direction = self._cardinal(self._num(current, "windDirection"))
+                wind_mph = current.wind_mph
+                if wind_mph is not None:
+                    direction = self._cardinal(current.wind_direction)
                     line += f" ... WIND: {direction + ' ' if direction else ''}{wind_mph} MPH"
                 items.append(line)
 
         # Today / tonight outlook.
-        forecast = None
+        periods: list[ForecastPeriod] = []
         if weather is not None and lat is not None and lon is not None:
             try:
-                forecast = weather.get_forecast(lat, lon) or {}
+                periods = weather.get_forecast(lat, lon) or []
             except Exception:
-                forecast = {}
-        try:
-            periods = (forecast or {}).get("periods") or []
-        except Exception:
-            periods = []
+                periods = []
         if periods:
             today = periods[0]
-            name = self._text(today, "name")
-            temp = today.get("temperature")
+            name = today.name
+            temp = today.temperature
             if temp is not None and name:
-                items.append(
-                    f"{name.upper()}: {temp}\N{DEGREE SIGN}, {self._text(today, 'shortForecast')}"
-                )
+                items.append(f"{name.upper()}: {int(temp)}\N{DEGREE SIGN}, {today.short_forecast}")
             if len(periods) > 1:
                 tonight = periods[1]
-                temp = tonight.get("temperature")
+                temp = tonight.temperature
                 if temp is not None:
-                    items.append(
-                        f"TONIGHT: {temp}\N{DEGREE SIGN}, {self._text(tonight, 'shortForecast')}"
-                    )
+                    items.append(f"TONIGHT: {int(temp)}\N{DEGREE SIGN}, {tonight.short_forecast}")
 
         if not items:
             items = list(_FALLBACK_ITEMS)

@@ -15,8 +15,7 @@ so constants live at module scope.
 
 from __future__ import annotations
 
-import calendar
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
 
 import pygame
@@ -196,13 +195,26 @@ class Renderer:
     # -- context / datasource access -------------------------------------
 
     def datasource(self, ctx: Any, name: str) -> Any:
-        """Return a registered datasource by name, or ``None`` if unavailable."""
+        """Return a registered datasource by name (strict).
+
+        Screens/components reference datasources through their declared
+        ``datasources`` tuples, so a missing name is a programming error: fail
+        loudly (KeyError) instead of silently degrading to "no data".
+        """
         data = getattr(ctx, "data", None)
         if data is None:
-            return None
+            raise KeyError(f"No datasource registry on ctx; cannot resolve {name!r}.")
+        return data.get(name)
+
+    def optional_datasource(self, ctx: Any, name: str) -> Any:
+        """Like :meth:`datasource` but returns ``None`` when the name is absent.
+
+        For genuinely optional reads (e.g. the always-on bottom ticker probing
+        for weather) where a missing source is a normal condition.
+        """
         try:
-            return data.get(name)
-        except Exception:  # noqa: BLE001 - optional datasource
+            return self.datasource(ctx, name)
+        except KeyError:
             return None
 
     def latlon(self, ctx: Any) -> tuple[float, float]:
@@ -280,107 +292,23 @@ class Renderer:
         except (TypeError, ValueError):
             return str(date_str)
 
-    # -- calendar helpers ---------------------------------------------------
-
-    def period_start_date(self, period: Any) -> date | None:
-        """Calendar date a NOAA forecast ``startTime`` falls on, or ``None``.
-
-        NOAA timestamps may end in ``Z`` or carry a numeric UTC offset; parse
-        leniently so label logic never raises on odd payloads.
-        """
-        if not isinstance(period, dict):
-            return None
-        start_time = period.get("startTime")
-        if not start_time:
-            return None
-        try:
-            iso = str(start_time).replace("Z", "+00:00")
-            return datetime.fromisoformat(iso).date()
-        except (TypeError, ValueError):
-            return None
-
-    def weekday_label(self, period: Any, fallback: date | None = None) -> str:
-        """Abbreviated weekday (``SAT``) for a forecast period.
-
-        The weekday comes from ``startTime`` when present (the reliable source),
-        then from a weekday name embedded in the period ``name`` (NOAA drops the
-        weekday for labels like "Tonight"/"Labor Day"), then ``fallback`` or
-        today.  ``calendar`` tables keep the result stable regardless of locale.
-        """
-        start = self.period_start_date(period)
-        if start is not None:
-            return calendar.day_abbr[start.weekday()].upper()
-        if isinstance(period, dict):
-            name = str(period.get("name", "")).lower()
-            for index, day in enumerate(calendar.day_name):
-                if day.lower() in name:
-                    return calendar.day_abbr[index].upper()
-        if fallback is None and not isinstance(period, dict):
-            return ""
-        chosen = fallback or datetime.now().date()
-        return calendar.day_abbr[chosen.weekday()].upper()
-
-    @staticmethod
-    def weekday_name(day: date | None) -> str:
-        """Full weekday name (``SUNDAY``) for a date, or ``""`` when unusable."""
-        if day is None:
-            return ""
-        return calendar.day_name[day.weekday()].upper()
-
-    # -- weather observation payload access --------------------------------
-
-    def num(self, props: Any, key: str) -> float | None:
-        """Return a NOAA quantity ``{"value": ...}`` as a float (or ``None``)."""
-        try:
-            return (props or {}).get(key, {}).get("value")
-        except AttributeError:
-            return None
-
-    def measure(self, current: dict, *keys: str) -> float | None:
-        """Return the first present numeric value for any of ``keys``.
-
-        Accepts either NOAA ``{"value": ...}`` dicts or bare scalars.
-        """
-        for key in keys:
-            raw = (current or {}).get(key)
-            if raw is None:
-                continue
-            if isinstance(raw, dict):
-                value = raw.get("value")
-            else:
-                value = raw
-            if value is not None:
-                try:
-                    return float(value)
-                except (TypeError, ValueError):
-                    continue
-        return None
-
-    def text(self, props: Any, key: str, maxlen: int | None = None) -> str:
-        """Return a NOAA observation text field as a string (optionally clipped)."""
-        try:
-            val = (props or {}).get(key, "")
-            if isinstance(val, list):
-                val = " ".join(str(part) for part in val if part)
-            if not isinstance(val, str):
-                val = str(val)
-        except AttributeError:
-            val = ""
-        return val if maxlen is None else val[:maxlen]
+    # -- weather data access -------------------------------------------------
 
     def weather_data(self, ctx: Any, method: str) -> Any:
-        """Call ``weather.<method>(lat, lon)`` when available; else ``None``."""
+        """Call ``weather.<method>(lat, lon)`` for the active location.
+
+        Returns whatever the datasource method returns (a typed model, list, or
+        ``None``).  Raises if no ``weather`` datasource is registered; weather
+        screens declare it via their ``datasources`` tuple.
+        """
         ds = self.datasource(ctx, "weather")
-        fn = getattr(ds, method, None) if ds is not None else None
+        fn = getattr(ds, method, None)
         if fn is None:
             return None
         location = getattr(ctx, "location", None)
         if location is None:
             return None
-        try:
-            return fn(location.lat, location.lon)
-        except Exception:  # noqa: BLE001 - weather data is optional
-            return None
+        return fn(location.lat, location.lon)
 
     # -- weather icons -----------------------------------------------------
 

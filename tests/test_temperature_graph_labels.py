@@ -1,9 +1,15 @@
 """Tests for the 7-Day Temperature Graph screen's day labels and bar geometry."""
 
 import calendar
+import datetime
 from datetime import date, timedelta
 
 from weatherstar_4000.context import AppContext, DataRegistry, Location
+from weatherstar_4000.datasources.noaa import ForecastPeriod
+
+
+def _period(**kw):
+    return ForecastPeriod(**kw)
 
 
 def _screen():
@@ -14,49 +20,51 @@ def _screen():
 
 def test_weekday_helpers_are_robust_to_unusable_periods():
     screen = _screen()
-    assert screen.weekday_label(None) == ""
-    assert screen.weekday_label("not-a-period") == ""
-    assert screen.weekday_name(None) == ""
-    # Malformed start times fall back to the day name derived from the name, or today.
-    assert (
-        screen.weekday_label({"startTime": "garbage"})
-        == calendar.day_abbr[date.today().weekday()].upper()
-    )
+    # Unknown weekday/name with no fallback resolves to today.
+    assert ForecastPeriod().weekday_abbrev() == calendar.day_abbr[date.today().weekday()].upper()
+    # A name with no embedded weekday uses the explicit fallback date.
+    assert ForecastPeriod(name="Labor Day").weekday_abbrev(fallback=date(2026, 9, 7)) == "MON"
+    assert screen._column_label(_period(), None, date(2026, 9, 5)) != ""
 
 
 def test_column_label_is_weekday_of_start_time_not_name_truncation():
     screen = _screen()
     # NOAA "This Afternoon" would truncate to "THI"; the label must be the
     # calendar weekday of the period's own start time instead.
-    day = {"name": "This Afternoon", "isDaytime": True, "startTime": "2026-09-05T18:00:00Z"}
-    night = {"name": "Tonight", "isDaytime": False, "startTime": "2026-09-05T23:00:00Z"}
+    day = _period(
+        name="This Afternoon", is_daytime=True, start_time=datetime.datetime(2026, 9, 5, 18)
+    )
+    night = _period(name="Tonight", is_daytime=False, start_time=datetime.datetime(2026, 9, 5, 23))
     assert screen._column_label(day, night, fallback=date(2026, 9, 5)) == "SAT"
 
 
 def test_column_label_prefers_daytime_period_of_the_pair():
     screen = _screen()
-    night = {"name": "Saturday Night", "isDaytime": False, "startTime": "2026-09-05T23:00:00Z"}
-    day = {"name": "Sunday", "isDaytime": True, "startTime": "2026-09-06T18:00:00Z"}
+    night = _period(
+        name="Saturday Night", is_daytime=False, start_time=datetime.datetime(2026, 9, 5, 23)
+    )
+    day = _period(name="Sunday", is_daytime=True, start_time=datetime.datetime(2026, 9, 6, 18))
     assert screen._column_label(night, day, fallback=date(2026, 9, 6)) == "SUN"
 
 
 def test_column_label_never_truncates_holiday_or_relative_names():
     screen = _screen()
     assert (
-        screen._column_label({"name": "Labor Day", "isDaytime": True}, None, date(2026, 9, 7))
+        screen._column_label(_period(name="Labor Day", is_daytime=True), None, date(2026, 9, 7))
         == "MON"
     )
     assert (
-        screen._column_label({"name": "Today", "isDaytime": True}, None, date(2026, 9, 5)) == "SAT"
+        screen._column_label(_period(name="Today", is_daytime=True), None, date(2026, 9, 5))
+        == "SAT"
     )
     assert (
-        screen._column_label({"name": "Saturday", "isDaytime": True}, None, date(2026, 9, 5))
+        screen._column_label(_period(name="Saturday", is_daytime=True), None, date(2026, 9, 5))
         == "SAT"
     )
 
 
 def _ctx_with_periods(periods):
-    weather = type("W", (), {"get_forecast": lambda self, lat, lon: {"periods": periods}})()
+    weather = type("W", (), {"get_forecast": lambda self, lat, lon: periods})()
     data = DataRegistry()
     data.register("weather", weather)
     return AppContext(data=data, location=Location(lat=28.5383, lon=-81.3792))
@@ -69,20 +77,20 @@ def test_collect_periods_labels_follow_start_time_dates():
     for offset in range(4):
         day = base + timedelta(days=offset)
         periods.append(
-            {
-                "name": f"This day {offset}",
-                "isDaytime": True,
-                "startTime": f"{day}T18:00:00Z",
-                "temperature": 90,
-            }
+            ForecastPeriod(
+                name=f"This day {offset}",
+                is_daytime=True,
+                start_time=datetime.datetime.combine(day, datetime.time(18)),
+                temperature=90.0,
+            )
         )
         periods.append(
-            {
-                "name": "Tonight",
-                "isDaytime": False,
-                "startTime": f"{day}T23:00:00Z",
-                "temperature": 70,
-            }
+            ForecastPeriod(
+                name="Tonight",
+                is_daytime=False,
+                start_time=datetime.datetime.combine(day, datetime.time(23)),
+                temperature=70.0,
+            )
         )
     temps, labels = screen._collect_periods(_ctx_with_periods(periods))
     assert labels == ["SAT", "SUN", "MON", "TUE"]

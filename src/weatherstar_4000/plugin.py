@@ -20,6 +20,9 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict, SecretStr
 
 from weatherstar_4000.errors import InvalidConfiguration
+from weatherstar_4000.logging_setup import get_logger
+
+_log = get_logger("weatherstar4000.plugin")
 
 
 class Plugin(BaseModel):
@@ -92,7 +95,7 @@ class Plugin(BaseModel):
         from pydantic import ValidationError
 
         try:
-            return cls.model_validate(values)
+            instance = cls.model_validate(values)
         except ValidationError as exc:
             scope = cls.config_scope()
             missing: list[str] = []
@@ -108,6 +111,14 @@ class Plugin(BaseModel):
             if details:
                 parts.append("Errors: " + "; ".join(details))
             raise InvalidConfiguration("\n".join(parts), scope=scope, missing=missing) from exc
+        _log.info(
+            "plugin_configured",
+            kind=cls.kind,
+            name=cls.name,
+            scope=cls.config_scope(),
+            config=instance.config_repr(),
+        )
+        return instance
 
     # -- Introspection / logging ----------------------------------------
 

@@ -9,6 +9,7 @@ import pygame
 
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -28,24 +29,9 @@ class RegionalObservationsScreen(Screen):
         ComponentSpec(component="clock"),
     )
 
-    @staticmethod
-    def _station_name(current: Any) -> str:
-        station = ""
-        try:
-            station = str(current.get("station", "") or "")
-        except Exception:
-            station = ""
-        if not station:
-            return "Station"
-        if "/stations/" in station:
-            station = station.split("/stations/", 1)[1]
-        else:
-            station = station.rstrip("/").split("/")[-1]
-        return station or "Station"
-
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        current = self.weather_data(ctx, "get_current") or {}
-        if not current:
+        current: CurrentConditions | None = self.weather_data(ctx, "get_current")
+        if current is None:
             render.draw_centered_text(
                 surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
             )
@@ -55,13 +41,12 @@ class RegionalObservationsScreen(Screen):
         yellow = self.color(ctx, "yellow")
         y_pos = 120
 
-        station_surf = self.font(ctx, "normal").render(
-            f"Station: {self._station_name(current)}", True, yellow
-        )
+        station = current.station or "Station"
+        station_surf = self.font(ctx, "normal").render(f"Station: {station}", True, yellow)
         surface.blit(station_surf, (60, y_pos))
         y_pos += 40
 
-        temp_f = self.fahrenheit(self.num(current, "temperature"))
+        temp_f = current.temperature_f
         if temp_f is not None:
             temp_surf = self.font(ctx, "normal").render(
                 f"Temperature: {temp_f}\N{DEGREE SIGN}", True, white
@@ -69,18 +54,13 @@ class RegionalObservationsScreen(Screen):
             surface.blit(temp_surf, (60, y_pos))
             y_pos += 30
 
-        wind_speed = self.num(current, "windSpeed")
-        if wind_speed is not None:
-            wind_mph = int(wind_speed * 0.621371)
+        wind_mph = current.wind_mph
+        if wind_mph is not None:
             wind_surf = self.font(ctx, "normal").render(f"Wind: {wind_mph} mph", True, white)
             surface.blit(wind_surf, (60, y_pos))
             y_pos += 30
 
-        timestamp = ""
-        try:
-            timestamp = current.get("timestamp")
-        except Exception:
-            timestamp = None
+        timestamp = current.timestamp
         if timestamp:
             try:
                 obs_time = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))

@@ -29,7 +29,7 @@ def test_alerts_active_sorts_by_severity_and_caches(monkeypatch):
     calls = []
     monkeypatch.setattr(ds, "http_get_json", lambda *a, **k: calls.append(1) or payload)
     alerts = ds.active(10.0, 20.0)
-    assert [a["event"] for a in alerts] == ["B", "A"]
+    assert [a.event for a in alerts] == ["B", "A"]
     assert ds.active(10.0, 20.0) is alerts  # served from cache
     assert len(calls) == 1
 

@@ -42,12 +42,15 @@ class Column(BaseModel):
     )
     index: int | None = Field(default=None, description="Cell position for tuple rows.")
     key: str | None = Field(default=None, description="Cell dict key for dict rows.")
+    attr: str | None = Field(default=None, description="Cell attribute for typed model rows.")
 
     @model_validator(mode="after")
     def _exactly_one_accessor(self) -> Column:
-        if (self.index is None) == (self.key is None):
+        present = sum(accessor is not None for accessor in (self.index, self.key, self.attr))
+        if present != 1:
             raise ValueError(
-                "Column needs exactly one of `index` (tuple rows) or `key` (dict rows)."
+                "Column needs exactly one of `index` (tuple rows), `key` (dict rows) "
+                "or `attr` (model rows)."
             )
         return self
 
@@ -152,9 +155,14 @@ class DataTable(Component):
                 return row[column.index]
             except (IndexError, TypeError):
                 return None
+        if column.key is not None:
+            try:
+                return row.get(column.key) if isinstance(row, dict) else None
+            except AttributeError:
+                return None
         try:
-            return row.get(column.key) if isinstance(row, dict) else None
-        except AttributeError:
+            return getattr(row, column.attr)
+        except (AttributeError, TypeError):
             return None
 
     def _format_cell(self, raw: Any, column: Column, ctx: AppContext) -> str | None:
@@ -188,17 +196,13 @@ class DataTable(Component):
             return None
         return str(raw)
 
-    @staticmethod
-    def _protection(ctx: AppContext, uv_value: float) -> str:
-        uv_ds = None
-        data = getattr(ctx, "data", None)
-        if data is not None:
-            try:
-                uv_ds = data.get("uv_index")
-            except Exception:  # noqa: BLE001 - optional datasource
-                uv_ds = None
+    def _protection(self, ctx: AppContext, uv_value: float) -> str:
+        uv_ds = self.optional_datasource(ctx, "uv_index")
         if uv_ds is not None and callable(getattr(uv_ds, "protection_level", None)):
-            return uv_ds.protection_level(uv_value)
+            try:
+                return uv_ds.protection_level(uv_value)
+            except (TypeError, ValueError):
+                pass
         if uv_value <= 2:
             return "Low"
         if uv_value <= 5:

@@ -22,26 +22,30 @@ def _ctx(surface, description="Orlando"):
 
 
 def test_ticker_builds_current_conditions_items(screen):
+    from weatherstar_4000.datasources.noaa import (
+        City,
+        CurrentConditions,
+        ForecastPeriod,
+    )
+
     class _Weather:
         def get_city(self, lat, lon):
-            return ("Orlando", "FL")
+            return City(city="Orlando", state="FL")
 
         def get_current(self, lat, lon):
-            return {
-                "temperature": {"value": 27.0},
-                "textDescription": "Partly Cloudy",
-                "relativeHumidity": {"value": 60.0},
-                "windSpeed": {"value": 4.0},
-                "windDirection": {"value": 180},
-            }
+            return CurrentConditions(
+                temperature_c=27.0,
+                text_description="Partly Cloudy",
+                relative_humidity=60.0,
+                wind_speed_kmh=4.0,
+                wind_direction=180.0,
+            )
 
         def get_forecast(self, lat, lon):
-            return {
-                "periods": [
-                    {"name": "Today", "temperature": 90, "shortForecast": "Sunny"},
-                    {"name": "Tonight", "temperature": 72, "shortForecast": "Clear"},
-                ]
-            }
+            return [
+                ForecastPeriod(name="Today", temperature=90.0, short_forecast="Sunny"),
+                ForecastPeriod(name="Tonight", temperature=72.0, short_forecast="Clear"),
+            ]
 
     ctx = _ctx(screen)
     ctx.data.register("weather", _Weather())

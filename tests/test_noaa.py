@@ -100,7 +100,8 @@ def test_get_current_returns_and_caches(monkeypatch):
     fake = _router()
     ds = _ds(monkeypatch, fake)
     current = ds.get_current(28.5383, -81.3792)
-    assert current["temperature"]["value"] == 25.0
+    assert current.temperature_c == 25.0
+    assert current.text_description == "Fair"
     assert ds.get_current(28.5383, -81.3792) is current
 
 
@@ -115,7 +116,9 @@ def test_get_forecast_success_and_caches(monkeypatch):
     fake = _router(forecast=periods)
     ds = _ds(monkeypatch, fake)
     forecast = ds.get_forecast(28.5383, -81.3792)
-    assert forecast["periods"][0]["temperature"] == 90
+    assert len(forecast) == 1
+    assert forecast[0].name == "Today"
+    assert forecast[0].temperature == 90.0
     # A different units value uses a different cache key -> another fetch.
     ds.get_forecast(28.5383, -81.3792, units="si")
     forecast_fetches = [u for u in fake.calls if "forecast" in u and "hourly" not in u]
@@ -131,20 +134,23 @@ def test_get_hourly_success(monkeypatch):
     fake = _router(forecast=periods)
     ds = _ds(monkeypatch, fake)
     hourly = ds.get_hourly(28.5383, -81.3792)
-    assert hourly["periods"][0]["startTime"] == "2026-09-05T12:00:00Z"
+    assert len(hourly) == 1
+    assert hourly[0].start_time is not None
+    assert hourly[0].start_time.hour == 12
 
 
-def test_grid_missing_returns_none_for_forecast(monkeypatch):
+def test_grid_missing_returns_empty_for_forecast(monkeypatch):
     ds = _ds(monkeypatch, _router(point={"properties": {"observationStations": STATIONS_URL}}))
-    assert ds.get_forecast(28.5383, -81.3792) is None
-    assert ds.get_hourly(28.5383, -81.3792) is None
+    assert ds.get_forecast(28.5383, -81.3792) == []
+    assert ds.get_hourly(28.5383, -81.3792) == []
 
 
 def test_get_city_and_missing_point(monkeypatch):
     ds = _ds(monkeypatch, _router())
-    assert ds.get_city(28.5383, -81.3792) == ("Melbourne", "FL")
+    city = ds.get_city(28.5383, -81.3792)
+    assert (city.city, city.state) == ("Melbourne", "FL")
     ds2 = _ds(monkeypatch, _router(point=None))
-    assert ds2.get_city(28.5383, -81.3792) == ("", "")
+    assert ds2.get_city(28.5383, -81.3792).label == ""
 
 
 def test_get_radar_station(monkeypatch):

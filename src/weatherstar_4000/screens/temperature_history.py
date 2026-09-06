@@ -32,9 +32,9 @@ class TemperatureHistoryScreen(Screen):
                 "max_rows": 8,
                 "empty_text": "History data unavailable",
                 "columns": [
-                    Column(header="DATE", header_x=60, x=60, format="date", index=0),
-                    Column(header="HIGH", header_x=320, x=330, format="degrees", index=1),
-                    Column(header="LOW", header_x=480, x=490, format="degrees", index=2),
+                    Column(header="DATE", header_x=60, x=60, format="date", attr="date"),
+                    Column(header="HIGH", header_x=320, x=330, format="degrees", attr="high"),
+                    Column(header="LOW", header_x=480, x=490, format="degrees", attr="low"),
                 ],
             },
         ),

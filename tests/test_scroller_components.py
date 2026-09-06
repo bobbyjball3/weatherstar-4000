@@ -130,9 +130,22 @@ def test_data_table_skips_invalid_rows(screen, fonts):
     assert _nonblank(screen, 60, 200, 120, 320)
 
 
-def test_data_table_empty_when_datasource_missing(screen, fonts):
+def test_data_table_empty_when_datasource_has_no_rows(screen, fonts):
     from weatherstar_4000.components.data_table import DataTable
 
+    class _Empty:
+        def temperature(self, lat, lon):
+            return []
+
+        def scroll(self, current_time):
+            pass
+
+        @property
+        def scroll_offsets(self):
+            return (0.0, 0.0)
+
+    data = DataRegistry()
+    data.register("history", _Empty())
     table = DataTable.model_validate(
         {
             "datasource_name": "history",
@@ -141,7 +154,7 @@ def test_data_table_empty_when_datasource_missing(screen, fonts):
             "columns": [],
         }
     )
-    table.render(screen, _ctx(screen, fonts))
+    table.render(screen, _ctx(screen, fonts, data=data))
     assert _nonblank(screen, 0, 640, 220, 260)
 
 

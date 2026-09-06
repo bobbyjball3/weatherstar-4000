@@ -16,6 +16,7 @@ from pydantic import PrivateAttr
 
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -48,12 +49,7 @@ class LocalForecastScreen(Screen):
     _panel_cache: dict[Any, tuple] = PrivateAttr(default_factory=dict)
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        forecast = self.weather_data(ctx, "get_forecast") or {}
-        try:
-            periods = forecast.get("periods") or []
-        except Exception:
-            periods = []
-
+        periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
         if len(periods) < 3:
             render.draw_centered_text(
                 surface, ctx, "NO DATA AVAILABLE", 240, font_name="large", color_key="yellow"
@@ -84,19 +80,18 @@ class LocalForecastScreen(Screen):
             )
             y_cursor += name_surf.get_height() + _GROUP_GAP
 
-            temp = period.get("temperature")
+            temp = period.temperature
             if temp is not None:
-                temp_surf = self.font(ctx, "normal").render(f"{temp}\N{DEGREE SIGN}", True, white)
+                temp_surf = self.font(ctx, "normal").render(
+                    f"{int(temp)}\N{DEGREE SIGN}", True, white
+                )
                 surface.blit(
                     temp_surf,
                     temp_surf.get_rect(center=(center_x, y_cursor + temp_surf.get_height() // 2)),
                 )
                 y_cursor += temp_surf.get_height() + _GROUP_GAP
 
-            try:
-                detailed = period.get("detailedForecast") or ""
-            except Exception:
-                detailed = ""
+            detailed = period.detailed_forecast
             forecast_font = self.font(ctx, "forecast")
             lines = self.wrap(forecast_font, str(detailed), x1 - x0 - 2 * _PAD_X)
 
@@ -114,31 +109,32 @@ class LocalForecastScreen(Screen):
     # -- column selection & labels -----------------------------------------
 
     @staticmethod
-    def _outlook_columns(periods: list) -> list:
+    def _outlook_columns(periods: list[ForecastPeriod]) -> list[ForecastPeriod]:
         """The three columns of a 3-day outlook: daytime periods when present."""
-        days = [p for p in periods if p.get("isDaytime") is True]
+        days = [p for p in periods if p.is_daytime]
         return days[:3] if len(days) >= 3 else periods[:3]
 
-    def _column_labels(self, columns: list) -> list[str]:
+    def _column_labels(self, columns: list[ForecastPeriod]) -> list[str]:
         """Labels for a 3-day outlook: TODAY / TOMORROW / weekday-after.
 
         When the outlook does not start today, every column is labelled by its
         own weekday instead.
         """
         today = date.today()
-        base = self.period_start_date(columns[0]) if columns else None
+        base = columns[0].start_date() if columns else None
         if base == today:
-            third = self.period_start_date(columns[2]) if len(columns) > 2 else None
+            third = columns[2].start_date() if len(columns) > 2 else None
             if third is None:
                 third = today + timedelta(days=2)
-            return ["TODAY", "TOMORROW", self.weekday_name(third)]
+            return ["TODAY", "TOMORROW", third.strftime("%A").upper()]
         labels: list[str] = []
         fallback = base or today
         for index, period in enumerate(columns):
-            day = self.period_start_date(period)
-            labels.append(
-                self.weekday_name(day) or self.weekday_name(fallback + timedelta(days=index))
-            )
+            day = period.start_date()
+            if day is not None:
+                labels.append(day.strftime("%A").upper())
+            else:
+                labels.append((fallback + timedelta(days=index)).strftime("%A").upper())
         return labels
 
     # -- block geometry ----------------------------------------------------

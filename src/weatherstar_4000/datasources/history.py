@@ -3,7 +3,7 @@
 Self-contained replacement for the legacy ``history_graphs`` client.  Fetches
 the last 30 days of daily high/low temperature and precipitation from
 Open-Meteo (``/v1/forecast`` with ``past_days=30``) through the base Datasource
-HTTP helpers with TTL caching, and returns rows most-recent-first.
+HTTP helpers with TTL caching, and returns typed rows most-recent-first.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any, ClassVar
 
-from pydantic import PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
@@ -19,6 +19,34 @@ from weatherstar_4000.registry import plugin
 _HISTORY_URL = "https://api.open-meteo.com/v1/forecast"
 _DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum"
 _CACHE_TTL = 3600
+
+
+def _as_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+class TemperatureRow(BaseModel):
+    """One day's recorded high/low temperature."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    date: str = Field(default="", description="YYYY-MM-DD.")
+    high: float | None = Field(default=None)
+    low: float | None = Field(default=None)
+
+
+class PrecipRow(BaseModel):
+    """One day's recorded precipitation total (inches)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    date: str = Field(default="", description="YYYY-MM-DD.")
+    inches: float | None = Field(default=None)
 
 
 @plugin
@@ -59,27 +87,32 @@ class HistoryDatasource(Datasource):
         daily = self._daily(lat, lon)
         return bool(daily.get("time"))
 
-    def temperature(self, lat: float, lon: float) -> list[tuple]:
+    def temperature(self, lat: float, lon: float) -> list[TemperatureRow]:
         """Return ``(date, high, low)`` rows, most recent first."""
         daily = self._daily(lat, lon)
-        dates = daily.get("time", [])
-        highs = daily.get("temperature_2m_max", [])
-        lows = daily.get("temperature_2m_min", [])
-        rows = []
+        dates = daily.get("time") or []
+        highs = daily.get("temperature_2m_max") or []
+        lows = daily.get("temperature_2m_min") or []
+        rows: list[TemperatureRow] = []
         for i in range(len(dates) - 1, -1, -1):
-            if i < len(highs) and i < len(lows):
-                rows.append((dates[i], highs[i], lows[i]))
+            rows.append(
+                TemperatureRow(
+                    date=str(dates[i]),
+                    high=_as_float(highs[i]) if i < len(highs) else None,
+                    low=_as_float(lows[i]) if i < len(lows) else None,
+                )
+            )
         return rows
 
-    def precipitation(self, lat: float, lon: float) -> list[tuple]:
+    def precipitation(self, lat: float, lon: float) -> list[PrecipRow]:
         """Return ``(date, precip_inches)`` rows, most recent first."""
         daily = self._daily(lat, lon)
-        dates = daily.get("time", [])
-        amounts = daily.get("precipitation_sum", [])
-        rows = []
+        dates = daily.get("time") or []
+        amounts = daily.get("precipitation_sum") or []
+        rows: list[PrecipRow] = []
         for i in range(len(dates) - 1, -1, -1):
-            amount = amounts[i] if i < len(amounts) else 0
-            rows.append((dates[i], amount if amount else 0))
+            amount = _as_float(amounts[i]) if i < len(amounts) else 0.0
+            rows.append(PrecipRow(date=str(dates[i]), inches=amount if amount else 0.0))
         return rows
 
     # -- scrolling -----------------------------------------------------------

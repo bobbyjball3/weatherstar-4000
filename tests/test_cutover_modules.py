@@ -20,7 +20,7 @@ def test_history_temperature_returns_most_recent_first(monkeypatch):
     ds = HistoryDatasource()
     monkeypatch.setattr(ds, "http_get_json", lambda *a, **k: {"daily": dict(_DAILY)})
     rows = ds.temperature(28.5, -81.4)
-    assert rows == [
+    assert [(r.date, r.high, r.low) for r in rows] == [
         ("2026-09-03", 92.0, 72.0),
         ("2026-09-02", 90.0, 71.0),
         ("2026-09-01", 88.0, 70.0),
@@ -31,7 +31,11 @@ def test_history_precipitation_most_recent_first(monkeypatch):
     ds = HistoryDatasource()
     monkeypatch.setattr(ds, "http_get_json", lambda *a, **k: {"daily": dict(_DAILY)})
     rows = ds.precipitation(28.5, -81.4)
-    assert rows == [("2026-09-03", 0.0), ("2026-09-02", 0.25), ("2026-09-01", 0.0)]
+    assert [(r.date, r.inches) for r in rows] == [
+        ("2026-09-03", 0.0),
+        ("2026-09-02", 0.25),
+        ("2026-09-01", 0.0),
+    ]
 
 
 def test_history_refresh_false_when_empty(monkeypatch):
@@ -52,8 +56,8 @@ def test_history_scroll_offsets_advance_after_delay():
 def test_local_news_headlines_are_cached(monkeypatch):
     ds = LocalNewsDatasource()
     first = ds.headlines(28.5, -81.4)
-    assert first and all(len(item) == 2 for item in first)
-    assert first[0][1].startswith("https://")
+    assert first and all(item.title and item.url for item in first)
+    assert first[0].url.startswith("https://")
     assert ds.headlines(28.5, -81.4) == first
 
 

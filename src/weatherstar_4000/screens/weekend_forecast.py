@@ -7,6 +7,7 @@ from typing import Any
 import pygame
 
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -18,7 +19,12 @@ class WeekendForecastScreen(Screen):
     datasources = ("weather",)
 
     def _draw_day_column(
-        self, surface: pygame.Surface, ctx: Any, col_x: int, title: str, periods: list[Any]
+        self,
+        surface: pygame.Surface,
+        ctx: Any,
+        col_x: int,
+        title: str,
+        periods: list[ForecastPeriod],
     ) -> None:
         yellow = self.color(ctx, "yellow")
         cyan = self.color(ctx, "cyan")
@@ -31,19 +37,21 @@ class WeekendForecastScreen(Screen):
         y_pos += 35
 
         for period in periods[:2]:
-            name = str(period.get("name", ""))
+            name = period.name
             time_of_day = "DAY" if "Day" in name or "Night" not in name else "NIGHT"
             tod_surf = self.font(ctx, "normal").render(time_of_day, True, cyan)
             surface.blit(tod_surf, (col_x + 10, y_pos))
             y_pos += 25
 
-            temp = period.get("temperature")
+            temp = period.temperature
             if temp is not None:
-                temp_surf = self.font(ctx, "normal").render(f"{temp}\N{DEGREE SIGN}", True, white)
+                temp_surf = self.font(ctx, "normal").render(
+                    f"{int(temp)}\N{DEGREE SIGN}", True, white
+                )
                 surface.blit(temp_surf, (col_x + 10, y_pos))
             y_pos += 25
 
-            icon = self.icon_surface(ctx, self.icon_name(str(period.get("icon", ""))))
+            icon = self.icon_surface(ctx, self.icon_name(period.icon))
             if icon is not None:
                 orig_size = icon.get_size()
                 if orig_size[0] > 0 and orig_size[1] > 0:
@@ -54,7 +62,7 @@ class WeekendForecastScreen(Screen):
                     icon_y = y_pos - 50 + (60 - new_size[1]) // 2
                     surface.blit(scaled, (icon_x, icon_y))
 
-            short = str(period.get("shortForecast", ""))
+            short = period.short_forecast
             lines = self.wrap(self.font(ctx, "tiny"), short, col_width - 20)
             for line in lines[:3]:
                 line_surf = self.font(ctx, "tiny").render(line, True, white)
@@ -73,19 +81,15 @@ class WeekendForecastScreen(Screen):
     )
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        forecast = self.weather_data(ctx, "get_forecast") or {}
-        try:
-            periods = forecast.get("periods") or []
-        except Exception:
-            periods = []
+        periods: list[ForecastPeriod] = self.weather_data(ctx, "get_forecast") or []
 
         left_col_x = 60
         right_col_x = 340
-        saturday_periods: list[Any] = []
-        sunday_periods: list[Any] = []
+        saturday_periods: list[ForecastPeriod] = []
+        sunday_periods: list[ForecastPeriod] = []
 
         for period in periods:
-            name = str(period.get("name", ""))
+            name = period.name
             if "Saturday" in name:
                 saturday_periods.append(period)
             elif "Sunday" in name:

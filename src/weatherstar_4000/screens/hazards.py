@@ -7,6 +7,7 @@ from typing import Any
 import pygame
 
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import ForecastPeriod
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -52,16 +53,16 @@ class HazardsScreen(Screen):
         has_alerts = False
 
         for period in periods[:3]:
-            forecast_text = str(period.get("detailedForecast", "")).lower()
+            forecast_text = period.detailed_forecast.lower()
             if not any(word in forecast_text for word in _HAZARD_WORDS):
                 continue
             has_alerts = True
-            name = period.get("name", "")
+            name = period.name
             name_text = normal.render(f"{name}:", True, yellow)
             surface.blit(name_text, (80, y_pos))
             y_pos += 25
 
-            words = str(period.get("shortForecast", "")).split()
+            words = period.short_forecast.split()
             line: list[str] = []
             for word in words:
                 line.append(word)
@@ -80,9 +81,9 @@ class HazardsScreen(Screen):
 
         if not has_alerts:
             no_alert = normal.render("No active weather alerts at this time", True, white)
-            surface.blit(no_alert, no_alert.get_rect(center=(320, 200)))
+            surface.blit(no_alert, no_alert.get_rect(center=(320, 230)))
 
-            y_pos = 250
+            y_pos = 290
             tips_title = extended.render("WEATHER SAFETY TIPS", True, yellow)
             surface.blit(tips_title, (60, y_pos))
             y_pos += 35
@@ -90,13 +91,5 @@ class HazardsScreen(Screen):
                 surface.blit(normal.render(tip, True, white), (80, y_pos))
                 y_pos += 25
 
-    def _forecast_periods(self, ctx: Any) -> list[dict]:
-        lat, lon = self.latlon(ctx)
-        weather = self.datasource(ctx, "weather")
-        if weather is None:
-            return []
-        try:
-            forecast = weather.get_forecast(lat, lon) or {}
-        except Exception:  # noqa: BLE001 - data is optional
-            return []
-        return list(forecast.get("periods") or [])
+    def _forecast_periods(self, ctx: Any) -> list[ForecastPeriod]:
+        return self.weather_data(ctx, "get_forecast") or []

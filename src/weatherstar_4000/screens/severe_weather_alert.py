@@ -18,6 +18,7 @@ from typing import Any
 import pygame
 from pydantic import PrivateAttr
 
+from weatherstar_4000.datasources.feeds import Alert
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -49,14 +50,13 @@ class SevereWeatherAlertScreen(Screen):
     # -- entry ---------------------------------------------------------------
 
     def draw(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
-        alerts: list[dict] = []
+        alerts: list[Alert] = []
         ds = self.datasource(ctx, "alerts")
-        if ds is not None:
-            lat, lon = self.latlon(ctx)
-            try:
-                alerts = list(ds.active(lat, lon) or [])
-            except Exception:  # noqa: BLE001 - data is optional
-                alerts = []
+        lat, lon = self.latlon(ctx)
+        try:
+            alerts = ds.active(lat, lon) or []
+        except Exception:  # noqa: BLE001 - data is optional
+            alerts = []
 
         if alerts:
             self._draw_alert(surface, ctx, dt, alerts[0])
@@ -85,7 +85,7 @@ class SevereWeatherAlertScreen(Screen):
         surface: pygame.Surface,
         ctx: Any,
         dt: float,
-        alert: dict[str, Any],
+        alert: Alert,
     ) -> None:
         base_red = self.color(ctx, "red", (255, 0, 0))
         accent = self._pulse_color(base_red, dt)
@@ -99,12 +99,12 @@ class SevereWeatherAlertScreen(Screen):
         title = self._font(34).render("EMERGENCY ALERT", True, white)
         surface.blit(title, title.get_rect(center=(_WIDTH // 2, 32)))
 
-        severity = str(alert.get("severity") or "Unknown").upper()
-        event = str(alert.get("event") or "Weather Alert")
+        severity = alert.severity.upper() or "Unknown"
+        event = alert.event or "Weather Alert"
         sev_text = self._font(18).render(f"{severity} - {event}", True, white)
         surface.blit(sev_text, sev_text.get_rect(center=(_WIDTH // 2, 66)))
 
-        expiry = self._format_expiry(alert.get("expires"))
+        expiry = self._format_expiry(alert.expires)
         if expiry:
             exp_text = self._font(15).render(f"VALID UNTIL {expiry}", True, (255, 255, 200))
             surface.blit(exp_text, exp_text.get_rect(topright=(_WIDTH - 24, 26)))
@@ -112,7 +112,7 @@ class SevereWeatherAlertScreen(Screen):
         # Body, laid out sequentially starting just below the header.
         cursor = 120
 
-        headline = str(alert.get("headline") or "").strip()
+        headline = alert.headline.strip()
         if headline:
             cursor = self._draw_block(
                 surface,
@@ -127,8 +127,8 @@ class SevereWeatherAlertScreen(Screen):
             )
             cursor += 12
 
-        areas = str(alert.get("areas") or "").strip()
-        instruction = str(alert.get("instruction") or "").strip()
+        areas = alert.areas.strip()
+        instruction = alert.instruction.strip()
 
         for label, body, max_lines in (
             ("AFFECTED AREAS:", areas, 2),

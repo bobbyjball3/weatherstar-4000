@@ -1,7 +1,7 @@
 """Wind & Pressure screen (port of legacy ``draw_wind_pressure``).
 
-Reads the NOAA current-conditions properties (wind, gust, wind chill/heat
-index, pressure) and shows a simulated steady trend arrow.
+Reads the typed current-conditions model (wind, gust, wind chill/heat index,
+pressure) and shows a simulated steady trend arrow.
 """
 
 from __future__ import annotations
@@ -12,17 +12,13 @@ import pygame
 
 from weatherstar_4000 import render
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.noaa import CurrentConditions
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
 _WHITE = (255, 255, 255)
 _YELLOW = (255, 255, 0)
 _SOFT_RED = (255, 100, 100)
-
-# m/s -> mph
-_MS_TO_MPH = 2.23694
-# Pa -> inches of mercury
-_PA_TO_INHG = 0.00029530
 
 
 @plugin
@@ -45,8 +41,8 @@ class WindPressureScreen(Screen):
         yellow = colors.get("yellow", _YELLOW)
         white = colors.get("white", _WHITE)
 
-        current = self._current_conditions(ctx)
-        if not current:
+        current: CurrentConditions | None = self.weather_data(ctx, "get_current")
+        if current is None:
             render.draw_centered_text(surface, ctx, "Current conditions unavailable", 240)
             return
 
@@ -56,17 +52,14 @@ class WindPressureScreen(Screen):
         )
         y_pos += 35
 
-        wind_speed = self.measure(current, "windSpeed")
-        wind_dir = self.measure(current, "windDirection")
-        wind_gust = self.measure(current, "windGust")
-
-        if wind_speed is not None:
-            wind_mph = int(wind_speed * _MS_TO_MPH)
+        wind_mph = current.wind_mph
+        if wind_mph is not None:
             self.blit_text(
                 surface, ctx, f"Speed: {wind_mph} mph", (80, y_pos), font_name="normal", color=white
             )
             y_pos += 30
 
+        wind_dir = current.wind_direction
         if wind_dir is not None:
             dir_text = self.cardinal(wind_dir)
             self.blit_text(
@@ -79,38 +72,36 @@ class WindPressureScreen(Screen):
             )
             y_pos += 30
 
-        if wind_gust is not None:
-            gust_mph = int(wind_gust * _MS_TO_MPH)
+        wind_gust_mph = current.wind_gust_mph
+        if wind_gust_mph is not None:
             self.blit_text(
                 surface,
                 ctx,
-                f"Gusts: {gust_mph} mph",
+                f"Gusts: {wind_gust_mph} mph",
                 (80, y_pos),
                 font_name="normal",
                 color=yellow,
             )
             y_pos += 30
 
-        wind_chill = self.measure(current, "windChill")
-        heat_index = self.measure(current, "heatIndex")
-        if wind_chill is not None:
-            wc_f = int(wind_chill * 9 / 5 + 32)
+        wind_chill_f = current.wind_chill_f
+        heat_index_f = current.heat_index_f
+        if wind_chill_f is not None:
             blue = colors.get("blue", (128, 128, 255))
             self.blit_text(
                 surface,
                 ctx,
-                f"Wind Chill: {wc_f}\u00b0F",
+                f"Wind Chill: {wind_chill_f}\u00b0F",
                 (80, y_pos),
                 font_name="normal",
                 color=blue,
             )
             y_pos += 30
-        elif heat_index is not None:
-            hi_f = int(heat_index * 9 / 5 + 32)
+        elif heat_index_f is not None:
             self.blit_text(
                 surface,
                 ctx,
-                f"Heat Index: {hi_f}\u00b0F",
+                f"Heat Index: {heat_index_f}\u00b0F",
                 (80, y_pos),
                 font_name="normal",
                 color=_SOFT_RED,
@@ -123,9 +114,8 @@ class WindPressureScreen(Screen):
         )
         y_pos += 35
 
-        pressure = self.measure(current, "pressure", "barometricPressure")
-        if pressure is not None:
-            pressure_inhg = pressure * _PA_TO_INHG
+        pressure_inhg = current.pressure_inhg
+        if pressure_inhg is not None:
             self.blit_text(
                 surface,
                 ctx,
@@ -137,24 +127,11 @@ class WindPressureScreen(Screen):
             y_pos += 30
 
             font_normal = self.font(ctx, "normal")
-            if font_normal is not None:
-                trend = font_normal.render("Trend: Steady", True, white)
-                surface.blit(trend, (80, y_pos))
-                arrow_x = 80 + trend.get_width() + 14
-                pygame.draw.polygon(
-                    surface,
-                    white,
-                    [(arrow_x + 10, y_pos + 12), (arrow_x, y_pos + 4), (arrow_x, y_pos + 20)],
-                )
-
-    @staticmethod
-    def _current_conditions(ctx: Any) -> dict:
-        try:
-            weather = ctx.data.get("weather")
-            location = ctx.location
-            if weather is None or location is None:
-                return {}
-            current = weather.get_current(location.lat, location.lon)
-        except Exception:
-            return {}
-        return current or {}
+            trend = font_normal.render("Trend: Steady", True, white)
+            surface.blit(trend, (80, y_pos))
+            arrow_x = 80 + trend.get_width() + 14
+            pygame.draw.polygon(
+                surface,
+                white,
+                [(arrow_x + 10, y_pos + 12), (arrow_x, y_pos + 4), (arrow_x, y_pos + 20)],
+            )

@@ -45,21 +45,19 @@ class LocalNewsScreen(Screen):
     def _resolve_city(self, ctx: Any) -> str:
         lat, lon = self.latlon(ctx)
         news = self.datasource(ctx, "local_news")
-        if news is not None and callable(getattr(news, "city_name", None)):
-            try:
-                name = news.city_name(lat, lon)
-                if name:
-                    return str(name)
-            except Exception:  # noqa: BLE001 - fall through to weather/location
-                pass
+        try:
+            name = news.city_name(lat, lon)
+            if name:
+                return str(name)
+        except Exception:  # noqa: BLE001 - fall through to weather/location
+            pass
         weather = self.datasource(ctx, "weather")
-        if weather is not None and callable(getattr(weather, "get_city", None)):
-            try:
-                city, _state = weather.get_city(lat, lon)
-                if city:
-                    return str(city)
-            except Exception:  # noqa: BLE001 - fall through to location
-                pass
+        try:
+            city = weather.get_city(lat, lon)
+            if city.city:
+                return str(city.city)
+        except Exception:  # noqa: BLE001 - fall through to location
+            pass
         location = getattr(ctx, "location", None)
         if location is not None and getattr(location, "description", ""):
             return str(location.description)

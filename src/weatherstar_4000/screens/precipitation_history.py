@@ -33,9 +33,15 @@ class PrecipitationHistoryScreen(Screen):
                 "max_rows": 8,
                 "empty_text": "History data unavailable",
                 "columns": [
-                    Column(header="DATE", header_x=60, x=60, format="date", index=0),
-                    Column(header="AMOUNT", header_x=300, x=310, format="inches", index=1),
-                    Column(header="STATUS", header_x=480, x=490, format="precip_status", index=1),
+                    Column(header="DATE", header_x=60, x=60, format="date", attr="date"),
+                    Column(header="AMOUNT", header_x=300, x=310, format="inches", attr="inches"),
+                    Column(
+                        header="STATUS",
+                        header_x=480,
+                        x=490,
+                        format="precip_status",
+                        attr="inches",
+                    ),
                 ],
             },
         ),

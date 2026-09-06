@@ -32,14 +32,14 @@ class UvIndexScreen(Screen):
                 "max_rows": 7,
                 "empty_text": "UV Index data unavailable",
                 "columns": [
-                    Column(header="DATE", header_x=60, x=60, format="date", key="date"),
-                    Column(header="UV INDEX", header_x=280, x=300, format="int", key="uv_index"),
+                    Column(header="DATE", header_x=60, x=60, format="date", attr="date"),
+                    Column(header="UV INDEX", header_x=280, x=300, format="int", attr="uv_index"),
                     Column(
                         header="PROTECTION",
                         header_x=450,
                         x=460,
                         format="protection",
-                        key="uv_index",
+                        attr="uv_index",
                     ),
                 ],
             },

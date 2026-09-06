@@ -2,7 +2,7 @@
 
 The legacy screen embedded an Alpha Vantage API key in source; the plugin
 architecture never does.  Quotes arrive via the configured ``stocks``
-datasource (which owns its own API key configuration).
+datasource (which owns its own API key configuration) as typed ``Quote`` models.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from typing import Any
 import pygame
 
 from weatherstar_4000.components.base import ComponentSpec
+from weatherstar_4000.datasources.feeds import Quote
 from weatherstar_4000.registry import plugin
 from weatherstar_4000.screens.base import Screen
 
@@ -42,21 +43,18 @@ class StockMarketScreen(Screen):
     )
 
     @staticmethod
-    def _format_price(value: Any) -> str:
-        try:
-            return f"{float(value):,.2f}"
-        except (TypeError, ValueError):
+    def _format_price(value: float | None) -> str:
+        if value is None:
             return "N/A"
+        return f"{value:,.2f}"
 
     @staticmethod
-    def _format_change(value: Any) -> tuple[str, tuple[int, int, int]]:
-        try:
-            change = float(value)
-        except (TypeError, ValueError):
+    def _format_change(value: float | None) -> tuple[str, tuple[int, int, int]]:
+        if value is None:
             return "N/A", _GREEN
-        sign = "+" if change >= 0 else ""
-        color = _GREEN if change >= 0 else _RED
-        return f"{sign}{change:,.2f}", color
+        sign = "+" if value >= 0 else ""
+        color = _GREEN if value >= 0 else _RED
+        return f"{sign}{value:,.2f}", color
 
     def compose(self, surface: pygame.Surface, ctx: Any, dt: float) -> None:
         yellow = self.color(ctx, "yellow", (255, 255, 0))
@@ -68,13 +66,12 @@ class StockMarketScreen(Screen):
         surface.blit(title, title.get_rect(center=(320, y_pos)))
         y_pos += 50
 
-        quotes: list[dict] = []
+        quotes: list[Quote] = []
         ds = self.datasource(ctx, "stocks")
-        if ds is not None:
-            try:
-                quotes = list(ds.quotes() or [])
-            except Exception:  # noqa: BLE001 - data is optional
-                quotes = []
+        try:
+            quotes = list(ds.quotes() or [])
+        except Exception:  # noqa: BLE001 - data is optional
+            quotes = []
 
         if not quotes:
             message = normal.render("Market data unavailable", True, white)
@@ -82,11 +79,11 @@ class StockMarketScreen(Screen):
             return
 
         for quote in quotes:
-            symbol = str(quote.get("symbol") or "")
+            symbol = quote.symbol
             name = _SYMBOL_NAMES.get(symbol, symbol)
-            price = self._format_price(quote.get("price"))
-            change, color = self._format_change(quote.get("change"))
-            percent = self._format_change(quote.get("change_percent"))[0]
+            price = self._format_price(quote.price)
+            change, color = self._format_change(quote.change)
+            percent = self._format_change(quote.change_percent)[0]
 
             name_text = normal.render(name, True, white)
             price_text = normal.render(price, True, white)

@@ -1,8 +1,16 @@
-"""Datasources for live secondary feeds: alerts, earthquakes, UV, stocks."""
+"""Datasources for live secondary feeds: alerts, earthquakes, UV, stocks.
+
+Each datasource owns its public data contract: fetch methods return lists of
+typed Pydantic models (empty list when nothing is available) so consumers never
+touch the raw upstream payloads.
+"""
 
 from __future__ import annotations
 
-from pydantic import Field, SecretStr
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from weatherstar_4000.datasources.base import Datasource
 from weatherstar_4000.registry import plugin
@@ -10,6 +18,89 @@ from weatherstar_4000.registry import plugin
 NOAA_ALERTS_URL = "https://api.weather.gov/alerts/active"
 USGS_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 OM_UV_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+def _as_float(value) -> float | None:
+    """Coerce a bare/string number (possibly ``%``/comma formatted) to float."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.replace("%", "").replace(",", "").strip()
+        if not value:
+            return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+class Alert(BaseModel):
+    """An active NOAA alert, normalized to the fields the app displays."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    severity: str = Field(default="", description="Capitalized severity (Extreme/Severe/Moderate).")
+    event: str = Field(default="")
+    headline: str = Field(default="")
+    areas: str = Field(default="")
+    instruction: str = Field(default="")
+    expires: str = Field(default="", description="ISO expiry timestamp.")
+    urgency: str = Field(default="")
+    description: str = Field(default="")
+
+
+class Earthquake(BaseModel):
+    """A recent earthquake event."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    magnitude: float = Field(default=0.0)
+    place: str = Field(default="")
+    time: datetime | None = Field(default=None, description="UTC occurrence time.")
+
+
+class Quote(BaseModel):
+    """A stock/index quote with a semantic direction for coloring."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str = Field(default="")
+    price: float | None = Field(default=None)
+    change: float | None = Field(default=None)
+    change_percent: float | None = Field(default=None)
+    direction: Literal["up", "down", "flat"] = Field(default="flat")
+
+
+class UvReading(BaseModel):
+    """One day's maximum UV index forecast."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    date: str = Field(default="", description="YYYY-MM-DD.")
+    uv_index: float | None = Field(default=None)
+
+
+def _parse_alerts(data: dict) -> list[Alert]:
+    features = data.get("features") or []
+    result: list[Alert] = []
+    for feature in features:
+        props = feature.get("properties") or {}
+        severity = props.get("severity")
+        if severity not in {"Extreme", "Severe", "Moderate"}:
+            continue
+        result.append(
+            Alert(
+                severity=severity,
+                event=str(props.get("event") or ""),
+                headline=str(props.get("headline") or ""),
+                areas=str(props.get("areaDesc") or ""),
+                instruction=str(props.get("instruction") or ""),
+                expires=str(props.get("expires") or ""),
+                urgency=str(props.get("urgency") or ""),
+                description=str(props.get("description") or ""),
+            )
+        )
+    return result
 
 
 @plugin
@@ -23,7 +114,7 @@ class NoaaAlertsDatasource(Datasource):
         description="Colon-separated severity order used to sort alerts (most severe first).",
     )
 
-    def active(self, lat: float, lon: float) -> list[dict]:
+    def active(self, lat: float, lon: float) -> list[Alert]:
         key = self._cache_key("alerts", lat, lon)
         cached = self.cache_get(key, 60)
         if cached is not None:
@@ -31,40 +122,14 @@ class NoaaAlertsDatasource(Datasource):
         data = self.http_get_json(NOAA_ALERTS_URL, params={"point": f"{lat},{lon}"}, timeout=5)
         alerts = _parse_alerts(data or {})
         priority = [p.strip() for p in self.severity_priority.split(":") if p.strip()]
-        alerts.sort(
-            key=lambda a: priority.index(a["severity"]) if a["severity"] in priority else 99
-        )
+        alerts.sort(key=lambda a: priority.index(a.severity) if a.severity in priority else 99)
         self.cache_set(key, alerts)
         return alerts
 
-    def is_critical(self, alerts: list[dict]) -> bool:
-        return any(a.get("severity") == "Extreme" for a in alerts) or any(
-            a.get("severity") == "Severe" and a.get("urgency") == "Immediate" for a in alerts
+    def is_critical(self, alerts: list[Alert]) -> bool:
+        return any(a.severity == "Extreme" for a in alerts) or any(
+            a.severity == "Severe" and a.urgency == "Immediate" for a in alerts
         )
-
-
-def _parse_alerts(data: dict) -> list[dict]:
-    features = data.get("features") or []
-    result = []
-    for feature in features:
-        props = feature.get("properties") or {}
-        severity = props.get("severity")
-        if severity not in {"Extreme", "Severe", "Moderate"}:
-            continue
-        result.append(
-            {
-                "id": props.get("id"),
-                "event": props.get("event"),
-                "headline": props.get("headline"),
-                "severity": severity,
-                "urgency": props.get("urgency"),
-                "areas": props.get("areaDesc"),
-                "instruction": props.get("instruction"),
-                "expires": props.get("expires"),
-                "description": props.get("description"),
-            }
-        )
-    return result
 
 
 @plugin
@@ -76,7 +141,7 @@ class EarthquakesDatasource(Datasource):
     )
     limit: int = Field(default=10, description="Maximum number of earthquakes to fetch.")
 
-    def recent(self, lat: float, lon: float) -> list[dict]:
+    def recent(self, lat: float, lon: float) -> list[Earthquake]:
         key = self._cache_key("quakes", lat, lon, self.min_magnitude, self.limit)
         cached = self.cache_get(key, 1800)
         if cached is not None:
@@ -89,15 +154,25 @@ class EarthquakesDatasource(Datasource):
         }
         data = self.http_get_json(USGS_URL, params=params, timeout=10)
         events = (data or {}).get("features") or []
-        result = [
-            {
-                "magnitude": float(e["properties"].get("mag") or 0),
-                "place": e["properties"].get("place", ""),
-                "time": e["properties"].get("time"),
-            }
-            for e in events
-            if e.get("properties")
-        ]
+        result: list[Earthquake] = []
+        for e in events:
+            props = e.get("properties")
+            if not props:
+                continue
+            time_ms = _as_float(props.get("time"))
+            occurred = None
+            if time_ms is not None:
+                try:
+                    occurred = datetime.utcfromtimestamp(time_ms / 1000.0)
+                except (OverflowError, OSError, ValueError):
+                    occurred = None
+            result.append(
+                Earthquake(
+                    magnitude=_as_float(props.get("mag")) or 0.0,
+                    place=str(props.get("place") or ""),
+                    time=occurred,
+                )
+            )
         self.cache_set(key, result)
         return result
 
@@ -108,7 +183,7 @@ class UvIndexDatasource(Datasource):
 
     days: int = Field(default=7, description="Number of days of UV index forecast to fetch.")
 
-    def daily(self, lat: float, lon: float) -> list[dict]:
+    def daily(self, lat: float, lon: float) -> list[UvReading]:
         key = self._cache_key("uv", lat, lon, self.days)
         cached = self.cache_get(key, 1800)
         if cached is not None:
@@ -122,9 +197,10 @@ class UvIndexDatasource(Datasource):
         }
         data = self.http_get_json(OM_UV_URL, params=params, timeout=10)
         daily = (data or {}).get("daily") or {}
+        dates = daily.get("time") or []
+        values = daily.get("uv_index_max") or []
         result = [
-            {"date": daily["time"][i], "uv_index": daily["uv_index_max"][i]}
-            for i in range(len(daily.get("time", [])))
+            UvReading(date=str(dates[i]), uv_index=_as_float(values[i])) for i in range(len(dates))
         ]
         self.cache_set(key, result)
         return result
@@ -165,16 +241,16 @@ class StockMarketDatasource(Datasource):
         default="DIA,SPY,QQQ", description="Comma-separated stock/index symbols to display."
     )
 
-    def quotes(self) -> list[dict]:
+    def quotes(self) -> list[Quote]:
         symbols = [s.strip() for s in self.symbols.split(",") if s.strip()]
-        result = []
+        result: list[Quote] = []
         for symbol in symbols:
             quote = self._quote(symbol)
             if quote:
                 result.append(quote)
         return result
 
-    def _quote(self, symbol: str) -> dict | None:
+    def _quote(self, symbol: str) -> Quote | None:
         key = self._cache_key("quote", symbol)
         cached = self.cache_get(key, 300)
         if cached is not None:
@@ -187,12 +263,19 @@ class StockMarketDatasource(Datasource):
         quote = (data or {}).get("Global Quote") or {}
         if not quote:
             return None
-        result = {
-            "symbol": quote.get("01. symbol", symbol),
-            "price": quote.get("05. price"),
-            "change": quote.get("09. change"),
-            "change_percent": quote.get("10. change percent"),
-        }
+        change = _as_float(quote.get("09. change"))
+        direction: Literal["up", "down", "flat"] = "flat"
+        if change is not None and change > 0:
+            direction = "up"
+        elif change is not None and change < 0:
+            direction = "down"
+        result = Quote(
+            symbol=str(quote.get("01. symbol", symbol)),
+            price=_as_float(quote.get("05. price")),
+            change=change,
+            change_percent=_as_float(quote.get("10. change percent")),
+            direction=direction,
+        )
         self.cache_set(key, result)
         return result
 

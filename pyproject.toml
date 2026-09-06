@@ -64,7 +64,7 @@ show_missing = true
 skip_covered = true
 # Ratchet: rendering is exercised headlessly via populated-data screen tests;
 # coverage currently sits around 85%. Raise fail_under as coverage grows.
-fail_under = 80
+fail_under = 85
 
 [tool.coverage.xml]
 output = "coverage.xml"

@@ -2,7 +2,8 @@
 
 The empty-stub integration test only exercises each screen's "no data" path.
 This suite swaps in datasources returning realistic, populated payloads and
-renders every screen so the data-dependent branches execute.
+renders every screen so the data-dependent branches execute.  Stubs return the
+typed Pydantic models datasources now own as their public contract.
 """
 
 import pygame
@@ -10,6 +11,15 @@ import pytest
 
 from weatherstar_4000.config_file import AppConfig
 from weatherstar_4000.context import DataRegistry
+from weatherstar_4000.datasources.feeds import (
+    Alert,
+    Earthquake,
+    Quote,
+    UvReading,
+)
+from weatherstar_4000.datasources.history import PrecipRow, TemperatureRow
+from weatherstar_4000.datasources.news import Headline
+from weatherstar_4000.datasources.noaa import City, CurrentConditions, ForecastPeriod
 from weatherstar_4000.engine import Builder, SequenceRunner, resolve_location
 from weatherstar_4000.sequence import Sequence
 
@@ -105,44 +115,50 @@ _PERIOD_NAMES = [
 ]
 
 
-def forecast_payload():
+def forecast_periods():
     periods = []
     for name, is_day in _PERIOD_NAMES:
         periods.append(
-            {
-                "name": name,
-                "isDaytime": is_day,
-                "temperature": 96 if is_day else 74,
-                "shortForecast": "Sunny and hot" if is_day else "Clear",
-                "detailedForecast": (
+            ForecastPeriod(
+                name=name,
+                is_daytime=is_day,
+                temperature=96.0 if is_day else 74.0,
+                short_forecast="Sunny and hot" if is_day else "Clear",
+                detailed_forecast=(
                     "A severe thunderstorm warning is possible late today "
                     "with damaging wind and heavy rain."
                 ),
-                "icon": "https://api.weather.gov/icons/land/day/sct?size=medium",
-            }
+                icon="https://api.weather.gov/icons/land/day/sct?size=medium",
+            )
         )
-    return {"periods": periods}
+    return periods
 
 
-def hourly_payload():
+def hourly_periods():
     periods = []
     for hour in range(8):
         periods.append(
-            {
-                "name": f"{hour} AM",
-                "startTime": f"2026-09-05T{hour:02d}:00:00Z",
-                "temperature": 80 + hour,
-                "shortForecast": "Partly cloudy then becoming sunny",
-            }
+            ForecastPeriod(
+                name=f"{hour} AM",
+                start_time=_parse_hour(hour),
+                temperature=float(80 + hour),
+                short_forecast="Partly cloudy then becoming sunny",
+            )
         )
-    return {"periods": periods}
+    return periods
+
+
+def _parse_hour(hour):
+    from datetime import datetime
+
+    return datetime.fromisoformat(f"2026-09-05T{hour:02d}:00:00+00:00")
 
 
 def history_rows(count=12):
     rows = []
     for day in range(count):
         date = f"2026-08-{27 - day:02d}"
-        rows.append((date, 95 - day, 70 + day))
+        rows.append(TemperatureRow(date=date, high=float(95 - day), low=float(70 + day)))
     return rows
 
 
@@ -150,27 +166,27 @@ def precip_rows(count=12):
     amounts = [0.0, 0.05, 0.25, 0.6, 0.0, 0.1, 0.75, 0.02, 0.0, 0.4, 1.2, 0.0]
     rows = []
     for day in range(count):
-        rows.append((f"2026-08-{27 - day:02d}", amounts[day % len(amounts)]))
+        rows.append(PrecipRow(date=f"2026-08-{27 - day:02d}", inches=amounts[day % len(amounts)]))
     return rows
 
 
 class _Weather:
     def __init__(self, current=None, forecast=None, hourly=None):
         self.current = current or current_payload()
-        self.forecast = forecast if forecast is not None else forecast_payload()
-        self.hourly = hourly if hourly is not None else hourly_payload()
+        self.forecast = forecast if forecast is not None else forecast_periods()
+        self.hourly = hourly if hourly is not None else hourly_periods()
 
     def get_current(self, lat, lon):
-        return self.current
+        return CurrentConditions.from_props(self.current)
 
     def get_forecast(self, lat, lon, units="us"):
-        return self.forecast
+        return list(self.forecast)
 
     def get_hourly(self, lat, lon, units="us"):
-        return self.hourly
+        return list(self.hourly)
 
     def get_city(self, lat, lon):
-        return ("Melbourne", "FL")
+        return City(city="Melbourne", state="FL")
 
 
 class _History:
@@ -192,7 +208,7 @@ class _Uv:
     def daily(self, lat, lon):
         values = [2.0, 5.0, 7.0, 10.0, 11.0, 3.0, 6.0]
         return [
-            {"date": f"2026-09-{day + 1:02d}", "uv_index": values[day]}
+            UvReading(date=f"2026-09-{day + 1:02d}", uv_index=values[day])
             for day in range(len(values))
         ]
 
@@ -210,13 +226,15 @@ class _Uv:
 
 class _Quakes:
     def recent(self, lat, lon):
+        from datetime import datetime
+
         mags = [2.5, 3.5, 4.5, 5.5, 6.5, 4.0, 5.0, 3.0]
         return [
-            {
-                "magnitude": mag,
-                "place": "12 km NW of Some City, FL",
-                "time": 1700000000000 + i * 100000,
-            }
+            Earthquake(
+                magnitude=mag,
+                place="12 km NW of Some City, FL",
+                time=datetime.utcfromtimestamp(1700000000 + i * 100),
+            )
             for i, mag in enumerate(mags)
         ]
 
@@ -224,9 +242,9 @@ class _Quakes:
 class _Stocks:
     def quotes(self):
         return [
-            {"symbol": "DIA", "price": "412.50", "change": "1.25", "change_percent": 0.3},
-            {"symbol": "SPY", "price": "556.10", "change": "-2.00", "change_percent": -0.4},
-            {"symbol": "CUSTOM", "price": "10.00", "change": "0", "change_percent": 0},
+            Quote(symbol="DIA", price=412.50, change=1.25, change_percent=0.3, direction="up"),
+            Quote(symbol="SPY", price=556.10, change=-2.00, change_percent=-0.4, direction="down"),
+            Quote(symbol="CUSTOM", price=10.00, change=0.0, change_percent=0.0, direction="flat"),
         ]
 
 
@@ -236,23 +254,27 @@ class _News:
 
     def headlines(self, lat, lon):
         return [
-            ("BREAKING: Severe storms possible this evening", "https://example.com/1"),
-            ("Council votes on budget: final details", "https://example.com/2"),
-            "Plain headline without a category separator",
+            Headline(
+                title="BREAKING: Severe storms possible this evening", url="https://example.com/1"
+            ),
+            Headline(title="Council votes on budget: final details", url="https://example.com/2"),
+            Headline(
+                title="Plain headline without a category separator", url="https://example.com/3"
+            ),
         ]
 
 
 class _Alerts:
     def active(self, lat, lon):
         return [
-            {
-                "severity": "Severe",
-                "event": "Tornado Warning",
-                "headline": "A tornado warning is in effect until 8 PM for central counties.",
-                "areas": "Orange, Seminole and Lake counties",
-                "instruction": "Move to an interior room on the lowest floor now.",
-                "expires": "2026-09-05T20:00:00Z",
-            }
+            Alert(
+                severity="Severe",
+                event="Tornado Warning",
+                headline="A tornado warning is in effect until 8 PM for central counties.",
+                areas="Orange, Seminole and Lake counties",
+                instruction="Move to an interior room on the lowest floor now.",
+                expires="2026-09-05T20:00:00Z",
+            )
         ]
 
     def is_critical(self, alerts):
