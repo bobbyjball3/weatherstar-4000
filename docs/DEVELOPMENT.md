@@ -147,7 +147,9 @@ tests/
   conftest.py             headless SDL dummy drivers + pygame fixtures
   test_*.py               unit + integration tests for the engine
 docs/                     user + developer documentation
-static_assets/            bundled fonts, backgrounds, icons, logos, music
+static_assets/            bundled asset trees, one per era/product
+  weatherstar_4000/           fonts, backgrounds, icons, logos, music (classic)
+  weatherstar_3000/           fonts + background for the Weather Star 3000 look
 reports/                  JUnit output (gitignored, generated)
 coverage.xml              coverage output (gitignored, generated)
 README.old.md             original project README (features, packaging)

@@ -42,7 +42,7 @@ Built-in themes: `weatherstar4000` (default/base), `dark`, `high_contrast`,
 # <name>.theme.toml  (file stem = theme name)
 title = "Weather Star 3000"     # product name (progress/loading text)
 title_bottom = "3000"          # header bottom line; blank if unset
-asset_dir = "static_assets_ws3000"  # media tree (default "static_assets")
+asset_dir = "static_assets/weatherstar_3000"  # media tree (default "static_assets/weatherstar_4000")
 
 [colors]
 # Palette keys layered over the engine's small built-in base palette
@@ -73,8 +73,8 @@ it omits falls back to the base value. Only define what your look overrides.
 
 When set, the media plugins (`fonts`, `backgrounds`, `logos`, `icons`) load from
 `<asset_dir>/fonts_ttf/`, `<asset_dir>/backgrounds/`, etc. instead of the repo's
-`static_assets/`. This is how a theme supplies its own typeface, background art,
-logos and icons with no code changes.
+`static_assets/weatherstar_4000/`. This is how a theme supplies its own typeface,
+background art, logos and icons with no code changes.
 
 A theme's asset tree applies **per media kind**: the engine only switches a media
 plugin to the theme's directory when that subdirectory actually exists there.
@@ -83,8 +83,8 @@ classic backgrounds; a theme with no asset tree at all (a recolor-only theme)
 keeps the classic icons, fonts, backgrounds and logos. Precedence for a given
 media kind: an explicit `[media.X] asset_dir` in the main config wins over the
 theme; otherwise the theme's directory is used when it provides the subdirectory,
-falling back to the built-in `static_assets` when it does not. So icons and fonts
-never vanish under a theme that merely recolors the palette.
+falling back to the built-in `static_assets/weatherstar_4000` when it does not.
+So icons and fonts never vanish under a theme that merely recolors the palette.
 
 ### `fonts`
 

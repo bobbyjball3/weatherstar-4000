@@ -12,7 +12,7 @@
 # system fonts and a generated gradient.
 title = "Weather Star 3000"
 title_bottom = "3000"
-asset_dir = "static_assets_ws3000"
+asset_dir = "static_assets/weatherstar_3000"
 
 # ws3kp draws every text glyph with a black outline ring + a 3px drop shadow
 # (see server/styles/scss/shared/_utils.scss text-shadow mixin).

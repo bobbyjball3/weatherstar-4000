@@ -24,7 +24,7 @@ class Media(Plugin):
     kind = "media"
 
     asset_dir: str = Field(
-        default="static_assets",
+        default="static_assets/weatherstar_4000",
         description="Directory containing this media's assets (project-relative or absolute).",
     )
 

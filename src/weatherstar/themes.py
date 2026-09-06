@@ -185,7 +185,7 @@ class Theme:
     name: str
     title: str = "Weather Star 4000"
     title_bottom: str = ""
-    asset_dir: str = "static_assets"
+    asset_dir: str = "static_assets/weatherstar_4000"
     colors: dict[str, tuple[int, int, int]] = field(default_factory=dict)
     fonts: dict[str, tuple[str, int]] = field(default_factory=dict)
     #: Render every text glyph with a black outline + drop shadow.
@@ -242,7 +242,7 @@ def _theme_from_file(path: Path) -> Theme | None:
     try:
         title = str(data.get("title") or "Weather Star 4000")
         title_bottom = str(data.get("title_bottom") or "")
-        asset_dir = str(data.get("asset_dir") or "static_assets")
+        asset_dir = str(data.get("asset_dir") or "static_assets/weatherstar_4000")
         colors = {
             key: _parse_color(value, key) for key, value in (data.get("colors") or {}).items()
         }

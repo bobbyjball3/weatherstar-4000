@@ -51,7 +51,7 @@ def test_title_bottom_defaults_blank(tmp_path):
     _write_theme(tmp_path, "minimal", 'title = "Minimal"\n[colors]\nwhite = "#FFFFFF"')
     theme = get_theme("minimal", dirs=[tmp_path])
     assert theme.title_bottom == ""
-    assert theme.asset_dir == "static_assets"
+    assert theme.asset_dir == "static_assets/weatherstar_4000"
     # Layout-family fields default to the Weather Star 4000 variant.
     assert theme.variant is LayoutVariant.WS4000
     assert theme.bottom_band is LayoutVariant.WS4000
@@ -255,13 +255,18 @@ def test_media_asset_dir_precedence(tmp_path, pygame_env):
     builder = Builder(appcfg, cli_theme="weatherstar3000", themes_dir=str(themes_dir))
 
     # Theme provides nothing yet -> media stays on the default asset dir.
-    assert builder.make_media("backgrounds", str(theme_assets)).asset_dir == "static_assets"
+    assert (
+        builder.make_media("backgrounds", str(theme_assets)).asset_dir
+        == "static_assets/weatherstar_4000"
+    )
 
     # Theme gains a backgrounds/ subdir -> themed backgrounds are used (whether
     # the scope omits asset_dir or merely repeats the built-in default).
     (theme_assets / "backgrounds").mkdir(parents=True)
     assert builder.make_media("backgrounds", str(theme_assets)).asset_dir == str(theme_assets)
-    cfg2 = AppConfig({**appcfg.data, "media": {"backgrounds": {"asset_dir": "static_assets"}}})
+    cfg2 = AppConfig(
+        {**appcfg.data, "media": {"backgrounds": {"asset_dir": "static_assets/weatherstar_4000"}}}
+    )
     assert Builder(cfg2, cli_theme="weatherstar3000", themes_dir=str(themes_dir)).make_media(
         "backgrounds", str(theme_assets)
     ).asset_dir == str(theme_assets)
@@ -280,13 +285,24 @@ def test_media_asset_dir_precedence(tmp_path, pygame_env):
     icons_theme = tmp_path / "icons_theme"
     (icons_theme / "icons").mkdir(parents=True)
     assert builder.make_media("icons", str(icons_theme)).asset_dir == str(icons_theme)
-    assert builder.make_media("backgrounds", str(icons_theme)).asset_dir == "static_assets"
+    assert (
+        builder.make_media("backgrounds", str(icons_theme)).asset_dir
+        == "static_assets/weatherstar_4000"
+    )
 
     # Conversely, a theme that only recolors (no asset tree) must not silence
     # the classic icons/fonts/logos.
-    assert builder.make_media("icons", str(theme_assets)).asset_dir == "static_assets"
-    assert builder.make_media("logos", str(theme_assets)).asset_dir == "static_assets"
-    assert builder.make_media("fonts", str(theme_assets)).asset_dir == "static_assets"
+    assert (
+        builder.make_media("icons", str(theme_assets)).asset_dir == "static_assets/weatherstar_4000"
+    )
+    assert (
+        builder.make_media("logos", str(theme_assets)).asset_dir == "static_assets/weatherstar_4000"
+    )
+    assert (
+        builder.make_media("fonts", str(theme_assets)).asset_dir == "static_assets/weatherstar_4000"
+    )
 
     # Music is not visual: it never follows the theme's asset dir.
-    assert builder.make_media("music", str(theme_assets)).asset_dir == "static_assets"
+    assert (
+        builder.make_media("music", str(theme_assets)).asset_dir == "static_assets/weatherstar_4000"
+    )

@@ -124,7 +124,7 @@ def test_icon_gif_colorkey_survives_loading_and_scaling(pygame_env):
 
     import pytest
 
-    source = Path("static_assets/icons/Cloudy.gif")
+    source = Path("static_assets/weatherstar_4000/icons/Cloudy.gif")
     if not source.exists():
         pytest.skip("icon assets not present")
 

@@ -33,7 +33,7 @@ and I want to be clear about whose shoulders it stands on.
   red Hazards box, the regional observation tables, and more). Its art is also
   vendored directly — the shared deep-blue background it drew from scratch and
   its copies of the Star3000 typeface. See
-  [`static_assets_ws3000/README.md`](static_assets_ws3000/README.md).
+  [`static_assets/weatherstar_3000/README.md`](static_assets/weatherstar_3000/README.md).
 - **[Nick Smith / TWCClassics](http://twcclassics.com)** — the authentic
   Weather Star typefaces. The Star3000 face came into this project via ws3kp,
   and the classic Star4000 face that anchors the default look is drawn from the

@@ -74,7 +74,7 @@ through the context.
 ### Media
 
 `Media` plugins load local assets from an `asset_dir` (default
-`static_assets/…`) and register them on the context:
+`static_assets/weatherstar_4000/…`) and register them on the context:
 
 - `fonts` → `ctx.fonts` (named `pygame.font.Font` objects)
 - `backgrounds` / `logos` / `icons` → `ctx.assets` dicts plus

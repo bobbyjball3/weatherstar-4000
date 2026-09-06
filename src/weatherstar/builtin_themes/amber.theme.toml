@@ -1,7 +1,7 @@
 # Amber monochrome (classic IBM terminal).
 title = "Weather Star 4000"
 title_bottom = "4000"
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [colors]
 yellow = "#FFB400"        # Bright amber

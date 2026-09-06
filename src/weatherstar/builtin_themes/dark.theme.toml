@@ -1,7 +1,7 @@
 # Dark modern take on the Weather Star 4000 look.
 title = "Weather Star 4000"
 title_bottom = "4000"
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [colors]
 yellow = "#FFD700"        # Gold title

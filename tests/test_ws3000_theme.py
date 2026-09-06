@@ -118,8 +118,8 @@ def test_ws3000_theme_loads_with_assets(all_appcfg, pygame_env):
     assert theme.layout_for("almanac")["title_text"] == "The Weatherstar Almanac"
     assert theme.layout_for("regional_forecast")["variant"] == "3000"
     repo_root = Path(__file__).resolve().parents[1]
-    assert (repo_root / "static_assets_ws3000" / "fonts_ttf").is_dir()
-    assert (repo_root / "static_assets_ws3000" / "backgrounds" / "1.png").is_file()
+    assert (repo_root / "static_assets" / "weatherstar_3000" / "fonts_ttf").is_dir()
+    assert (repo_root / "static_assets" / "weatherstar_3000" / "backgrounds" / "1.png").is_file()
 
 
 def test_all_ws3000_screens_render_with_populated_data(all_appcfg, pygame_env):
@@ -179,7 +179,7 @@ def test_text_shadow_underlay_rendered(pygame_env):
             name="ws3000",
             colors={"white": white, "black": (0, 0, 0)},
             fonts={},  # asset fonts still load via asset_dir
-            asset_dir="static_assets_ws3000",
+            asset_dir="static_assets/weatherstar_3000",
             text_shadow=True,
             text_shadow_offset=3,
             text_shadow_outline=2,

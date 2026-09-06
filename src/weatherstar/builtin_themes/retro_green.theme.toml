@@ -1,7 +1,7 @@
 # Retro green monochrome (old terminal style).
 title = "Weather Star 4000"
 title_bottom = "4000"
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [colors]
 yellow = "#64FF64"        # Bright green

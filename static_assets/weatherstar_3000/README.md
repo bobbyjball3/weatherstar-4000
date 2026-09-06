@@ -1,7 +1,8 @@
-# static_assets_ws3000
+# weatherstar_3000
 
 Asset tree for the built-in `weatherstar3000` theme (see
-`src/weatherstar/builtin_themes/weatherstar3000.theme.toml`).
+`src/weatherstar/builtin_themes/weatherstar3000.theme.toml`). The Weather Star
+4000 asset tree lives in the sibling `weatherstar_4000/` directory.
 
 Contents:
 

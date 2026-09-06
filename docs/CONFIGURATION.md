@@ -181,23 +181,23 @@ user_agent = "weatherstar (python)"
 
 [media.backgrounds]
 # Directory containing this media's assets (project-relative or absolute).
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [media.fonts]
 # Directory containing this media's assets (project-relative or absolute).
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [media.icons]
 # Directory containing this media's assets (project-relative or absolute).
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [media.logos]
 # Directory containing this media's assets (project-relative or absolute).
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 
 [media.music]
 # Directory containing this media's assets (project-relative or absolute).
-asset_dir = "static_assets"
+asset_dir = "static_assets/weatherstar_4000"
 # Play background music during the show.
 enabled = false
 # Music volume, from 0.0 (silent) to 1.0 (full).
