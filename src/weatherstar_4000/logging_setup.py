@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,13 @@ def redact_sensitive(_logger: Any, _method: str, event_dict: dict) -> dict:
     return {k: ("***" if is_sensitive_key(k) else _redact(v)) for k, v in event_dict.items()}
 
 
+def _timestamp_rfc3339(_logger: Any, _method: str, event_dict: dict) -> dict:
+    """Stamp events with an RFC 3339 timestamp plus the local TZ abbreviation."""
+    now = datetime.now().astimezone()
+    event_dict["timestamp"] = now.isoformat(timespec="seconds") + " " + now.strftime("%Z")
+    return event_dict
+
+
 def setup_logging(
     level: int = logging.INFO,
     *,
@@ -86,7 +94,7 @@ def setup_logging(
     pre_chain = [
         structlog.stdlib.add_log_level,
         redact_sensitive,
-        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+        _timestamp_rfc3339,
     ]
 
     if console:
@@ -116,6 +124,7 @@ def setup_logging(
     structlog.configure(
         processors=[
             structlog.stdlib.add_log_level,
+            _timestamp_rfc3339,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             redact_sensitive,
