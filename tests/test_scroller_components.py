@@ -203,3 +203,44 @@ def test_data_table_column_requires_one_accessor():
         Column(header="X", header_x=0, x=0, format="text", index=None, key=None)
     with pytest.raises(ValidationError):
         Column(header="X", header_x=0, x=0, format="text", index=0, key="date")
+
+
+def test_data_table_money_and_signed_formats():
+    from weatherstar_4000.components.data_table import Column, DataTable
+
+    table = DataTable.model_validate(
+        {
+            "datasource_name": "stocks",
+            "rows_method": "quotes",
+            "scroll": False,
+            "columns": [
+                Column(header="P", header_x=0, x=0, format="money", attr="price"),
+                Column(header="C", header_x=0, x=0, format="signed", attr="change"),
+            ],
+        }
+    )
+    ctx = _ctx(None, {})
+    assert table._format_cell(412.50, table.columns[0], ctx) == "412.50"
+    assert table._format_cell(1234.5, table.columns[0], ctx) == "1,234.50"
+    assert table._format_cell(-2.0, table.columns[1], ctx) == "-2.00"
+    assert table._format_cell(1.25, table.columns[1], ctx) == "+1.25"
+    assert table._format_cell(None, table.columns[0], ctx) is None
+
+
+def test_data_table_sign_color_uses_up_down(screen, fonts):
+    from weatherstar_4000.components.data_table import Column, DataTable
+
+    table = DataTable.model_validate(
+        {
+            "datasource_name": "stocks",
+            "rows_method": "quotes",
+            "scroll": False,
+            "columns": [
+                Column(header="C", header_x=0, x=0, format="signed", attr="change", sign_color=True)
+            ],
+        }
+    )
+    ctx = _ctx(screen, fonts)
+    assert table._cell_color(table.columns[0], 1.0, ctx) == (0, 255, 0)
+    assert table._cell_color(table.columns[0], -1.0, ctx) == (255, 0, 0)
+    assert table._cell_color(table.columns[0], "bad", ctx) == (0, 255, 0)

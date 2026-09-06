@@ -159,6 +159,45 @@ class CurrentConditions(BaseModel):
             return None
         return self.visibility_m * _M_TO_MILES
 
+    # -- observation rows (label/value display strings) ---------------------
+
+    def observation_rows(self, pressure_trend: str = "") -> list[tuple[str, str]]:
+        """Formatted ``(label, value)`` observation rows for the current screen.
+
+        Centralizes the ceiling/visibility/pressure and heat-index/wind-chill
+        presentation decisions so ``compose`` only places the returned strings.
+        ``pressure_trend`` is the ephemeral trend glyph (drawn by the screen
+        from its own short pressure history) appended to the pressure value.
+        """
+        degree = "\N{DEGREE SIGN}"
+        rows: list[tuple[str, str]] = []
+        if self.relative_humidity is not None:
+            rows.append(("Humidity:", f"{int(self.relative_humidity)}%"))
+        if self.dewpoint_f is not None:
+            rows.append(("Dewpoint:", f"{self.dewpoint_f}{degree}"))
+        if self.ceiling_ft:
+            rows.append(("Ceiling:", f"{self.ceiling_ft} ft"))
+        else:
+            rows.append(("Ceiling:", "Unlimited"))
+        if self.visibility_miles is not None:
+            miles = self.visibility_miles
+            rows.append(("Visibility:", "10 mi" if miles >= 10 else f"{miles:.1f} mi"))
+        if self.pressure_inhg is not None:
+            rows.append(("Pressure:", f'{self.pressure_inhg:.2f}" {pressure_trend}'.strip()))
+        if (
+            self.heat_index_f is not None
+            and self.temperature_c is not None
+            and self.temperature_c > 26
+        ):
+            rows.append(("Heat Index:", f"{self.heat_index_f}{degree}"))
+        elif (
+            self.wind_chill_f is not None
+            and self.temperature_c is not None
+            and self.temperature_c < 10
+        ):
+            rows.append(("Wind Chill:", f"{self.wind_chill_f}{degree}"))
+        return rows
+
     # -- construction -------------------------------------------------------
 
     @classmethod

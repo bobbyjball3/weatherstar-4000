@@ -8,7 +8,7 @@ touch the raw upstream payloads.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
@@ -59,6 +59,14 @@ class Earthquake(BaseModel):
     time: datetime | None = Field(default=None, description="UTC occurrence time.")
 
 
+#: Classic WeatherStar display names for the default market symbols.
+_QUOTE_DISPLAY_NAMES = {
+    "DIA": "DOW JONES",
+    "SPY": "S&P 500",
+    "QQQ": "NASDAQ",
+}
+
+
 class Quote(BaseModel):
     """A stock/index quote with a semantic direction for coloring."""
 
@@ -69,6 +77,11 @@ class Quote(BaseModel):
     change: float | None = Field(default=None)
     change_percent: float | None = Field(default=None)
     direction: Literal["up", "down", "flat"] = Field(default="flat")
+
+    @property
+    def display_name(self) -> str:
+        """The classic index label for this symbol (falls back to the symbol)."""
+        return _QUOTE_DISPLAY_NAMES.get(self.symbol, self.symbol)
 
 
 class UvReading(BaseModel):
@@ -241,7 +254,13 @@ class StockMarketDatasource(Datasource):
         default="DIA,SPY,QQQ", description="Comma-separated stock/index symbols to display."
     )
 
-    def quotes(self) -> list[Quote]:
+    def quotes(self, *args: Any, **kwargs: Any) -> list[Quote]:
+        """Return quotes for every configured symbol.
+
+        Accepts (and ignores) a location so the shared data_table component can
+        call rows uniformly as ``method(lat, lon)``; quotes are not location
+        scoped.
+        """
         symbols = [s.strip() for s in self.symbols.split(",") if s.strip()]
         result: list[Quote] = []
         for symbol in symbols:

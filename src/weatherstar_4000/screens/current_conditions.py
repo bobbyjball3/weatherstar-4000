@@ -112,60 +112,25 @@ class CurrentConditionsScreen(Screen):
             surface.blit(loc_surf, (right_col_x, y_pos))
             y_pos += 30
 
-        row_data = []
-
-        humidity = current.relative_humidity
-        if humidity is not None:
-            row_data.append(("Humidity:", f"{int(humidity)}%"))
-
-        dewpoint_f = current.dewpoint_f
-        if dewpoint_f is not None:
-            row_data.append(("Dewpoint:", f"{dewpoint_f}\N{DEGREE SIGN}"))
-
-        ceiling_ft = current.ceiling_ft
-        if ceiling_ft is None or ceiling_ft == 0:
-            ceiling_str = "Unlimited"
-        else:
-            ceiling_str = f"{ceiling_ft} ft"
-        row_data.append(("Ceiling:", ceiling_str))
-
-        visibility_miles = current.visibility_miles
-        if visibility_miles is not None:
-            if visibility_miles >= 10:
-                vis_str = "10 mi"
-            else:
-                vis_str = f"{visibility_miles:.1f} mi"
-            row_data.append(("Visibility:", vis_str))
-
-        pressure_inhg = current.pressure_inhg
-        if pressure_inhg is not None:
+        pressure_trend = ""
+        if current.pressure_inhg is not None:
             history = self._pressure_history
             if history is None:
                 history = []
                 self._pressure_history = history
-            history.append(pressure_inhg)
+            history.append(current.pressure_inhg)
             if len(history) > 5:
                 history.pop(0)
-            trend = ""
             if len(history) >= 2:
                 change = history[-1] - history[0]
                 if change > 0.02:
-                    trend = "\u2191"
+                    pressure_trend = "\u2191"
                 elif change < -0.02:
-                    trend = "\u2193"
+                    pressure_trend = "\u2193"
                 else:
-                    trend = "\u2192"
-            row_data.append(("Pressure:", f'{pressure_inhg:.2f}" {trend}'.strip()))
+                    pressure_trend = "\u2192"
 
-        temp_c = current.temperature_c
-        heat_index_f = current.heat_index_f
-        wind_chill_f = current.wind_chill_f
-        if heat_index_f is not None and temp_c is not None and temp_c > 26:
-            row_data.append(("Heat Index:", f"{heat_index_f}\N{DEGREE SIGN}"))
-        elif wind_chill_f is not None and temp_c is not None and temp_c < 10:
-            row_data.append(("Wind Chill:", f"{wind_chill_f}\N{DEGREE SIGN}"))
-
-        for label, value in row_data:
+        for label, value in current.observation_rows(pressure_trend):
             label_surf = self.font(ctx, "normal").render(label, True, white)
             surface.blit(label_surf, (label_x, y_pos))
             value_surf = self.font(ctx, "normal").render(value, True, white)

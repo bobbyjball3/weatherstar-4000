@@ -240,7 +240,7 @@ class _Quakes:
 
 
 class _Stocks:
-    def quotes(self):
+    def quotes(self, *args, **kwargs):
         return [
             Quote(symbol="DIA", price=412.50, change=1.25, change_percent=0.3, direction="up"),
             Quote(symbol="SPY", price=556.10, change=-2.00, change_percent=-0.4, direction="down"),

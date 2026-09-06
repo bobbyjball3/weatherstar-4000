@@ -93,6 +93,7 @@ def test_icon_glyph_is_lightened_against_dark_bands(pygame_env):
     surface.fill((255, 255, 255))
     surface.set_colorkey((255, 255, 255))
     pygame.draw.rect(surface, (0, 0, 0), pygame.Rect(1, 1, 2, 2))
+    surface.set_at((0, 3), (73, 102, 161))  # saturated blue accent
 
     lightened = _lighten_glyph(surface)
     # The white canvas stays fully transparent.
@@ -100,3 +101,5 @@ def test_icon_glyph_is_lightened_against_dark_bands(pygame_env):
     # The formerly-black glyph is now light so it reads on the navy band.
     pixel = lightened.get_at((2, 2))
     assert pixel[0] > 200 and pixel[1] > 200 and pixel[2] > 200
+    # Saturated color accents (blue rain, yellow sun) are preserved.
+    assert lightened.get_at((0, 3))[:3] == (73, 102, 161)

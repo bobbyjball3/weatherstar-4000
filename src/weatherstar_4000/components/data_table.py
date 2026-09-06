@@ -37,12 +37,24 @@ class Column(BaseModel):
     header: str = Field(description="Header text for this column.")
     header_x: int = Field(description="Left x of the header cell.")
     x: int = Field(description="Left x of the data cells.")
-    format: Literal["date", "degrees", "int", "text", "inches", "precip_status", "protection"] = (
-        Field(description="How to render the raw cell value.")
-    )
+    format: Literal[
+        "date",
+        "degrees",
+        "int",
+        "text",
+        "inches",
+        "precip_status",
+        "protection",
+        "money",
+        "signed",
+    ] = Field(description="How to render the raw cell value.")
     index: int | None = Field(default=None, description="Cell position for tuple rows.")
     key: str | None = Field(default=None, description="Cell dict key for dict rows.")
     attr: str | None = Field(default=None, description="Cell attribute for typed model rows.")
+    sign_color: bool = Field(
+        default=False,
+        description="Color the cell by its value sign (up/down) instead of white.",
+    )
 
     @model_validator(mode="after")
     def _exactly_one_accessor(self) -> Column:
@@ -95,7 +107,6 @@ class DataTable(Component):
             return
 
         yellow = self.color(ctx, "yellow")
-        white = self.color(ctx, "white")
         font = self.font(ctx, "normal")
 
         y_pos = self.start_y
@@ -109,16 +120,22 @@ class DataTable(Component):
 
         start = self._start_index(ctx, rows)
         for row in rows[start : start + self.max_rows]:
-            cells = []
+            cells: list[str] = []
+            colors: list[tuple[int, int, int]] = []
+            draw = True
             for column in self.columns:
-                text = self._format_cell(self._cell(row, column), column, ctx)
+                raw = self._cell(row, column)
+                text = self._format_cell(raw, column, ctx)
                 if text is None:
+                    draw = False
                     break
                 cells.append(text)
-            else:
-                for column, text in zip(self.columns, cells):
-                    surface.blit(font.render(text, True, white), (column.x, y_pos))
-                y_pos += _ROW_GAP
+                colors.append(self._cell_color(column, raw, ctx))
+            if not draw:
+                continue
+            for column, text, color in zip(self.columns, cells, colors):
+                surface.blit(font.render(text, True, color), (column.x, y_pos))
+            y_pos += _ROW_GAP
 
     # -- internals --------------------------------------------------------
 
@@ -192,9 +209,32 @@ class DataTable(Component):
                 return "Heavy"
             if fmt == "protection":
                 return self._protection(ctx, float(raw))
+            if fmt == "money":
+                return f"{float(raw):,.2f}"
+            if fmt == "signed":
+                value = float(raw)
+                sign = "+" if value >= 0 else ""
+                return f"{sign}{value:,.2f}"
         except (TypeError, ValueError):
             return None
         return str(raw)
+
+    def _cell_color(self, column: Column, raw: Any, ctx: AppContext) -> tuple[int, int, int]:
+        """Return the render color for one cell.
+
+        ``sign_color`` columns render up/down semantically (theme keys ``up`` /
+        ``down``, falling back to the classic green/red); everything else is
+        plain white.
+        """
+        if not column.sign_color:
+            return self.color(ctx, "white")
+        try:
+            positive = float(raw) >= 0
+        except (TypeError, ValueError):
+            positive = True
+        if positive:
+            return self.color(ctx, "up", (0, 255, 0))
+        return self.color(ctx, "down", (255, 0, 0))
 
     def _protection(self, ctx: AppContext, uv_value: float) -> str:
         uv_ds = self.optional_datasource(ctx, "uv_index")
