@@ -1,7 +1,7 @@
 [project]
-name = "weatherstar-4000"
+name = "weatherstar"
 version = "0.1.0"
-description = "Weatherstar 4000 Simulator"
+description = "Weather Star simulator (The Weather Channel's Weather Star 4000 & 3000)"
 readme = "README.md"
 authors = [
     { name = "Bobby Ball", email = "bobbyjball3@gmail.com" }
@@ -20,11 +20,11 @@ dependencies = [
 ]
 
 [project.scripts]
-weatherstar4000 = "weatherstar_4000.cli:main"
+weatherstar = "weatherstar.cli:main"
 
 # External plugins register here (built-ins register via the built-in registry).
-[project.entry-points."weatherstar4000.plugins"]
-placeholder = "weatherstar_4000.plugins"
+[project.entry-points."weatherstar.plugins"]
+placeholder = "weatherstar.plugins"
 
 [dependency-groups]
 dev = [
@@ -49,14 +49,14 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["weatherstar_4000"]
+known-first-party = ["weatherstar"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--continue-on-collection-errors --junitxml=reports/junit.xml"
 
 [tool.coverage.run]
-source = ["src/weatherstar_4000"]
+source = ["src/weatherstar"]
 branch = true
 
 [tool.coverage.report]

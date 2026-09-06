@@ -2,8 +2,8 @@
 
 import pygame
 
-from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.renderer import Renderer
+from weatherstar.context import AppContext, DataRegistry, Location
+from weatherstar.renderer import Renderer
 
 
 class _Dummy(Renderer):
@@ -132,7 +132,7 @@ def test_weather_data(screen):
             return SimpleNamespace(lat=lat, lon=lon)
 
         def get_city(self, lat, lon):
-            from weatherstar_4000.datasources.noaa import City
+            from weatherstar.datasources.noaa import City
 
             return City(city="Melbourne", state="FL")
 

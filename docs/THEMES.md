@@ -1,6 +1,6 @@
 # Themes
 
-The WeatherStar 4000 engine is themed by name. A theme changes the look and
+The Weather Star engine is themed by name. A theme changes the look and
 feel of every screen — colors, the fonts/backgrounds/logos/icons asset tree it
 loads, and the product line shown in the screen header — without any per-screen
 code branching on the theme. Themes are **data** (one TOML file per theme), so
@@ -11,13 +11,13 @@ adding or tweaking a look never requires writing Python.
 The active theme is just a name:
 
 ```sh
-uv run weatherstar4000 --sequence main --theme weatherstar3000
+uv run weatherstar --sequence main --theme weatherstar3000
 # or in config.toml
 theme = "weatherstar3000"
 ```
 
 Selection precedence: `--theme` > `WEATHERSTAR_THEME` > the top-level `theme`
-key > `weatherstar4000` (the authentic WeatherStar 4000 look).
+key > `weatherstar4000` (the authentic Weather Star 4000 look).
 
 ## Where theme files live
 
@@ -26,7 +26,7 @@ Each theme is a `*.theme.toml` file whose **file stem is the theme name**
 from these directories, highest precedence first:
 
 1. `--themes-dir` / `WEATHERSTAR_THEMES_DIR`
-2. `~/.config/weatherstar4000/themes/` (XDG user themes)
+2. `~/.config/weatherstar/themes/` (XDG user themes)
 3. the built-in themes shipped inside the package (`builtin_themes/`)
 
 Earlier directories shadow later ones by name, so a user theme can override a
@@ -40,7 +40,7 @@ Built-in themes: `weatherstar4000` (default/base), `dark`, `high_contrast`,
 
 ```toml
 # <name>.theme.toml  (file stem = theme name)
-title = "WeatherStar 3000"     # product name (progress/loading text)
+title = "Weather Star 3000"     # product name (progress/loading text)
 title_bottom = "3000"          # header bottom line; blank if unset
 asset_dir = "static_assets_ws3000"  # media tree (default "static_assets")
 
@@ -90,7 +90,7 @@ never vanish under a theme that merely recolors the palette.
 
 Optional map of the named font slots (`title`, `large`, `extended`, `small`,
 `normal`, `forecast`, `tiny`, `scroller`) to `[file, size]`. A theme that
-points these at its own TTF files (e.g. the WeatherStar 3000 typeface) uses them
+points these at its own TTF files (e.g. the Weather Star 3000 typeface) uses them
 when present; otherwise the classic filenames are used.
 
 A theme may also **add** new slots, not just override existing ones. The 3000
@@ -105,11 +105,11 @@ datetime = ["Star3000 Small.ttf", 24]
 ### `bottom_band`
 
 Which always-on bottom band overlays every slide. Defaults to `"4000"` — the
-navy WeatherStar 4000 crawler. A theme that reserves the bottom of the canvas
+navy Weather Star 4000 crawler. A theme that reserves the bottom of the canvas
 for a different band opts in with a value:
 
 ```toml
-bottom_band = "3000"   # WeatherStar 3000 scroll: date + time over a crawling line
+bottom_band = "3000"   # Weather Star 3000 scroll: date + time over a crawling line
 ```
 
 `"3000"` draws the real 3000 foot-of-canvas scroll (a small date/time row above a
@@ -121,7 +121,7 @@ Like `variant`, `bottom_band` is drawn from the closed `LayoutVariant` enum
 
 ### `text_shadow`
 
-The 1980s WeatherStar 3000 look draws every text glyph with a black outline ring
+The 1980s Weather Star 3000 look draws every text glyph with a black outline ring
 plus a right/down drop shadow (the ws3kp `text-shadow` stack). Themes opt in:
 
 ```toml
@@ -131,7 +131,7 @@ text_shadow_outline = 2    # outline stroke width in px
 ```
 
 When `text_shadow` is false (the default) text renders with no underlay, exactly
-as the classic WeatherStar 4000 screens do. The outline color comes from the
+as the classic Weather Star 4000 screens do. The outline color comes from the
 theme's `black` palette key.
 
 ### `layout`
@@ -152,11 +152,11 @@ title_font = "title"           # font slot for the header title
 
 [layout.current_conditions]    # per-screen overrides beat the defaults
 title_style = "hidden"
-variant = "3000"               # request this screen's WeatherStar 3000 layout
+variant = "3000"               # request this screen's Weather Star 3000 layout
 ```
 
 Header tokens drive the shared header/clock components. A screen with a
-genuinely different WeatherStar 3000 layout (e.g. Current Conditions as a plain
+genuinely different Weather Star 3000 layout (e.g. Current Conditions as a plain
 text list) is *requested* through the `variant` token — but which variants a
 screen actually implements is declared in code, never branched in the theme.
 
@@ -224,7 +224,7 @@ typo in the mapping).
 
 ## Adding your own theme
 
-1. Drop a `<name>.theme.toml` into `~/.config/weatherstar4000/themes/`
+1. Drop a `<name>.theme.toml` into `~/.config/weatherstar/themes/`
    (or point `--themes-dir` at a directory of your own).
 2. Set `theme = "<name>"` in `config.toml` (or pass `--theme <name>`).
 

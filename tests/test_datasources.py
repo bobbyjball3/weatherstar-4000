@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from weatherstar_4000.datasources.feeds import (
+from weatherstar.datasources.feeds import (
     Alert,
     EarthquakesDatasource,
     NoaaAlertsDatasource,

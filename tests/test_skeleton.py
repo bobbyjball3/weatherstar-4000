@@ -7,9 +7,9 @@ except ModuleNotFoundError:  # Python 3.10 backport
 
 from pydantic import Field, SecretStr
 
-from weatherstar_4000.plugin import Plugin
-from weatherstar_4000.registry import registry
-from weatherstar_4000.skeleton import render_skeleton
+from weatherstar.plugin import Plugin
+from weatherstar.registry import registry
+from weatherstar.skeleton import render_skeleton
 
 # Guard: never pollute the real registry between runs.
 _BASE_REGISTRY = {k: dict(v) for k, v in registry._plugins.items()}
@@ -39,7 +39,7 @@ def _restore():
 def test_render_skeleton_contains_sections_and_parses():
     _reg("screen", "current_conditions", fields={"header_text": (str, "Now")})
     _reg("screen", "radar", fields={"refresh": (int, 300)})
-    _reg("datasource", "noaa", fields={"user_agent": (str, "WeatherStar4000/1.0")})
+    _reg("datasource", "noaa", fields={"user_agent": (str, "weatherstar/1.0")})
     _reg("datasource", "alpha_vantage", fields={"api_key": (SecretStr,)})
     try:
         text = render_skeleton(sequence_name="night", screen_names=["current_conditions", "radar"])

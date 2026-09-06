@@ -3,12 +3,12 @@
 import pytest
 from pydantic import SecretStr
 
-from weatherstar_4000 import InvalidConfiguration
-from weatherstar_4000.config_file import AppConfig
-from weatherstar_4000.engine import Builder, SequenceRunner, resolve_location
-from weatherstar_4000.plugin import Plugin
-from weatherstar_4000.registry import registry
-from weatherstar_4000.sequence import Sequence
+from weatherstar import InvalidConfiguration
+from weatherstar.config_file import AppConfig
+from weatherstar.engine import Builder, SequenceRunner, resolve_location
+from weatherstar.plugin import Plugin
+from weatherstar.registry import registry
+from weatherstar.sequence import Sequence
 
 CFG = """
 sequence = "demo"
@@ -95,7 +95,7 @@ def test_run_sequence_advances_all_slides(appcfg, pygame_env):
     sequence = Sequence.from_config(name, data)
     surface = pygame.Surface((640, 480))
     ctx, screens = builder.build_runtime(sequence, surface, resolve_location(appcfg))
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.engine import run_sequence
 
     frames = run_sequence(ctx, screens, sequence)
     assert frames >= 1
@@ -104,8 +104,8 @@ def test_run_sequence_advances_all_slides(appcfg, pygame_env):
 def test_run_sequence_interactive_auto_advances_and_wraps(pygame_env):
     import pygame
 
-    from weatherstar_4000.context import AppContext, DataRegistry, Location
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.context import AppContext, DataRegistry, Location
+    from weatherstar.engine import run_sequence
 
     drawn = []
 
@@ -140,8 +140,8 @@ def test_run_sequence_interactive_auto_advances_and_wraps(pygame_env):
 def test_run_sequence_polls_music_controller(pygame_env):
     import pygame
 
-    from weatherstar_4000.context import AppContext, DataRegistry, Location
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.context import AppContext, DataRegistry, Location
+    from weatherstar.engine import run_sequence
 
     class _Controller:
         def __init__(self):
@@ -173,7 +173,7 @@ def test_run_sequence_polls_music_controller(pygame_env):
 def _slide_pair_ctx(pygame_env):
     import pygame
 
-    from weatherstar_4000.context import AppContext, DataRegistry, Location
+    from weatherstar.context import AppContext, DataRegistry, Location
 
     class _FakeSlide:
         def __init__(self, name):
@@ -195,7 +195,7 @@ def _slide_pair_ctx(pygame_env):
 
 
 def test_run_sequence_noninteractive_completes_single_pass(pygame_env):
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.engine import run_sequence
 
     ctx, screens, seq = _slide_pair_ctx(pygame_env)
     frames = run_sequence(ctx, screens, seq)
@@ -206,7 +206,7 @@ def test_run_sequence_noninteractive_completes_single_pass(pygame_env):
 def test_run_sequence_stop_event(pygame_env):
     import threading
 
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.engine import run_sequence
 
     ctx, screens, seq = _slide_pair_ctx(pygame_env)
     stop = threading.Event()
@@ -216,7 +216,7 @@ def test_run_sequence_stop_event(pygame_env):
 
 
 def test_run_sequence_max_frames(pygame_env):
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.engine import run_sequence
 
     ctx, screens, seq = _slide_pair_ctx(pygame_env)
     frames = run_sequence(ctx, screens, seq, interactive=True, max_frames=7)
@@ -286,7 +286,7 @@ def test_screen_scope_config_is_applied(appcfg, tmp_path, pygame_env):
 
 
 def test_plugin_not_found_for_unknown_screen(appcfg):
-    from weatherstar_4000 import PluginNotFound
+    from weatherstar import PluginNotFound
 
     raw = dict(appcfg.data)
     raw["sequences"] = {"demo": {"pause": 0.05, "slides": [{"screen": "nope"}]}}

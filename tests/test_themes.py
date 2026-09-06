@@ -1,8 +1,8 @@
 """Tests for the theming system: TOML parsing, discovery, and engine wiring."""
 
-from weatherstar_4000.config_file import AppConfig
-from weatherstar_4000.engine import Builder, select_theme_name
-from weatherstar_4000.themes import (
+from weatherstar.config_file import AppConfig
+from weatherstar.engine import Builder, select_theme_name
+from weatherstar.themes import (
     DEFAULT_THEME_NAME,
     ENV_THEME,
     FALLBACK_THEME,
@@ -52,7 +52,7 @@ def test_title_bottom_defaults_blank(tmp_path):
     theme = get_theme("minimal", dirs=[tmp_path])
     assert theme.title_bottom == ""
     assert theme.asset_dir == "static_assets"
-    # Layout-family fields default to the WeatherStar 4000 variant.
+    # Layout-family fields default to the Weather Star 4000 variant.
     assert theme.variant is LayoutVariant.WS4000
     assert theme.bottom_band is LayoutVariant.WS4000
 
@@ -102,7 +102,7 @@ def test_builtin_themes_are_discoverable():
     for expected in ("weatherstar4000", "dark", "weatherstar3000", "amber"):
         assert expected in names
     theme = get_theme("weatherstar4000", dirs=[builtin_themes_dir()])
-    assert theme.title == "WeatherStar 4000"
+    assert theme.title == "Weather Star 4000"
     assert theme.title_bottom == "4000"
 
 
@@ -110,7 +110,7 @@ def test_higher_precedence_dir_shadows_lower(tmp_path):
     _write_theme(
         tmp_path,
         "weatherstar4000",
-        'title = "WeatherStar 4000"\ntitle_bottom = "4000"\n[colors]\nyellow = "#112233"\n',
+        'title = "Weather Star 4000"\ntitle_bottom = "4000"\n[colors]\nyellow = "#112233"\n',
     )
     dirs = [tmp_path, builtin_themes_dir()]
     assert get_theme("weatherstar4000", dirs=dirs).colors["yellow"] == (0x11, 0x22, 0x33)
@@ -122,7 +122,7 @@ def test_reversed_dir_order_keeps_builtin_first(tmp_path):
     _write_theme(
         tmp_path,
         "weatherstar4000",
-        'title = "WeatherStar 4000"\ntitle_bottom = "4000"\n[colors]\nyellow = "#112233"\n',
+        'title = "Weather Star 4000"\ntitle_bottom = "4000"\n[colors]\nyellow = "#112233"\n',
     )
     assert get_theme("weatherstar4000", dirs=[builtin_themes_dir(), tmp_path]).colors["yellow"] == (
         255,
@@ -184,12 +184,12 @@ def _register_media_classes() -> None:
     plugins may be missing here even though ``Builder`` discovered them earlier.
     Registering the concrete classes keeps this file self-contained.
     """
-    from weatherstar_4000.media.backgrounds import Backgrounds
-    from weatherstar_4000.media.fonts import Fonts
-    from weatherstar_4000.media.icons import Icons
-    from weatherstar_4000.media.logos import Logos
-    from weatherstar_4000.media.music import Music
-    from weatherstar_4000.registry import registry
+    from weatherstar.media.backgrounds import Backgrounds
+    from weatherstar.media.fonts import Fonts
+    from weatherstar.media.icons import Icons
+    from weatherstar.media.logos import Logos
+    from weatherstar.media.music import Music
+    from weatherstar.registry import registry
 
     registry.register("media", "backgrounds", Backgrounds)
     registry.register("media", "fonts", Fonts)
@@ -213,7 +213,7 @@ def test_builder_media_loads_from_theme_asset_dir(tmp_path, pygame_env):
     _write_theme(
         themes_dir,
         "weatherstar3000",
-        f'title = "WeatherStar 3000"\ntitle_bottom = "3000"\nasset_dir = "{assets_dir}"\n',
+        f'title = "Weather Star 3000"\ntitle_bottom = "3000"\nasset_dir = "{assets_dir}"\n',
     )
 
     cfg_path = tmp_path / "config.toml"
@@ -221,7 +221,7 @@ def test_builder_media_loads_from_theme_asset_dir(tmp_path, pygame_env):
     appcfg = AppConfig.from_file(cfg_path)
     builder = Builder(appcfg, cli_theme="weatherstar3000", themes_dir=str(themes_dir))
 
-    from weatherstar_4000.engine import resolve_location
+    from weatherstar.engine import resolve_location
 
     surface = pygame.Surface((640, 480))
     deps = {"datasource": set(), "media": {"fonts", "backgrounds"}, "component": set()}
@@ -240,14 +240,14 @@ def test_media_asset_dir_precedence(tmp_path, pygame_env):
     """An explicit, non-default [media.*] asset_dir beats the theme's dir."""
     _register_media_classes()
 
-    from weatherstar_4000.engine import Builder
+    from weatherstar.engine import Builder
 
     themes_dir = tmp_path / "themes"
     theme_assets = tmp_path / "theme_assets"
     _write_theme(
         themes_dir,
         "weatherstar3000",
-        f'title = "WeatherStar 3000"\ntitle_bottom = "3000"\nasset_dir = "{theme_assets}"\n',
+        f'title = "Weather Star 3000"\ntitle_bottom = "3000"\nasset_dir = "{theme_assets}"\n',
     )
     cfg_path = tmp_path / "config.toml"
     cfg_path.write_text(CFG)

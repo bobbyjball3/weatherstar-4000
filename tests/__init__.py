@@ -1,3 +1,3 @@
 """
-WeatherStar 4000 Test Suite
+Weather Star Test Suite
 """

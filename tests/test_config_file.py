@@ -2,8 +2,8 @@
 
 import pytest
 
-from weatherstar_4000 import ConfigError, SequenceError
-from weatherstar_4000.config_file import (
+from weatherstar import ConfigError, SequenceError
+from weatherstar.config_file import (
     ENV_SEQUENCE,
     AppConfig,
     discover_config_path,
@@ -48,7 +48,7 @@ def test_discover_env_when_no_explicit(tmp_path, monkeypatch):
 
 
 def test_discover_default_xdg_when_exists(tmp_path, monkeypatch):
-    default = tmp_path / "cfg" / "weatherstar4000" / "config.toml"
+    default = tmp_path / "cfg" / "weatherstar" / "config.toml"
     default.parent.mkdir(parents=True)
     default.write_text("")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))

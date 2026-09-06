@@ -5,7 +5,7 @@ import logging
 
 from pydantic import SecretStr
 
-from weatherstar_4000 import logging_setup
+from weatherstar import logging_setup
 
 
 def _render_via_console(event_dict, colors=True):
@@ -75,7 +75,7 @@ def test_setup_logging_writes_json_file_and_console(capsys, tmp_path):
     log_file = tmp_path / "logs.jsonl"
     base = logging_setup.setup_logging(logging.INFO, console=True, log_file=log_file, reset=True)
     base.handlers  # noqa: B018
-    structlog.get_logger("weatherstar4000").info("booted", component="engine")
+    structlog.get_logger("weatherstar").info("booted", component="engine")
     assert log_file.exists()
     content = log_file.read_text()
     assert "booted" in content
@@ -86,7 +86,7 @@ def test_setup_logging_console_disabled_writes_no_stdout(capsys, tmp_path):
 
     log_file = tmp_path / "only.jsonl"
     logging_setup.setup_logging(logging.INFO, console=False, log_file=log_file, reset=True)
-    structlog.get_logger("weatherstar4000").info("quiet", component="engine")
+    structlog.get_logger("weatherstar").info("quiet", component="engine")
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
@@ -101,7 +101,7 @@ def test_setup_logging_stamps_timestamp_on_console_and_file(capsys, tmp_path):
 
     log_file = tmp_path / "logs.jsonl"
     logging_setup.setup_logging(logging.INFO, console=True, log_file=log_file, reset=True)
-    structlog.get_logger("weatherstar4000").info("booted", component="engine")
+    structlog.get_logger("weatherstar").info("booted", component="engine")
 
     # RFC 3339 timestamp + local alpha TZ abbreviation, e.g.
     # "2026-09-05T10:41:00-04:00 EDT" -> console starts with the year.

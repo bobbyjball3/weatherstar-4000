@@ -3,8 +3,8 @@
 import pytest
 from pydantic import SecretStr
 
-from weatherstar_4000 import InvalidConfiguration
-from weatherstar_4000.plugin import Plugin
+from weatherstar import InvalidConfiguration
+from weatherstar.plugin import Plugin
 
 
 class Widget(Plugin):

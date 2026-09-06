@@ -1,4 +1,4 @@
-# WeatherStar 4000 — Configuration
+# Weather Star — Configuration
 
 The engine reads one TOML file that configures the plugin graph: which
 sequence to run, where to point the datasources, window/logging behavior, and
@@ -10,7 +10,7 @@ overrides for any plugin's typed config fields.
 | --- | --- |
 | `--config` CLI flag | explicit path |
 | `WEATHERSTAR_CONFIG` | explicit path |
-| Default (XDG) | `~/.config/weatherstar4000/config.toml` |
+| Default (XDG) | `~/.config/weatherstar/config.toml` |
 
 A config file is **not** required if you pass `--sequence`, `--lat` and `--lon`
 on the command line.
@@ -22,7 +22,7 @@ so you can always regenerate a fully commented starting point that stays in sync
 with the code:
 
 ```sh
-uv run weatherstar4000 generate-config --sequence main -o ~/.config/weatherstar4000/config.toml
+uv run weatherstar generate-config --sequence main -o ~/.config/weatherstar/config.toml
 ```
 
 Fill in any `# REQUIRED` keys and uncomment the values you want to change.
@@ -43,16 +43,16 @@ Fill in any `# REQUIRED` keys and uncomment the values you want to change.
 The `theme` key only *names* the active theme; the theme body lives in its own
 `*.theme.toml` file (see `docs/THEMES.md`). Theme files are discovered from a
 `--themes-dir`/`WEATHERSTAR_THEMES_DIR` directory, then
-`~/.config/weatherstar4000/themes/`, then the built-ins shipped with the app.
+`~/.config/weatherstar/themes/`, then the built-ins shipped with the app.
 A theme's `asset_dir` supplies its own fonts/backgrounds/logos/icons and is used
 by the media plugins unless a `[media.*] asset_dir` is set explicitly.
 
 ## Example
 
-Below is the output of `weatherstar4000 generate-config --sequence main`
+Below is the output of `weatherstar generate-config --sequence main`
 with the location filled in for Orlando, FL. Every value is documented inline.
 ```toml
-# WeatherStar 4000 configuration skeleton.
+# Weather Star configuration skeleton.
 # Generated per-plugin from declared typed config fields.
 # Every configurable value is documented inline; uncomment keys you want
 # to change and fill in REQUIRED values.
@@ -118,7 +118,7 @@ slides = [
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 # Colon-separated severity order used to sort alerts (most severe first).
 severity_priority = "extreme:severe:moderate"
 
@@ -126,7 +126,7 @@ severity_priority = "extreme:severe:moderate"
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 # Minimum earthquake magnitude to include.
 min_magnitude = 3.0
 # Maximum number of earthquakes to fetch.
@@ -136,25 +136,25 @@ limit = 10
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 
 [datasource.local_news]
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 
 [datasource.radar]
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 
 [datasource.stocks]
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 # Alpha Vantage API key (required; sent with each request).
 # REQUIRED - supply a value for this key.
 # api_key = "value"
@@ -169,7 +169,7 @@ symbols = "DIA,SPY,QQQ"
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 # Number of days of UV index forecast to fetch.
 days = 7
 
@@ -177,7 +177,7 @@ days = 7
 # HTTP request timeout in seconds.
 timeout = 10
 # User-Agent header sent with upstream API requests.
-user_agent = "WeatherStar4000 (python)"
+user_agent = "weatherstar (python)"
 
 [media.backgrounds]
 # Directory containing this media's assets (project-relative or absolute).
@@ -232,7 +232,7 @@ empty_text = "Data unavailable"
 
 [component.header]
 # Top line of the screen header.
-title_top = "WeatherStar"
+title_top = "Weather Star"
 # Bottom line of the screen header. When blank, the active theme's product line (e.g. '3000') is shown instead.
 title_bottom = ""
 # Show the NOAA mark to the right of the header title.

@@ -8,11 +8,11 @@ requested variant and raises :class:`ThemeNotSupported` when it is not declared.
 import pygame
 import pytest
 
-from weatherstar_4000.context import AppContext
-from weatherstar_4000.errors import InvalidConfiguration, ThemeNotSupported
-from weatherstar_4000.screens.base import Screen
-from weatherstar_4000.sequence import Sequence, Slide
-from weatherstar_4000.themes import LayoutVariant, Theme
+from weatherstar.context import AppContext
+from weatherstar.errors import InvalidConfiguration, ThemeNotSupported
+from weatherstar.screens.base import Screen
+from weatherstar.sequence import Sequence, Slide
+from weatherstar.themes import LayoutVariant, Theme
 
 
 def _ctx(surface, variant, active="test"):
@@ -30,8 +30,8 @@ def test_registered_screens_declare_variants_and_methods(pygame_env):
     import importlib
     import pkgutil
 
-    import weatherstar_4000.screens as pkg
-    from weatherstar_4000.screens import base as screens_base
+    import weatherstar.screens as pkg
+    from weatherstar.screens import base as screens_base
 
     seen: set[str] = set()
     for info in pkgutil.iter_modules(pkg.__path__):
@@ -55,7 +55,7 @@ def test_registered_screens_declare_variants_and_methods(pygame_env):
 
 
 def test_variant_screens_introspect_both_layouts(pygame_env):
-    from weatherstar_4000.screens.current_conditions import CurrentConditionsScreen
+    from weatherstar.screens.current_conditions import CurrentConditionsScreen
 
     assert CurrentConditionsScreen.supported_variants() == (
         LayoutVariant.WS3000,
@@ -65,7 +65,7 @@ def test_variant_screens_introspect_both_layouts(pygame_env):
 
 
 def test_component_only_screens_declare_nothing(pygame_env):
-    from weatherstar_4000.screens.uv_index import UvIndexScreen
+    from weatherstar.screens.uv_index import UvIndexScreen
 
     assert UvIndexScreen.variants == {}
     assert UvIndexScreen.supported_variants() == ()
@@ -124,7 +124,7 @@ def test_undeclared_variant_raises_theme_not_supported(pygame_env, screen):
 
 
 def test_validate_records_unsupported_variant(pygame_env):
-    from weatherstar_4000.engine import SequenceRunner
+    from weatherstar.engine import SequenceRunner
 
     class Only4000(Screen):
         name = "only4000"
@@ -143,7 +143,7 @@ def test_validate_records_unsupported_variant(pygame_env):
 
 
 def test_run_sequence_degrades_unsupported_variant_to_placeholder(pygame_env):
-    from weatherstar_4000.engine import run_sequence
+    from weatherstar.engine import run_sequence
 
     class Only4000(Screen):
         name = "only4000"
@@ -175,7 +175,7 @@ def test_run_sequence_degrades_unsupported_variant_to_placeholder(pygame_env):
 
 
 def test_build_validation_flags_missing_declared_method(pygame_env):
-    from weatherstar_4000.engine import validate_screen_variants
+    from weatherstar.engine import validate_screen_variants
 
     class Typo(Screen):
         name = "typo"
@@ -190,7 +190,7 @@ def test_build_validation_flags_missing_declared_method(pygame_env):
 def test_build_validation_warns_but_does_not_raise_for_undeclared_request(
     pygame_env,
 ):
-    from weatherstar_4000.engine import validate_screen_variants
+    from weatherstar.engine import validate_screen_variants
 
     class Only4000(Screen):
         name = "solo"

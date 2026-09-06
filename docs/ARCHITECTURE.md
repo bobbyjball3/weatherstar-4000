@@ -1,7 +1,7 @@
 # Architecture
 
-This document explains how the WeatherStar 4000 plugin engine is put together.
-Everything lives under `src/weatherstar_4000/`.
+This document explains how the Weather Star plugin engine is put together.
+Everything lives under `src/weatherstar/`.
 
 ## At a glance
 
@@ -103,7 +103,7 @@ only at the point of use (`get_secret_value()`), and query-param style keys
 `(kind, name) -> class`. Built-ins are discovered by importing every module in
 the plugin bags (`plugins/__init__.py` walks `screens`, `components`,
 `media`, `datasources`, `sequences`). External plugins register through entry
-points in the `weatherstar4000.plugins` group. `registry.discover()` is
+points in the `weatherstar.plugins` group. `registry.discover()` is
 idempotent and is called once by the engine/CLI.
 
 ## Configuration
@@ -112,7 +112,7 @@ Config is loaded by `config_file.py` (`AppConfig`) and applied per plugin via
 Pydantic:
 
 - The file is discovered from `--config` > `WEATHERSTAR_CONFIG` >
-  `~/.config/weatherstar4000/config.toml` (`xdg_config_file`).
+  `~/.config/weatherstar/config.toml` (`xdg_config_file`).
 - `AppConfig.scope(kind, name)` returns the `[<kind>.<name>]` section, which
   `Plugin.from_config(...)` feeds to `model_validate`. Missing required fields
   raise `InvalidConfiguration` with the offending scope and a TOML example.
@@ -123,7 +123,7 @@ Pydantic:
 
 Because plugins are Pydantic models with `Field(description=...)` annotations,
 `skeleton.py` can generate a fully commented example config
-(`weatherstar4000 generate-config`) — descriptions are rendered inline as
+(`weatherstar generate-config`) — descriptions are rendered inline as
 `#` comments, and required/secret fields appear as commented `# key = "value"`
 placeholders. See `docs/CONFIGURATION.md`.
 
@@ -165,7 +165,7 @@ See `docs/THEMES.md` for the file format and discovery rules.
 
 `SequenceRunner.validate(...)` reuses the built screens but only *draws* each
 slide once headlessly (no window, datasources usually stubbed) — this powers
-`weatherstar4000 --validate` and the integration tests.
+`weatherstar --validate` and the integration tests.
 
 ### Bottom ticker
 

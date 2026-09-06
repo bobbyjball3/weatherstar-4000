@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from weatherstar_4000.context import AppContext, DataRegistry, Location
+from weatherstar.context import AppContext, DataRegistry, Location
 
 
 def _ctx(screen, fonts, *, data=None, location=None):
@@ -42,7 +42,7 @@ class _NoNews:
 
 
 def test_headline_scroller_draws_and_steps(screen, fonts):
-    from weatherstar_4000.components.headline_scroller import HeadlineScroller
+    from weatherstar.components.headline_scroller import HeadlineScroller
 
     scroller = HeadlineScroller.model_validate({"numbered": True})
     scroller.set_headlines([("BREAKING: Storm tonight", "u"), "plain headline"])
@@ -55,7 +55,7 @@ def test_headline_scroller_draws_and_steps(screen, fonts):
 
 
 def test_headline_scroller_empty_message(screen, fonts):
-    from weatherstar_4000.components.headline_scroller import HeadlineScroller
+    from weatherstar.components.headline_scroller import HeadlineScroller
 
     scroller = HeadlineScroller.model_validate({"empty_text": "No headlines"})
     scroller.render(screen, _ctx(screen, fonts))
@@ -63,7 +63,7 @@ def test_headline_scroller_empty_message(screen, fonts):
 
 
 def test_headline_scroller_token_accent_no_numbers(screen, fonts):
-    from weatherstar_4000.components.headline_scroller import HeadlineScroller
+    from weatherstar.components.headline_scroller import HeadlineScroller
 
     scroller = HeadlineScroller.model_validate({"numbered": False, "accent": "token"})
     scroller.set_headlines([("r/news: Storm approaches [OC]", "u")])
@@ -72,7 +72,7 @@ def test_headline_scroller_token_accent_no_numbers(screen, fonts):
 
 
 def test_headline_scroller_fetches_from_datasource_and_swallows_errors(screen, fonts):
-    from weatherstar_4000.components.headline_scroller import HeadlineScroller
+    from weatherstar.components.headline_scroller import HeadlineScroller
 
     data = DataRegistry()
     data.register("local_news", _NoNews())
@@ -84,7 +84,7 @@ def test_headline_scroller_fetches_from_datasource_and_swallows_errors(screen, f
 
 
 def test_data_table_renders_history_rows(screen, fonts):
-    from weatherstar_4000.components.data_table import Column, DataTable
+    from weatherstar.components.data_table import Column, DataTable
 
     data = DataRegistry()
     data.register("history", _History())
@@ -108,7 +108,7 @@ def test_data_table_renders_history_rows(screen, fonts):
 
 
 def test_data_table_skips_invalid_rows(screen, fonts):
-    from weatherstar_4000.components.data_table import Column, DataTable
+    from weatherstar.components.data_table import Column, DataTable
 
     data = DataRegistry()
     data.register(
@@ -129,7 +129,7 @@ def test_data_table_skips_invalid_rows(screen, fonts):
 
 
 def test_data_table_empty_when_datasource_has_no_rows(screen, fonts):
-    from weatherstar_4000.components.data_table import DataTable
+    from weatherstar.components.data_table import DataTable
 
     class _Empty:
         def temperature(self, lat, lon):
@@ -157,7 +157,7 @@ def test_data_table_empty_when_datasource_has_no_rows(screen, fonts):
 
 
 def test_data_table_no_scroll_with_static_rows(screen, fonts):
-    from weatherstar_4000.components.data_table import Column, DataTable
+    from weatherstar.components.data_table import Column, DataTable
 
     data = DataRegistry()
     data.register("history", _History())
@@ -175,7 +175,7 @@ def test_data_table_no_scroll_with_static_rows(screen, fonts):
 
 
 def test_data_table_uv_protection_fallback(screen, fonts):
-    from weatherstar_4000.components.data_table import Column, DataTable
+    from weatherstar.components.data_table import Column, DataTable
 
     data = DataRegistry()
     data.register("uv_index", object())  # no protection_level() -> fallback thresholds
@@ -195,7 +195,7 @@ def test_data_table_uv_protection_fallback(screen, fonts):
 
 
 def test_data_table_column_requires_one_accessor():
-    from weatherstar_4000.components.data_table import Column
+    from weatherstar.components.data_table import Column
 
     with pytest.raises(ValidationError):
         Column(header="X", header_x=0, x=0, format="text", index=None, key=None)
@@ -204,7 +204,7 @@ def test_data_table_column_requires_one_accessor():
 
 
 def test_data_table_money_and_signed_formats():
-    from weatherstar_4000.components.data_table import Column, DataTable
+    from weatherstar.components.data_table import Column, DataTable
 
     table = DataTable.model_validate(
         {
@@ -226,7 +226,7 @@ def test_data_table_money_and_signed_formats():
 
 
 def test_data_table_sign_color_uses_up_down(screen, fonts):
-    from weatherstar_4000.components.data_table import Column, DataTable
+    from weatherstar.components.data_table import Column, DataTable
 
     table = DataTable.model_validate(
         {

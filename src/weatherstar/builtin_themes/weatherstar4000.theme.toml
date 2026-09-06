@@ -1,0 +1,19 @@
+# Authentic Weather Star 4000 look (1990s): the default/baseline theme.
+# Every other theme layers over or supersedes this palette.
+title = "Weather Star 4000"
+title_bottom = "4000"
+asset_dir = "static_assets"
+
+[colors]
+yellow = "#FFFF00"        # Title color
+white = "#FFFFFF"         # Main text
+black = "#000000"         # Text shadows
+purple_header = "#200057"  # Column headers
+blue_gradient_1 = "#102080"  # Gradient start
+blue_gradient_2 = "#001040"  # Gradient end
+light_blue = "#8080FF"    # Low temperatures
+blue = "#8080FF"          # Alias for light_blue
+cyan = "#00FFFF"          # Accent / category text
+red = "#FF0000"           # Breaking news / alerts
+up = "#00FF00"            # Positive table cells
+down = "#FF0000"          # Negative table cells

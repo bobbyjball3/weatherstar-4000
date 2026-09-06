@@ -4,8 +4,8 @@ import calendar
 import datetime
 from datetime import date, timedelta
 
-from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.datasources.noaa import ForecastPeriod
+from weatherstar.context import AppContext, DataRegistry, Location
+from weatherstar.datasources.noaa import ForecastPeriod
 
 
 def _period(**kw):
@@ -13,7 +13,7 @@ def _period(**kw):
 
 
 def _screen():
-    from weatherstar_4000.screens.temperature_graph import TemperatureGraphScreen
+    from weatherstar.screens.temperature_graph import TemperatureGraphScreen
 
     return TemperatureGraphScreen.model_validate({})
 
@@ -99,7 +99,7 @@ def test_collect_periods_labels_follow_start_time_dates():
 
 def test_plot_band_keeps_labels_inside_the_chart_frame():
     screen = _screen()
-    from weatherstar_4000.screens import temperature_graph as m
+    from weatherstar.screens import temperature_graph as m
 
     for text_h in (12, 16, 20, 24, 28, 32, 40):
         top, bottom, label_offset = screen._plot_band(text_h)

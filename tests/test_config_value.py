@@ -3,7 +3,7 @@
 import pytest
 from pydantic import BaseModel, SecretStr, ValidationError
 
-from weatherstar_4000.logging_setup import is_sensitive_key
+from weatherstar.logging_setup import is_sensitive_key
 
 
 class ConfigHolder(BaseModel):

@@ -3,7 +3,7 @@
 import pygame
 import pytest
 
-from weatherstar_4000.datasources.radar import NoaaRadar
+from weatherstar.datasources.radar import NoaaRadar
 
 
 def _png_bytes(tmp_path) -> bytes:

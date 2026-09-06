@@ -2,10 +2,10 @@
 
 import pygame
 
-from weatherstar_4000.components.background import Background
-from weatherstar_4000.components.clock import Clock
-from weatherstar_4000.components.header import Header
-from weatherstar_4000.context import AppContext, DataRegistry, Location
+from weatherstar.components.background import Background
+from weatherstar.components.clock import Clock
+from weatherstar.components.header import Header
+from weatherstar.context import AppContext, DataRegistry, Location
 
 
 def _ctx(surface, *, assets=None):

@@ -1,4 +1,4 @@
-"""Shared pytest configuration and fixtures for WeatherStar 4000 tests.
+"""Shared pytest configuration and fixtures for Weather Star tests.
 
 pygame is driven headlessly: SDL dummy drivers are forced before any pygame
 import so rendering code can be exercised on CI machines without a display.

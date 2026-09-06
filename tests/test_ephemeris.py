@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from weatherstar_4000.ephemeris import next_moon_phases, sun_clock_minutes
+from weatherstar.ephemeris import next_moon_phases, sun_clock_minutes
 
 
 def test_sun_times_are_plausible_and_differ_by_day():

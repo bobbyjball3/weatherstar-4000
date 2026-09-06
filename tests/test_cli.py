@@ -1,6 +1,6 @@
 """Tests for the CLI (generate-config + validate run)."""
 
-from weatherstar_4000.cli import main
+from weatherstar.cli import main
 
 try:  # Python >= 3.11
     import tomllib

@@ -1,0 +1,18 @@
+# Amber monochrome (classic IBM terminal).
+title = "Weather Star 4000"
+title_bottom = "4000"
+asset_dir = "static_assets"
+
+[colors]
+yellow = "#FFB400"        # Bright amber
+white = "#FFB000"         # Pure amber
+black = "#140A00"         # Dark brown background
+purple_header = "#C88C00"  # Medium amber
+blue_gradient_1 = "#644600"  # Dark amber
+blue_gradient_2 = "#322300"  # Darker amber
+light_blue = "#FFC864"    # Light amber
+blue = "#FFC864"          # Alias
+cyan = "#FFB432"          # Bright amber
+red = "#FF6400"           # Orange (for alerts)
+up = "#FFB000"            # Positive table cells
+down = "#FF6400"          # Negative table cells

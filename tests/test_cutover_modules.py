@@ -4,9 +4,9 @@ import time
 
 import pygame
 
-from weatherstar_4000.datasources.history import HistoryDatasource
-from weatherstar_4000.datasources.news import LocalNewsDatasource
-from weatherstar_4000.media.icons import IconManager
+from weatherstar.datasources.history import HistoryDatasource
+from weatherstar.datasources.news import LocalNewsDatasource
+from weatherstar.media.icons import IconManager
 
 _DAILY = {
     "time": ["2026-09-01", "2026-09-02", "2026-09-03"],

@@ -9,24 +9,24 @@ typed Pydantic models datasources now own as their public contract.
 import pygame
 import pytest
 
-from weatherstar_4000.config_file import AppConfig
-from weatherstar_4000.context import DataRegistry
-from weatherstar_4000.datasources.feeds import (
+from weatherstar.config_file import AppConfig
+from weatherstar.context import DataRegistry
+from weatherstar.datasources.feeds import (
     Alert,
     Earthquake,
     Quote,
     UvReading,
 )
-from weatherstar_4000.datasources.history import PrecipRow, TemperatureRow
-from weatherstar_4000.datasources.news import Headline
-from weatherstar_4000.datasources.noaa import (
+from weatherstar.datasources.history import PrecipRow, TemperatureRow
+from weatherstar.datasources.news import Headline
+from weatherstar.datasources.noaa import (
     City,
     CurrentConditions,
     ForecastPeriod,
     RegionalForecast,
 )
-from weatherstar_4000.engine import Builder, SequenceRunner, resolve_location
-from weatherstar_4000.sequence import Sequence
+from weatherstar.engine import Builder, SequenceRunner, resolve_location
+from weatherstar.sequence import Sequence
 
 ALL_SCREENS = [
     "progress",
@@ -408,8 +408,8 @@ def test_weekend_periods_capture_sunday_run_by_date():
     finds both weekend columns (Sunday = today, Saturday = next weekend)."""
     from datetime import datetime, timedelta
 
-    from weatherstar_4000.datasources.noaa import ForecastPeriod
-    from weatherstar_4000.screens.weekend_forecast import WeekendForecastScreen
+    from weatherstar.datasources.noaa import ForecastPeriod
+    from weatherstar.screens.weekend_forecast import WeekendForecastScreen
 
     sunday = datetime.fromisoformat("2026-09-06T00:00:00+00:00")
     periods = []

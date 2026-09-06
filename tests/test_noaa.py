@@ -1,6 +1,6 @@
 """Tests for the NOAA weather datasource (grid/stations/observations/forecast)."""
 
-from weatherstar_4000.datasources.noaa import NoaaWeather
+from weatherstar.datasources.noaa import NoaaWeather
 
 BASE = "https://api.weather.gov"
 

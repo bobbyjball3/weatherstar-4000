@@ -4,8 +4,8 @@ import datetime
 
 import pygame
 
-from weatherstar_4000.context import AppContext, DataRegistry
-from weatherstar_4000.datasources.noaa import ForecastPeriod
+from weatherstar.context import AppContext, DataRegistry
+from weatherstar.datasources.noaa import ForecastPeriod
 
 
 def _period(**kw):
@@ -13,7 +13,7 @@ def _period(**kw):
 
 
 def test_extended_forecast_weekday_from_start_time():
-    from weatherstar_4000.screens.extended_forecast import ExtendedForecastScreen
+    from weatherstar.screens.extended_forecast import ExtendedForecastScreen
 
     screen = ExtendedForecastScreen.model_validate({})
     assert screen._weekday_abbrev(_period(start_time=datetime.datetime(2026, 9, 5, 18))) == "SAT"
@@ -22,7 +22,7 @@ def test_extended_forecast_weekday_from_start_time():
 
 
 def test_extended_forecast_weekday_from_name_when_no_start_time():
-    from weatherstar_4000.screens.extended_forecast import ExtendedForecastScreen
+    from weatherstar.screens.extended_forecast import ExtendedForecastScreen
 
     screen = ExtendedForecastScreen.model_validate({})
     assert screen._weekday_abbrev(_period(name="Saturday")) == "SAT"
@@ -30,7 +30,7 @@ def test_extended_forecast_weekday_from_name_when_no_start_time():
 
 
 def test_extended_forecast_day_label_prefers_daytime_period():
-    from weatherstar_4000.screens.extended_forecast import ExtendedForecastScreen
+    from weatherstar.screens.extended_forecast import ExtendedForecastScreen
 
     screen = ExtendedForecastScreen.model_validate({})
     day = _period(name="Sunday", is_daytime=True, start_time=datetime.datetime(2026, 9, 6, 18))
@@ -43,7 +43,7 @@ def test_extended_forecast_day_label_prefers_daytime_period():
 
 
 def test_extended_forecast_renders(fonts):
-    from weatherstar_4000.screens.extended_forecast import ExtendedForecastScreen
+    from weatherstar.screens.extended_forecast import ExtendedForecastScreen
 
     screen = ExtendedForecastScreen.model_validate({})
     surface = pygame.Surface((640, 480))

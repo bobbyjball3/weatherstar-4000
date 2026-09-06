@@ -4,8 +4,8 @@ import time
 
 import pygame
 
-from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.ticker import (
+from weatherstar.context import AppContext, DataRegistry, Location
+from weatherstar.ticker import (
     SCROLL_SPEED,
     BottomTicker,
     WeatherStar3000Scroll,
@@ -24,7 +24,7 @@ def _ctx(surface, description="Orlando"):
 
 
 def test_ticker_builds_current_conditions_items(screen):
-    from weatherstar_4000.datasources.noaa import (
+    from weatherstar.datasources.noaa import (
         City,
         CurrentConditions,
         ForecastPeriod,

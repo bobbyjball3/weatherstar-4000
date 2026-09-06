@@ -1,0 +1,18 @@
+# High-contrast palette for accessibility.
+title = "Weather Star 4000"
+title_bottom = "4000"
+asset_dir = "static_assets"
+
+[colors]
+yellow = "#FFFF64"        # Bright yellow
+white = "#FFFFFF"         # Pure white
+black = "#000000"         # Pure black
+purple_header = "#9600C8"  # Bright purple
+blue_gradient_1 = "#0000C8"  # Pure blue
+blue_gradient_2 = "#000064"  # Dark blue
+light_blue = "#64C8FF"    # Bright cyan-blue
+blue = "#64C8FF"          # Alias
+cyan = "#00FFFF"          # Pure cyan
+red = "#FF0000"           # Pure red
+up = "#00FF00"            # Positive table cells
+down = "#FF0000"          # Negative table cells

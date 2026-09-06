@@ -1,0 +1,147 @@
+# Weather Star 3000 look, matched to the ws3kp (netbymatt/ws3kp) implementation.
+#
+# The 1980s TWC aesthetic is white-on-deep-blue with a black text outline/drop
+# shadow, no yellow title, no corner logo, and one shared background for every
+# display.  Layout is theme-driven: screens without a 3000 equivalent fall into
+# the "[layout.default]" house style (centered tall white titles), and the
+# screens the 3000 actually had get dedicated "[layout.<screen>]" tokens.
+#
+# Assets come from the MIT-licensed ws3kp project (fonts by Nick Smith /
+# TWCClassics). Drop them under the asset_dir: fonts_ttf/Star3000*.ttf and
+# backgrounds/1.png. Without the assets the theme degrades gracefully to
+# system fonts and a generated gradient.
+title = "Weather Star 3000"
+title_bottom = "3000"
+asset_dir = "static_assets_ws3000"
+
+# ws3kp draws every text glyph with a black outline ring + a 3px drop shadow
+# (see server/styles/scss/shared/_utils.scss text-shadow mixin).
+text_shadow = true
+text_shadow_offset = 3
+text_shadow_outline = 2
+
+# The 3000 moves the always-on bottom crawler into a taller band that also
+# carries the live date + time (the top-right clock is hidden). Screens reserve
+# the canvas above y~405 so this band never overlaps content.
+bottom_band = "3000"
+
+[colors]
+# Text is white everywhere on the 3000: titles share the body color (there is
+# no yellow signature accent) - the "blue and white" look.
+white = "#FFFFFF"
+yellow = "#FFFFFF"
+black = "#000000"
+# ws3kp _colors.scss:
+#   $blue-box -> the purple header/box fill behind progress "links".
+purple_header = "#33047B"
+#   $gradient-loading-1..4 -> the striped loading bar + deep-blue base.
+blue_gradient_1 = "#09246F"
+blue_gradient_2 = "#364AC0"
+blue_gradient_3 = "#4F99F9"
+blue_gradient_4 = "#8FFDFA"
+# Remaining semantic keys fold onto the white-on-blue palette.
+light_blue = "#FFFFFF"
+blue = "#FFFFFF"
+cyan = "#FFFFFF"
+# Alerts / "failed" status (ws3kp $status colors: failed #ff0000).
+red = "#FF0000"
+up = "#00FF00"
+down = "#FF0000"
+# Hazards screen fills its box with a deep red (server/styles/scss/_hazards.scss).
+hazard_bg = "#702323"
+# ws3kp progress status colors (shared/_utils.scss status-colors mixin).
+status_loading = "#FFFF00"
+status_press_here = "#00FF00"
+status_failed = "#FF0000"
+status_no_data = "#C0C0C0"
+status_disabled = "#C0C0C0"
+status_retrying = "#FFFF00"
+
+[fonts]
+# Sizes are tuned so Star3000 glyph *ink* matches the classic Star4000 metrics
+# the WS4000-era layouts were drawn to (Star3000 is ~35% taller and ~18% wider
+# per point size), keeping every screen's text inside its rows/columns.  The
+# big display slots (title/large) stay large for the screens with 3000-style
+# layouts.  All slots use the single Star3000 face for a consistent look (the
+# separate "Star3000 Small" face is only used by real 3000 date/time blocks).
+title = ["Star3000.ttf", 30]
+large = ["Star3000.ttf", 30]
+extended = ["Star3000.ttf", 26]
+small = ["Star3000.ttf", 22]
+normal = ["Star3000.ttf", 18]
+forecast = ["Star3000.ttf", 16]
+tiny = ["Star3000.ttf", 15]
+scroller = ["Star3000.ttf", 20]
+# The real 3000 date/time blocks use the separate "Star3000 Small" face (a
+# genuinely short companion typeface), so it gets its own slot here.
+datetime = ["Star3000 Small.ttf", 24]
+
+[layout.default]
+# 3000 "house style": a centered single-line title in the standard face, no
+# corner logo, no NOAA mark, no top-right clock (the clock moves to the bottom
+# scroll band). Screens with a dedicated header override title_style below.
+show_logo = false
+show_noaa = false
+show_clock = false
+title_style = "tall"
+title_align = "center"
+title_color = "white"
+title_font = "title"
+# Wrapped body text gets a little extra leading (Star3000's glyphs carry almost
+# no top bearing, so the classic per-line spacing needs enlarging to breathe).
+forecast_line_spacing = 20
+# The 3000 bottom band replaces the per-screen "Updated" footers.
+show_headline_footer = false
+
+# Current Conditions is a plain left-aligned text list on the 3000 (no header,
+# no big temperature numeral, no icon) - see screens/current_conditions.py.
+[layout.current_conditions]
+title_style = "hidden"
+variant = "3000"
+
+# Hazards has no header; it fills the screen with a dark-red box.
+[layout.hazards]
+title_style = "hidden"
+variant = "3000"
+
+# The text Local Forecast keeps a single left-aligned title ("Your NWS
+# Forecast" in ws3kp) and reads as one tall rolling column of text.
+[layout.local_forecast]
+title_style = "single"
+title_align = "left"
+title_font = "small"
+title_text = "Your NWS Forecast"
+variant = "3000"
+
+# Weather Almanac: the classic two-line title becomes the single tall ws3kp
+# "The Weatherstar Almanac" heading over the sun/moon table.
+[layout.almanac]
+title_text = "The Weatherstar Almanac"
+variant = "3000"
+
+# Latest Hourly Observations on the 3000 is a per-station text table.
+[layout.regional_observations]
+title_text = "Latest Hourly Observations"
+variant = "3000"
+
+# Regional Forecast (no classic WS4000 equivalent): nearby-city hi/lo table.
+[layout.regional_forecast]
+title_text = "Forecast Across The Region"
+variant = "3000"
+
+# Weather Records has no 3000 equivalent; its classic list is tightened so the
+# last "history" line clears the taller 3000 bottom scroll band (y~405).
+[layout.weather_records]
+row_step = 28
+section_gap = 12
+heading_gap = 30
+
+# The loading/progress display is the dual "Weather Star / 3000+  vX.Y" title.
+[layout.progress]
+title_style = "dual"
+title_font = "small"
+
+# Extended Forecast day columns on the 3000: 3 per page, wide day boxes,
+# uppercase weekday, condition text (no icon), Lo/Hi label+value pairs.
+[layout.extended_forecast]
+variant = "3000"

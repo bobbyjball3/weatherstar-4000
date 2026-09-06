@@ -2,12 +2,12 @@
 
 import sys
 
-from weatherstar_4000.config_file import AppConfig
-from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.engine import Builder, music_enabled
-from weatherstar_4000.media.music import Music
-from weatherstar_4000.registry import discover
-from weatherstar_4000.sequence import Sequence
+from weatherstar.config_file import AppConfig
+from weatherstar.context import AppContext, DataRegistry, Location
+from weatherstar.engine import Builder, music_enabled
+from weatherstar.media.music import Music
+from weatherstar.registry import discover
+from weatherstar.sequence import Sequence
 
 BASIC = {
     "sequences": {
@@ -130,7 +130,7 @@ def test_play_starts_from_shuffled_first_track(screen, monkeypatch):
     fake = _fake_pygame(monkeypatch, _FakeMixer())
     # Force a deterministic "shuffle": move last track to the front.
     monkeypatch.setattr(
-        "weatherstar_4000.media.music.random.shuffle",
+        "weatherstar.media.music.random.shuffle",
         lambda seq: seq.insert(0, seq.pop()),
     )
     ctx = AppContext(surface=screen, data=DataRegistry(), location=Location(lat=0.0, lon=0.0))
@@ -143,7 +143,7 @@ def test_play_starts_from_shuffled_first_track(screen, monkeypatch):
 def test_advance_moves_through_shuffled_playlist_and_wraps(screen, monkeypatch):
     fake = _fake_pygame(monkeypatch, _FakeMixer())
     monkeypatch.setattr(
-        "weatherstar_4000.media.music.random.shuffle",
+        "weatherstar.media.music.random.shuffle",
         lambda seq: seq.insert(0, seq.pop()),
     )
     ctx = AppContext(surface=screen, data=DataRegistry(), location=Location(lat=0.0, lon=0.0))
@@ -173,7 +173,7 @@ def test_builder_start_music_respects_config(monkeypatch):
 def test_builder_advance_music_delegates_to_player(screen, monkeypatch):
     discover()
     fake = _fake_pygame(monkeypatch, _FakeMixer())
-    monkeypatch.setattr("weatherstar_4000.media.music.random.shuffle", lambda seq: None)
+    monkeypatch.setattr("weatherstar.media.music.random.shuffle", lambda seq: None)
     builder = Builder(_cfg(enabled=True))
     ctx = AppContext(surface=screen, data=DataRegistry(), location=Location(lat=0.0, lon=0.0))
     ctx.assets["music"] = ["/tmp/a.mp3", "/tmp/b.mp3"]

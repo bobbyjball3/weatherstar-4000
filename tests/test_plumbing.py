@@ -4,8 +4,8 @@ render helpers, fonts/backgrounds media, and CLI edge cases."""
 import pygame
 import pytest
 
-from weatherstar_4000.context import AppContext, DataRegistry
-from weatherstar_4000.datasources.feeds import (
+from weatherstar.context import AppContext, DataRegistry
+from weatherstar.datasources.feeds import (
     EarthquakesDatasource,
     NoaaAlertsDatasource,
     StockMarketDatasource,
@@ -86,24 +86,24 @@ def test_feeds_cache_second_calls(monkeypatch):
 
 
 def test_select_sequence_requires_name():
-    from weatherstar_4000 import ConfigError
-    from weatherstar_4000.config_file import AppConfig
+    from weatherstar import ConfigError
+    from weatherstar.config_file import AppConfig
 
     with pytest.raises(ConfigError):
         AppConfig({}).select_sequence(None)
 
 
 def test_get_sequence_missing_raises():
-    from weatherstar_4000 import SequenceError
-    from weatherstar_4000.config_file import AppConfig
+    from weatherstar import SequenceError
+    from weatherstar.config_file import AppConfig
 
     with pytest.raises(SequenceError):
         AppConfig({"sequence": "main"}).get_sequence("main")
 
 
 def test_sequence_from_raw_forms():
-    from weatherstar_4000 import SequenceError
-    from weatherstar_4000.sequence import Sequence, Slide
+    from weatherstar import SequenceError
+    from weatherstar.sequence import Sequence, Slide
 
     assert Slide.from_raw("radar", default_pause=3.0) == Slide("radar", 3.0)
     assert Slide.from_raw({"screen": "radar", "pause": 2.0}) == Slide("radar", 2.0)
@@ -168,7 +168,7 @@ def test_context_size_clone_and_registry_errors(pygame_env, screen):
 
 
 def test_render_draw_background_paths(pygame_env, screen):
-    from weatherstar_4000 import render
+    from weatherstar import render
 
     ctx = _ctx(screen)
     ctx.assets = {}
@@ -182,13 +182,13 @@ def test_render_draw_background_paths(pygame_env, screen):
 
 
 def test_render_header_and_text(pygame_env, screen):
-    from weatherstar_4000 import render
+    from weatherstar import render
 
     ctx = _ctx(screen)
     ctx.assets = {
         "logos": {"logo-corner": pygame.Surface((10, 10)), "noaa": pygame.Surface((10, 10))}
     }
-    render.draw_header(screen, ctx, "WeatherStar", "4000", has_noaa=True)
+    render.draw_header(screen, ctx, "Weather Star", "4000", has_noaa=True)
     render.draw_header(screen, ctx, "Single", has_noaa=False)
     rect = render.draw_centered_text(screen, ctx, "hi", 100, center_x=50)
     assert rect is not None
@@ -202,7 +202,7 @@ def test_render_header_and_text(pygame_env, screen):
 
 
 def test_fonts_fallback_without_asset_fonts(pygame_env, tmp_path):
-    from weatherstar_4000.media.fonts import Fonts
+    from weatherstar.media.fonts import Fonts
 
     fonts = Fonts.model_validate({"asset_dir": str(tmp_path)})
     ctx = AppContext(surface=None)
@@ -221,7 +221,7 @@ def test_fonts_fallback_without_asset_fonts(pygame_env, tmp_path):
 
 
 def test_backgrounds_generates_default_gradient(screen):
-    from weatherstar_4000.media.backgrounds import Backgrounds, make_default_background
+    from weatherstar.media.backgrounds import Backgrounds, make_default_background
 
     gradient = make_default_background(4, 4)
     assert gradient.get_size() == (4, 4)
@@ -239,7 +239,7 @@ def test_backgrounds_generates_default_gradient(screen):
 
 
 def test_cli_generate_config_nested_output(tmp_path, capsys):
-    from weatherstar_4000.cli import main
+    from weatherstar.cli import main
 
     out = tmp_path / "nested" / "dir" / "out.toml"
     assert main(["generate-config", "-o", str(out)]) == 0
@@ -247,7 +247,7 @@ def test_cli_generate_config_nested_output(tmp_path, capsys):
 
 
 def test_cli_config_missing_sequence_returns_2(tmp_path, capsys):
-    from weatherstar_4000.cli import main
+    from weatherstar.cli import main
 
     path = tmp_path / "cfg.toml"
     path.write_text(
@@ -258,7 +258,7 @@ def test_cli_config_missing_sequence_returns_2(tmp_path, capsys):
 
 
 def test_cli_keyboard_interrupt_returns_130(tmp_path, monkeypatch, capsys):
-    from weatherstar_4000 import cli
+    from weatherstar import cli
 
     path = tmp_path / "cfg.toml"
     path.write_text(
@@ -266,7 +266,7 @@ def test_cli_keyboard_interrupt_returns_130(tmp_path, monkeypatch, capsys):
         "[location]\nlat=28.5383\nlon=-81.3792\n"
         '[sequences.demo]\npause=0.001\nslides=[{screen="progress"}]\n'
     )
-    import weatherstar_4000.engine as engine_mod
+    import weatherstar.engine as engine_mod
 
     def boom(*a, **k):
         raise KeyboardInterrupt

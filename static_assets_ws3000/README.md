@@ -1,19 +1,19 @@
 # static_assets_ws3000
 
 Asset tree for the built-in `weatherstar3000` theme (see
-`src/weatherstar_4000/builtin_themes/weatherstar3000.theme.toml`).
+`src/weatherstar/builtin_themes/weatherstar3000.theme.toml`).
 
 Contents:
 
-- `fonts_ttf/` — `Star3000*.ttf`, the authentic WeatherStar 3000 typeface
+- `fonts_ttf/` — `Star3000*.ttf`, the authentic Weather Star 3000 typeface
   originally drawn by Nick Smith (http://twcclassics.com/downloads/fonts.html).
-- `backgrounds/` — `1.png`, the single deep-blue 640x480 WeatherStar 3000
+- `backgrounds/` — `1.png`, the single deep-blue 640x480 Weather Star 3000
   background used by every display (drawn from scratch by the ws3kp project).
 
 ## Attribution / license
 
 These assets are vendored from the MIT-licensed **netbymatt/ws3kp** project
-(https://github.com/netbymatt/ws3kp), a WeatherStar 3000 simulator, and are used
-here to reproduce the WeatherStar 3000 look. The font files were originally
+(https://github.com/netbymatt/ws3kp), a Weather Star 3000 simulator, and are used
+here to reproduce the Weather Star 3000 look. The font files were originally
 created by Nick Smith for TWCClassics; the ws3kp background art was created from
 scratch by that project. See ws3kp's LICENSE for its terms.

@@ -6,9 +6,9 @@ follow when changing it.
 
 ## Project status: plugin engine
 
-This is **`weatherstar-4000`**, a pygame recreation of the 1990s WeatherStar 4000
+This is **`weatherstar`**, a pygame recreation of The Weather Channel's Weather Star
 local forecast. The app is a **plugin-driven engine** living directly under
-`src/weatherstar_4000/`. There is no legacy monolith anymore — it was removed,
+`src/weatherstar/`. There is no legacy monolith anymore — it was removed,
 so do not reintroduce references to legacy modules like `displays`,
 `history_graphs`, `get_local_news`, etc. `themes.py` and the `datasources/*`
 clients are their self-contained replacements.
@@ -24,7 +24,7 @@ Runtime + docs entry points:
 
 Python 3.10 (`uv`), ruff, pytest, Task, pre-commit. All commands run through
 `uv run`. Ruff: line length 100, rules `E4 E7 E9 F I UP W`; first-party import
-group `weatherstar_4000`.
+group `weatherstar`.
 
 ```sh
 uv sync                # install (project + dev deps, pinned by uv.lock)
@@ -32,8 +32,8 @@ uv run pytest          # full suite (headless)
 uv run pytest --cov --cov-report=term-missing   # coverage (gate: 80)
 uv run ruff check src tests
 uv run ruff format src tests
-uv run weatherstar4000 --sequence main --lat 28.5383 --lon -81.3792 --validate  # headless render check
-uv run weatherstar4000 generate-config --sequence main                          # regenerates commented config skeleton
+uv run weatherstar --sequence main --lat 28.5383 --lon -81.3792 --validate  # headless render check
+uv run weatherstar generate-config --sequence main                          # regenerates commented config skeleton
 ```
 
 Run all quality gates with `task check` and tests+coverage with `task coverage`.
@@ -59,7 +59,7 @@ The CI runs `task check` and `task coverage` — a change is not done until
 - **Plugin import order pollution:** importing a plugin module (via the
   `@plugin` decorator) registers it in the global registry *at import time*.
   Pytest collects test modules alphabetically, so a module-level
-  `from weatherstar_4000.screens.… import …` in one test file can change what
+  `from weatherstar.screens.… import …` in one test file can change what
   a later file (e.g. `test_skeleton.py`, which snapshots the registry) sees.
   Keep plugin imports *inside test functions* unless the test file is
   self-contained about registry state.
@@ -72,7 +72,7 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
            overlays BottomTicker, advances the music controller
 ```
 
-`src/weatherstar_4000/`:
+`src/weatherstar/`:
 - `plugin.py` — `Plugin(BaseModel)`; config helpers.
 - `registry.py` — `@plugin`, `PluginRegistry`, built-in + entry-point discovery.
 - `renderer.py` — `Renderer` mixin: concrete font/color/data/blit/wrap helpers
@@ -85,11 +85,11 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 - `context.py` — `AppContext`, `DataRegistry`, `Location`.
 - `engine.py` — `Builder` (build runtime from config) + `run_sequence` /
   `SequenceRunner` (render + headless validate).
-- `cli.py` — `weatherstar4000` (run / `--validate` / `generate-config`).
+- `cli.py` — `weatherstar` (run / `--validate` / `generate-config`).
 - `skeleton.py` — generates the commented config from field descriptions.
 - `logging_setup.py` — structlog with SecretStr/key redaction.
 - `ticker.py` — bottom crawling banner over every slide (the classic navy crawler;
-  themes may swap it for the WeatherStar 3000 scroll band via ``bottom_band``).
+  themes may swap it for the Weather Star 3000 scroll band via ``bottom_band``).
 - `themes.py` — `Theme` model, TOML loader/discovery; `builtin_themes/` ships
   the data files (default/base theme is `weatherstar4000`).
 - `plugins/__init__.py` — `load_builtin_plugins()` imports every module in
@@ -97,7 +97,7 @@ config.toml -> AppConfig (config_file.py) -> Builder -> AppContext/DataRegistry
 
 Kinds and current inventories:
 - **screen (28):** 28 display modules in `screens/` (incl. the regional_forecast
-  screen that has no classic WS4000 equivalent but is a WeatherStar 3000 staple).
+  screen that has no classic WS4000 equivalent but is a Weather Star 3000 staple).
 - **datasource (8):** `alerts`, `earthquakes`, `history`, `local_news`,
   `radar`, `stocks`, `uv_index`, `weather`.
 - **media (5):** `fonts`, `backgrounds`, `logos`, `icons`, `music`.
@@ -189,7 +189,7 @@ that pattern — `ctx.data.get(name)` may raise `KeyError` (unknown or stubbed),
   `{ screen = "x", pause = 5.0 }`.
 - A bottom band is drawn over every slide (see `ticker.py`): the classic navy
   `BottomTicker` crawler by default (banner top ≈ `height - 50`, i.e. y≈430 on
-  480px), or the WeatherStar 3000 date/time + crawl scroll when a theme sets
+  480px), or the Weather Star 3000 date/time + crawl scroll when a theme sets
   `bottom_band = "3000"` (that band starts at y≈405). **Screen content must stay
   above ~y=424 (classic) / ~y=400 (3000)** or it will be hidden under the band
   (see the severe-alert layout as the reference solution).
@@ -198,7 +198,7 @@ that pattern — `ctx.data.get(name)` may raise `KeyError` (unknown or stubbed),
   random first song and advances when each ends. `Builder.advance_music()` is
   polled each frame. `--validate`/headless must never start audio.
 - Config discovery: `--config` > `WEATHERSTAR_CONFIG` > XDG
-  (`~/.config/weatherstar4000/config.toml`). Sequence precedence: CLI >
+  (`~/.config/weatherstar/config.toml`). Sequence precedence: CLI >
   `WEATHERSTAR_SEQUENCE` > top-level `sequence`. Location: `--lat/--lon` >
   `[location]`.
 - `generate-config` output is the source of truth for `docs/CONFIGURATION.md`;

@@ -2,9 +2,9 @@
 
 import pytest
 
-from weatherstar_4000 import PluginNotFound
-from weatherstar_4000.plugin import Plugin
-from weatherstar_4000.registry import PluginRegistry, plugin, registry
+from weatherstar import PluginNotFound
+from weatherstar.plugin import Plugin
+from weatherstar.registry import PluginRegistry, plugin, registry
 
 
 def _mk(kind, name, module=__name__):
@@ -67,7 +67,7 @@ def test_kinds_lists_kinds():
 
 
 def test_load_builtins_is_idempotent():
-    from weatherstar_4000.registry import load_builtins
+    from weatherstar.registry import load_builtins
 
     load_builtins()
     load_builtins()

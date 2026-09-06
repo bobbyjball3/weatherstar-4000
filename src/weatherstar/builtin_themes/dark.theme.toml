@@ -1,0 +1,18 @@
+# Dark modern take on the Weather Star 4000 look.
+title = "Weather Star 4000"
+title_bottom = "4000"
+asset_dir = "static_assets"
+
+[colors]
+yellow = "#FFD700"        # Gold title
+white = "#E6E6E6"         # Off-white text
+black = "#0F0F0F"         # Near black background
+purple_header = "#581883"  # Darker purple
+blue_gradient_1 = "#1E2850"  # Dark blue gradient start
+blue_gradient_2 = "#0A0F23"  # Dark blue gradient end
+light_blue = "#6496FF"    # Lighter blue for contrast
+blue = "#6496FF"          # Alias
+cyan = "#00C8C8"          # Muted cyan
+red = "#DC3232"           # Muted red
+up = "#33CC33"            # Positive table cells
+down = "#E05A5A"          # Negative table cells

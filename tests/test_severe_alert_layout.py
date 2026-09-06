@@ -5,8 +5,8 @@ other / later sections, and (2) alert content (and expiry) rendering underneath
 the engine's bottom ticker banner (which starts at y=430).
 """
 
-from weatherstar_4000.context import AppContext, DataRegistry, Location
-from weatherstar_4000.datasources.feeds import Alert
+from weatherstar.context import AppContext, DataRegistry, Location
+from weatherstar.datasources.feeds import Alert
 
 _TICKER_TOP = 430
 
@@ -46,7 +46,7 @@ class _Alerts:
 
 
 def _draw(screen):
-    from weatherstar_4000.screens.severe_weather_alert import SevereWeatherAlertScreen
+    from weatherstar.screens.severe_weather_alert import SevereWeatherAlertScreen
 
     screen.fill((0, 0, 0))
     ctx = _ctx(screen)
@@ -72,7 +72,7 @@ def test_alert_content_stays_above_ticker(screen):
 
 
 def test_alert_all_clear(screen):
-    from weatherstar_4000.screens.severe_weather_alert import SevereWeatherAlertScreen
+    from weatherstar.screens.severe_weather_alert import SevereWeatherAlertScreen
 
     screen.fill((0, 0, 0))
     ctx = _ctx(screen)

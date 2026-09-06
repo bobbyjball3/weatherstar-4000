@@ -8,11 +8,11 @@ crashing and paints non-blank output.
 import pygame
 import pytest
 
-from weatherstar_4000.config_file import AppConfig
-from weatherstar_4000.context import DataRegistry
-from weatherstar_4000.engine import Builder, SequenceRunner, resolve_location
-from weatherstar_4000.registry import registry
-from weatherstar_4000.sequence import Sequence
+from weatherstar.config_file import AppConfig
+from weatherstar.context import DataRegistry
+from weatherstar.engine import Builder, SequenceRunner, resolve_location
+from weatherstar.registry import registry
+from weatherstar.sequence import Sequence
 
 ALL_SCREENS = [
     "progress",
@@ -131,7 +131,7 @@ def all_appcfg(tmp_path):
 
 
 def test_every_registered_screen_is_available():
-    from weatherstar_4000.registry import discover
+    from weatherstar.registry import discover
 
     discover()
     missing = [name for name in ALL_SCREENS if name not in registry.names("screen")]

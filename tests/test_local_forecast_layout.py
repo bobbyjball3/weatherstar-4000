@@ -5,8 +5,8 @@ from datetime import date, timedelta
 
 import pygame
 
-from weatherstar_4000.context import AppContext
-from weatherstar_4000.datasources.noaa import ForecastPeriod
+from weatherstar.context import AppContext
+from weatherstar.datasources.noaa import ForecastPeriod
 
 
 def _period(name, is_daytime, when):
@@ -26,7 +26,7 @@ def _dt(d):
 
 
 def test_local_forecast_default_panels_when_no_background():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     screen = LocalForecastScreen.model_validate({})
     ctx = AppContext()
@@ -37,7 +37,7 @@ def test_local_forecast_default_panels_when_no_background():
 
 
 def test_local_forecast_detects_panels_in_background_art():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     image = pygame.Surface((640, 480))
     image.fill((200, 120, 40))  # warm sky, not panel-like
@@ -55,7 +55,7 @@ def test_local_forecast_detects_panels_in_background_art():
 
 
 def test_local_forecast_detection_returns_empty_for_art_without_panels():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     image = pygame.Surface((640, 480))
     image.fill((200, 120, 40))
@@ -64,7 +64,7 @@ def test_local_forecast_detection_returns_empty_for_art_without_panels():
 
 
 def test_outlook_uses_daytime_periods_when_available():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     sat = date(2026, 9, 5)
     periods = [
@@ -80,7 +80,7 @@ def test_outlook_uses_daytime_periods_when_available():
 
 
 def test_outlook_falls_back_to_raw_periods_without_day_flags():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     periods = [
         ForecastPeriod(name="Today"),
@@ -92,7 +92,7 @@ def test_outlook_falls_back_to_raw_periods_without_day_flags():
 
 
 def test_column_labels_today_tomorrow_weekday():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     today = date.today()
     screen_obj = LocalForecastScreen.model_validate({})
@@ -108,7 +108,7 @@ def test_column_labels_today_tomorrow_weekday():
 
 
 def test_column_labels_weekdays_when_outlook_not_today():
-    from weatherstar_4000.screens.local_forecast import LocalForecastScreen
+    from weatherstar.screens.local_forecast import LocalForecastScreen
 
     base = date.today() + timedelta(days=1)
     screen_obj = LocalForecastScreen.model_validate({})

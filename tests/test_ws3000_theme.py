@@ -1,4 +1,4 @@
-"""WeatherStar 3000 theme fidelity tests.
+"""Weather Star 3000 theme fidelity tests.
 
 Runs the whole screen inventory under the ``weatherstar3000`` theme (real
 Star3000 fonts + ws3kp 1.png) and asserts the theme-driven 3000 layout variants:
@@ -17,11 +17,11 @@ from tests.test_screens_rich import (
     _Weather,
     current_payload,
 )
-from weatherstar_4000.config_file import AppConfig
-from weatherstar_4000.engine import Builder, SequenceRunner, resolve_location
-from weatherstar_4000.registry import registry
-from weatherstar_4000.sequence import Sequence
-from weatherstar_4000.themes import Theme, theme_search_dirs
+from weatherstar.config_file import AppConfig
+from weatherstar.engine import Builder, SequenceRunner, resolve_location
+from weatherstar.registry import registry
+from weatherstar.sequence import Sequence
+from weatherstar.themes import Theme, theme_search_dirs
 
 
 def _reload_registered_plugins():
@@ -37,7 +37,7 @@ def _reload_registered_plugins():
     import sys
 
     prefixes = tuple(
-        f"weatherstar_4000.{bag}"
+        f"weatherstar.{bag}"
         for bag in ("screens", "components", "datasources", "media", "sequences")
     )
     seen: set[tuple[str, str]] = set()
@@ -104,7 +104,7 @@ def _step(runner, name):
 
 def test_ws3000_theme_loads_with_assets(all_appcfg, pygame_env):
     """Star3000 fonts + the ws3kp background are discoverable through the theme."""
-    from weatherstar_4000.themes import get_theme
+    from weatherstar.themes import get_theme
 
     theme = get_theme("weatherstar3000", dirs=theme_search_dirs())
     assert theme.text_shadow is True
@@ -159,9 +159,9 @@ def test_ws3000_extended_forecast_renders(all_appcfg, pygame_env):
 
 def test_text_shadow_underlay_rendered(pygame_env):
     """3000 text gets a black outline/drop underlay; classic text does not."""
-    from weatherstar_4000 import render
-    from weatherstar_4000.context import AppContext
-    from weatherstar_4000.media.fonts import Fonts
+    from weatherstar import render
+    from weatherstar.context import AppContext
+    from weatherstar.media.fonts import Fonts
 
     white = (255, 255, 255)
 
